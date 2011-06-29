@@ -79,12 +79,12 @@ class Hud(QFrame):
             self.layout().addWidget(self.dimLabel)
 
             # coordinate selection
-            self.coordSel = QSpinBox()
-            self.coordSel.setButtonSymbols(QAbstractSpinBox.NoButtons)
-            self.coordSel.setAlignment(Qt.AlignRight)
-            self.coordSel.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)            
-            self.coordSel.setRange(self._minimum, self._maximum)
-            self.layout().addWidget(self.coordSel)
+            self.sliceSelector = QSpinBox()
+            self.sliceSelector.setButtonSymbols(QAbstractSpinBox.NoButtons)
+            self.sliceSelector.setAlignment(Qt.AlignRight)
+            self.sliceSelector.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)            
+            self.sliceSelector.setRange(self._minimum, self._maximum)
+            self.layout().addWidget(self.sliceSelector)
 
             # coordinate label
             self.coordLabel = QLabel("of " + str(self._maximum))
@@ -156,18 +156,15 @@ class ImageScene(QGraphicsView):
         self.fastRepaint = True
         self.drawUpdateInterval = 300
 
-        # oli todo
         if self.sliceExtent > 1:
-            grviewHudLayout = QVBoxLayout(self)
-            tempLayout = QHBoxLayout()
-            self.fullScreenButton = QPushButton()
-            self.fullScreenButton.setIcon(QIcon(QPixmap(ilastikIcons.AddSelx22)))
-            self.fullScreenButton.setStyleSheet("background-color: white; border: 2px solid " + self.axisColor[self.axis].name() +"; border-radius: 4px;")
-            self.fullScreenButton.clicked.connect(self.imageSceneFullScreen)
-            tempLayout.addWidget(self.fullScreenButton)
-            tempLayout.addStretch()
-            grviewHudLayout.addLayout(tempLayout)
-            grviewHudLayout.addStretch()
+            self.setLayout(QVBoxLayout())
+
+            axisLabels = ["X:", "Y:", "Z:"]
+            self.hud = Hud(0, self.sliceExtent - 1, axisLabels[self.axis])
+            self.hud.zoomButton.clicked.connect(self.imageSceneFullScreen)
+
+            self.layout().addWidget(self.hud)
+            self.layout().addStretch()
         
         if self.openglWidget is not None:
             self.openglWidget.context().makeCurrent()

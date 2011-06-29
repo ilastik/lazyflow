@@ -141,6 +141,13 @@ class VolumeEditor(QWidget):
             self.changedSlice.connect(scene.updateSliceIntersection)
             scene.beginDraw.connect(self.beginDraw)
             scene.endDraw.connect(self.endDraw)
+
+            # connect hud slice selectors
+            fn = [self.changeSliceX, self.changeSliceY, self.changeSliceZ]
+            scene.hud.sliceSelector.valueChanged.connect(fn[scene.axis])
+        self.viewManager.sliceChanged.connect(lambda num,axis: self.imageScenes[axis].hud.sliceSelector.setValue(num))            
+            
+            
             
         #Controls the trade-off of speed and flickering when scrolling through this slice view
         self.setFastRepaint(True)   
