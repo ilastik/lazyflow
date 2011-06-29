@@ -41,7 +41,7 @@ Dataset Editor Dialog based on PyQt4
 from PyQt4.QtCore import Qt, pyqtSignal
 from PyQt4.QtGui import QApplication, QWidget, QPixmapCache, QLabel, QSpinBox, \
                         QCheckBox, QShortcut, QKeySequence, QSplitter, \
-                        QVBoxLayout, QHBoxLayout, QPushButton
+                        QVBoxLayout, QHBoxLayout, QPushButton, QToolButton
 
 import time
 import numpy, qimage2ndarray
@@ -189,12 +189,13 @@ class VolumeEditor(QWidget):
         self.toolBoxLayout.addStretch()
             
         # Check box for slice intersection marks
-        sliceIntersectionBox = QCheckBox("Slice Intersection")
-        sliceIntersectionBox.setEnabled(True)        
-        self.toolBoxLayout.addWidget(sliceIntersectionBox)
+        currPosButton = QToolButton()
+        currPosButton.setText("Indicate Current Position")
+        currPosButton.setCheckable(True)
+        currPosButton.setChecked(True)        
+        self.toolBoxLayout.addWidget(currPosButton)
         for scene in self.imageScenes:
-            sliceIntersectionBox.stateChanged.connect(scene.setSliceIntersection)
-        sliceIntersectionBox.setCheckState(Qt.Checked)
+            currPosButton.toggled.connect(scene.setSliceIntersection)
 
         # Channel Selector Combo Box in right side toolbox
         self.channelSpin = QSpinBox()

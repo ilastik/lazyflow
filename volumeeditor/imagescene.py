@@ -287,7 +287,7 @@ class ImageScene(QGraphicsView):
         self.toggleMaximized.emit(self.axis)
 
     def setSliceIntersection(self, state):
-        self.sliceIntersectionMarker.setVisibility(state == Qt.Checked)
+        self.sliceIntersectionMarker.setVisibility(state)
             
     def updateSliceIntersection(self, num, axis):
         #print "updateSliceIntersection(%d, %d)" % (num, axis)
