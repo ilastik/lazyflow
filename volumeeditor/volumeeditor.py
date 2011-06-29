@@ -187,31 +187,7 @@ class VolumeEditor(QWidget):
         self.setLabelWidget(DummyLabelWidget())
 
         self.toolBoxLayout.addStretch()
-
-        # Slice Selector Combo Box in right side toolbox
-        self.sliceSelectors = []
-        spinners = [("X:", self.image.shape[1] - 1, self.changeSliceX, \
-                     self.image.shape[1] > 1 and self.image.shape[2] > 1 and self.image.shape[3] > 1), \
-                    ("Y:", self.image.shape[1] - 1, self.changeSliceY, \
-                     self.image.shape[1] > 1 and self.image.shape[3] > 1), \
-                    ("Z:", self.image.shape[1] - 1, self.changeSliceZ, \
-                     self.image.shape[1] > 1 and self.image.shape[2] > 1)]
-        
-        for spinner in spinners:
-            label, limitMax, signalConnect, isVisible = spinner
-            sliceSpin = QSpinBox()
-            sliceSpin.setEnabled(True)
-            sliceSpin.setRange(0, limitMax)
-            if isVisible: #only show when needed
-                tempLay = QHBoxLayout()
-                tempLay.addWidget(QLabel("<pre>"+label+"</pre>"))
-                tempLay.addWidget(sliceSpin, 1)
-                self.toolBoxLayout.addLayout(tempLay)
-            sliceSpin.valueChanged.connect(signalConnect)
-            self.sliceSelectors.append(sliceSpin)
             
-        self.viewManager.sliceChanged.connect(lambda num,axis: self.sliceSelectors[axis].setValue(num))
-
         # Check box for slice intersection marks
         sliceIntersectionBox = QCheckBox("Slice Intersection")
         sliceIntersectionBox.setEnabled(True)        
@@ -461,9 +437,9 @@ class VolumeEditor(QWidget):
 
     def updateTimeSliceForSaving(self, time, num, axis):
         self.imageScenes[axis].thread.freeQueue.clear()
-        if self.sliceSelectors[axis].value() != num:
+        if self.imageScenes[axis].hud.sliceSelector.value() != num:
             #this will emit the signal and change the slice
-            self.sliceSelectors[axis].setValue(num)
+            self.imageScenes[axis].hud.sliceSelector.setValue(num)
         elif self.viewManager.time!=time:
             #if only the time is changed, we don't want to update all 3 slices
             self.viewManager.time = time
@@ -677,7 +653,7 @@ class VolumeEditor(QWidget):
         labels = numpy.where(labels > 0, number, 0)
         ls = LabelState('drawing', axis, self.viewManager.slicePosition[axis], result[0:2], labels.shape, self.viewManager.time, self, self.drawManager.erasing, labels, number)
         self._history.append(ls)        
-        self.setLabels(result[0:2], axis, self.sliceSelectors[axis].value(), labels, self.drawManager.erasing)
+        self.setLabels(result[0:2], axis, self.imageScenes[axis].hud.sliceSelector.value(), labels, self.drawManager.erasing)
         self.pushLabelsToLabelWidget()
 
     def pushLabelsToLabelWidget(self):
@@ -694,7 +670,7 @@ class VolumeEditor(QWidget):
         labels = numpy.where(labels > 0, number, 0)
         ls = LabelState('drawing', axis, self.viewManager.slicePosition[axis], result[0:2], labels.shape, self.viewManager.time, self, self.drawManager.erasing, labels, number)
         self._history.append(ls)        
-        self.setLabels(result[0:2], axis, self.sliceSelectors[axis].value(), labels, self.drawManager.erasing)
+        self.setLabels(result[0:2], axis, self.imageScenes[axis].hud.sliceSelector.value(), labels, self.drawManager.erasing)
         
     def getPendingLabels(self):
         temp = self.pendingLabels
