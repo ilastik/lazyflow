@@ -28,12 +28,8 @@
 #    or implied, of their employers.
 
 from PyQt4.QtCore import QPoint, QPointF, QRectF, QTimer, pyqtSignal, Qt
-from PyQt4.QtGui import QColor, QGraphicsView, QGraphicsItem, QPixmap, QImage, \
-                        QVBoxLayout, QHBoxLayout, QPushButton, QIcon, QBrush, \
-                        QPainter, QGraphicsPixmapItem, QPainterPath, \
-                        QGraphicsPathItem, QCursor, QApplication, \
-                        QGraphicsScene, QPen
 from PyQt4.QtOpenGL import QGLWidget, QGLFramebufferObject
+from PyQt4.QtGui import *
 
 from OpenGL.GL import *
 from OpenGL.GLU import *
@@ -50,6 +46,50 @@ from helper import DrawManager
 from imagescenerenderer import ImageSceneRenderer
 from helper import InteractionLogger, ViewManager, \
                                             DrawManager
+
+
+class Hud(QFrame):
+    def __init__( self, minimum = 0, maximum = 100, coordinateLabel = "X:", parent = None ):
+            super(Hud, self).__init__( parent=parent )
+
+            # init properties
+            self._minimum = minimum
+            self._maximum = maximum
+
+            # configure self
+            self.setStyleSheet("QFrame {background-color: white; color: black; border-radius: 4px;} ")
+            self.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
+
+            self.setLayout(QHBoxLayout())
+            self.layout().setContentsMargins(3,1,3,1)
+
+            # zoom button
+            self.zoomButton = QPushButton()
+            self.zoomButton.setIcon(QIcon(QPixmap(ilastikIcons.AddSelx22)))
+            self.zoomButton.setStyleSheet("background-color: white; border: 1px solid black; border-radius: 6px;")
+            self.zoomButton.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
+            self.layout().addWidget(self.zoomButton)
+            self.layout().addSpacing(5)
+
+            # dimension label
+            self.dimLabel = QLabel(coordinateLabel)
+            font = self.dimLabel.font()
+            font.setBold(True)
+            self.dimLabel.setFont(font)
+            self.layout().addWidget(self.dimLabel)
+
+            # coordinate selection
+            self.coordSel = QSpinBox()
+            self.coordSel.setButtonSymbols(QAbstractSpinBox.NoButtons)
+            self.coordSel.setAlignment(Qt.AlignRight)
+            self.coordSel.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)            
+            self.coordSel.setRange(self._minimum, self._maximum)
+            self.layout().addWidget(self.coordSel)
+
+            # coordinate label
+            self.coordLabel = QLabel("of " + str(self._maximum))
+            self.layout().addWidget(self.coordLabel)
+
 
 #*******************************************************************************
 # I m a g e S c e n e                                                          *
