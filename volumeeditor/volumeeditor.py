@@ -55,7 +55,7 @@ from imagescene import ImageScene
 from ilastikdeps.gui.view3d import OverviewScene
 from helper import ImageWithProperties, \
 DummyLabelWidget, DummyOverlayListWidget, ImageSaveThread, HistoryManager, \
-DrawManager, ViewManager, InteractionLogger
+DrawManager, ViewManager, InteractionLogger, LabelState, VolumeUpdate
 
 #*******************************************************************************
 # V o l u m e E d i t o r                                                      *
@@ -64,6 +64,7 @@ DrawManager, ViewManager, InteractionLogger
 class VolumeEditor(QWidget):
     changedSlice = pyqtSignal(int,int)
     onOverlaySelected = pyqtSignal(int)
+    newLabelsPending = pyqtSignal()
     
     @property
     def useOpenGL(self):
@@ -302,9 +303,9 @@ class VolumeEditor(QWidget):
 
 
     def onLabelSelected(self):
-        print "onLabelSelected"
+        print "xxxxxxxxxxxxxxxxxxxxxx onLabelSelected"
         item = self.labelWidget.currentItem()
-        if not None:
+        if item is not None:
             for imageScene in self.imageScenes:
                 imageScene.drawingEnabled = True
                 imageScene.crossHairCursor.setColor(item.color)
@@ -372,8 +373,6 @@ class VolumeEditor(QWidget):
         self.save_thread.wait()
         QApplication.processEvents()
         print "finished saving thread"
-
-
 
     def setLabelWidget(self,  widget):
         """
@@ -645,7 +644,8 @@ class VolumeEditor(QWidget):
         self.labelWidget.ensureLabelOverlayVisible()
         
     def endDraw(self, axis, pos):
-        result = self.drawManager.endDraw(pos)
+        result = self.drawManager.endDrawing(pos)
+        print "endDraw: result =", result
         image = result[2]
         ndarr = qimage2ndarray.rgb_view(image)
         labels = ndarr[:,:,0]

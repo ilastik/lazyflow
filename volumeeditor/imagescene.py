@@ -47,6 +47,9 @@ from imagescenerenderer import ImageSceneRenderer
 from helper import InteractionLogger, ViewManager, \
                                             DrawManager
 
+#*******************************************************************************
+# H u d                                                                        *
+#*******************************************************************************
 
 class Hud(QFrame):
     def __init__( self, minimum = 0, maximum = 100, coordinateLabel = "X:", parent = None ):
@@ -451,6 +454,7 @@ class ImageScene(QGraphicsView):
                 self.deltaPan = QPointF(0, 0)
 
         if not self.drawingEnabled:
+            print "ImageScene.mousePressEvent: drawing is not enabled"
             return
         
         if event.buttons() == Qt.LeftButton:

@@ -27,8 +27,9 @@
 #    authors and should not be interpreted as representing official policies, either expressed
 #    or implied, of their employers.
 
-from PyQt4.QtCore import pyqtSignal, QObject, QThread, Qt, QSize
-from PyQt4.QtGui  import QWidget, QPen, QGraphicsScene, QColor
+from PyQt4.QtCore import pyqtSignal, QObject, QThread, Qt, QSize, QPointF, QRectF
+from PyQt4.QtGui  import QWidget, QPen, QGraphicsScene, QColor, QGraphicsLineItem, \
+                         QImage, QPainter
 
 from ilastik.core.volume import DataAccessor
 
@@ -467,7 +468,7 @@ class DrawManager(QObject):
         self.penVis.setColor(color)
         self.emit.brushColorChanged(self.color)
         
-    def beginDraw(self, pos, shape):
+    def beginDrawing(self, pos, shape):
         self.shape = shape
         self.initBoundingBox()
         self.scene.clear()
@@ -480,7 +481,7 @@ class DrawManager(QObject):
         line = self.moveTo(pos)
         return line
 
-    def endDraw(self, pos):
+    def endDrawing(self, pos):
         self.moveTo(pos)
         self.growBoundingBox()
 
@@ -496,8 +497,8 @@ class DrawManager(QObject):
         return (oldLeft, oldTop, tempi) #TODO: hackish, probably return a class ??
 
     def dumpDraw(self, pos):
-        res = self.endDraw(pos)
-        self.beginDraw(pos, self.shape)
+        res = self.endDrawing(pos)
+        self.beginDrawing(pos, self.shape)
         return res
 
     def moveTo(self, pos):    
