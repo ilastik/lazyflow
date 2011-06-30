@@ -27,4 +27,4 @@
 #    authors and should not be interpreted as representing official policies, either expressed
 #    or implied, of their employers.
 
-from ilastik.gui.volumeeditor.volumeeditor import VolumeEditor, DummyLabelWidget, DummyOverlayListWidget
+from volumeeditor import VolumeEditor, DummyLabelWidget, DummyOverlayListWidget

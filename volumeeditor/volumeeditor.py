@@ -46,13 +46,13 @@ from PyQt4.QtGui import QApplication, QWidget, QPixmapCache, QLabel, QSpinBox, \
 import time
 import numpy, qimage2ndarray
 
-from ilastik.core.volume import DataAccessor
-from ilastik.gui.shortcutmanager import shortcutManager
-from ilastik.gui.quadsplitter import QuadView
-import ilastik.gui.exportDialog as exportDialog
+from ilastikdeps.core.volume import DataAccessor
+from ilastikdeps.gui.shortcutmanager import shortcutManager
+from ilastikdeps.gui.quadsplitter import QuadView
+import ilastikdeps.gui.exportDialog as exportDialog
       
 from imagescene import ImageScene
-from ilastik.gui.view3d import OverviewScene
+from ilastikdeps.gui.view3d import OverviewScene
 from helper import ImageWithProperties, \
 DummyLabelWidget, DummyOverlayListWidget, ImageSaveThread, HistoryManager, \
 DrawManager, ViewManager, InteractionLogger
