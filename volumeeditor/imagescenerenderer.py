@@ -105,7 +105,7 @@ class ImageSceneRenderThread(QThread):
         
         print "initialized ImageSceneRenderThread"
     
-    def convertImageUInt8(self, itemdata):
+    def convertImageUInt8(self, itemdata, itemcolorTable):
         if itemdata.dtype == numpy.uint8 or itemcolorTable == None:
             return itemdata
         if itemcolorTable is None and itemdata.dtype == numpy.uint16:
@@ -142,7 +142,7 @@ class ImageSceneRenderThread(QThread):
         return color
 
     def callMyFunction(self, itemdata, origitem, origitemColor, itemcolorTable):
-        uint8image = self.convertImageUInt8(itemdata)
+        uint8image = self.convertImageUInt8(itemdata, itemcolorTable)
 
         if itemcolorTable != None and self.isRGB(uint8image):
             return qimage2ndarray.array2qimage(uint8image.swapaxes(0,1), normalize=False)
