@@ -748,8 +748,6 @@ class CrossHairCursor(QGraphicsItem) :
         elif self.mode == self.modeYPosition:
             painter.drawLine(QPointF(0, self.y), QPointF(self.width, self.y))
         else:
-            painter.drawLine(QPointF(0.0,self.y), QPointF(self.x -0.5*self.brushSize, self.y))
-
             painter.drawLine(QPointF(self.x -0.5*self.brushSize -3 ,self.y), QPointF(self.x -0.5*self.brushSize, self.y))
             painter.drawLine(QPointF(self.x+0.5*self.brushSize, self.y), QPointF(self.x+0.5*self.brushSize +3, self.y))
 
