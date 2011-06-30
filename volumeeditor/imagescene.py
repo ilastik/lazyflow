@@ -747,12 +747,14 @@ class CrossHairCursor(QGraphicsItem) :
             painter.drawLine(QPointF(self.x+0.5, 0), QPointF(self.x+0.5, self.height))
         elif self.mode == self.modeYPosition:
             painter.drawLine(QPointF(0, self.y), QPointF(self.width, self.y))
-        else:            
-            painter.drawLine(QPointF(0.0,self.y), QPointF(self.x -0.5*self.brushSize, self.y))
-            painter.drawLine(QPointF(self.x+0.5*self.brushSize, self.y), QPointF(self.width, self.y))
+        else:
+            painter.drawLine(QtCore.QPointF(0.0,self.y), QtCore.QPointF(self.x -0.5*self.brushSize, self.y))
 
-            painter.drawLine(QPointF(self.x, 0), QPointF(self.x, self.y-0.5*self.brushSize))
-            painter.drawLine(QPointF(self.x, self.y+0.5*self.brushSize), QPointF(self.x, self.height))
+            painter.drawLine(QtCore.QPointF(self.x -0.5*self.brushSize -3 ,self.y), QtCore.QPointF(self.x -0.5*self.brushSize, self.y))
+            painter.drawLine(QtCore.QPointF(self.x+0.5*self.brushSize, self.y), QtCore.QPointF(self.x+0.5*self.brushSize +3, self.y))
+
+            painter.drawLine(QtCore.QPointF(self.x, self.y-0.5*self.brushSize - 3), QtCore.QPointF(self.x, self.y-0.5*self.brushSize))
+            painter.drawLine(QtCore.QPointF(self.x, self.y+0.5*self.brushSize), QtCore.QPointF(self.x, self.y+0.5*self.brushSize + 3))
 
             painter.setPen(self.penSolid)
             painter.drawEllipse(QPointF(self.x, self.y), 0.5*self.brushSize, 0.5*self.brushSize)
