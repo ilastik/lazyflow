@@ -27,10 +27,6 @@
 #    authors and should not be interpreted as representing official policies, either expressed
 #    or implied, of their employers.
 
-"""
-Dataset Editor Dialog based on PyQt4
-"""
-
 # TODO
 # TODO
 # TODO
@@ -67,6 +63,9 @@ class VolumeEditor(QWidget):
     changedSlice = pyqtSignal(int,int)
     onOverlaySelected = pyqtSignal(int)
     newLabelsPending = pyqtSignal()
+    
+    zoomInFactor  = 1.1
+    zoomOutFactor = 0.9
     
     @property
     def useOpenGL(self):
@@ -252,8 +251,7 @@ class VolumeEditor(QWidget):
             self.changeSliceY(numpy.floor((self._shape[2] - 1) / 2))
             self.changeSliceZ(numpy.floor((self._shape[3] - 1) / 2))
         QTimer.singleShot(0, initialPosition)
-        
-            
+              
     def _shortcutHelper(self, keySequence, group, description, parent, function, context = None, enabled = None):
         shortcut = QShortcut(QKeySequence(keySequence), parent, member=function, ambiguousMember=function)
         if context != None:
@@ -335,6 +333,9 @@ class VolumeEditor(QWidget):
         
     #Override: QWidget
     def focusNextPrevChild(self, forward = True):
+        """this method is overwritten from QWidget
+           so that the user can cycle through the three slice views
+           using TAB (without giving focus to other widgets in-between)"""
         if forward is True:
             self.focusAxis += 1
             if self.focusAxis > 2:
@@ -447,9 +448,9 @@ class VolumeEditor(QWidget):
         
         if k_ctrl is True:        
             if event.delta() > 0:
-                scaleFactor = 1.1
+                scaleFactor = VolumeEditor.zoomInFactor
             else:
-                scaleFactor = 0.9
+                scaleFactor = VolumeEditor.zoomOutFactor
             self.imageScenes[0].doScale(scaleFactor)
             self.imageScenes[1].doScale(scaleFactor)
             self.imageScenes[2].doScale(scaleFactor)
