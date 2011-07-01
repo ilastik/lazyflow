@@ -488,7 +488,7 @@ class DrawManager(QObject):
     def brushBigger(self):
         b = self.brushSize
         if self.brushSize < self.maxBrushSize:
-            self.drawManager.setBrushSize(b+1)
+            self.setBrushSize(b+1)
         
     def setBrushColor(self, color):
         self.drawColor = color
