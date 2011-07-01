@@ -127,7 +127,6 @@ class VolumeEditor(QWidget):
             self.grid.addWidget(2, self.imageScenes[1])
             self.grid.addWidget(3, self.overview)
             for i in xrange(3):
-                self.imageScenes[i].toggleMaximized.connect(self.grid.toggleMaximized)
                 self.imageScenes[i].drawing.connect(self.updateLabels)
                 self.imageScenes[i].customContextMenuRequested.connect(self.onContext)
         

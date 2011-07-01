@@ -71,14 +71,6 @@ class Hud(QFrame):
         self.setLayout(QHBoxLayout())
         self.layout().setContentsMargins(3,1,3,1)
 
-        # zoom button
-        self.zoomButton = QPushButton()
-        self.zoomButton.setIcon(QIcon(QPixmap(ilastikIcons.AddSelx22)))
-        self.zoomButton.setStyleSheet("background-color: white; border: 1px solid black; border-radius: 6px;")
-        self.zoomButton.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
-        self.layout().addWidget(self.zoomButton)
-        self.layout().addSpacing(5)
-
         # dimension label
         self.dimLabel = QLabel(coordinateLabel)
         font = self.dimLabel.font()
@@ -110,7 +102,6 @@ class ImageScene(QGraphicsView):
     endDraw            = pyqtSignal(int, QPointF)
     mouseMoved         = pyqtSignal(int, int, int, bool)
     mouseDoubleClicked = pyqtSignal(int, int, int)
-    toggleMaximized    = pyqtSignal(int)
     
     axisColor = [QColor(255,0,0,255), QColor(0,255,0,255), QColor(0,0,255,255)]
         
@@ -170,7 +161,6 @@ class ImageScene(QGraphicsView):
 
             axisLabels = ["X:", "Y:", "Z:"]
             self.hud = Hud(0, self.sliceExtent - 1, axisLabels[self.axis])
-            self.hud.zoomButton.clicked.connect(self.imageSceneFullScreen)
 
             self.layout().addWidget(self.hud)
             self.layout().addStretch()
@@ -291,9 +281,6 @@ class ImageScene(QGraphicsView):
         self.border.setPen(QPen(Qt.NoPen))
         self.border.setZValue(200)
         self.scene.addItem(self.border)
-
-    def imageSceneFullScreen(self):
-        self.toggleMaximized.emit(self.axis)
 
     def setSliceIntersection(self, state):
         self.sliceIntersectionMarker.setVisibility(state)
