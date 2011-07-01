@@ -94,12 +94,10 @@ class OverlayItemReference(object):
         self.overlayItem._data[args] = data
     
     def getColorTab(self):
-        if self.overlayItem.linkColorTable is False:
+        if not self.overlayItem.linkColorTable:
             return self.colorTable
-        else:
-            return self.overlayItem.getColorTab()
+        return self.overlayItem.getColorTab()
         
-      
     def getOverlaySlice(self, num, axis, time = 0, channel = 0):
         return OverlaySlice(self.overlayItem._data.getSlice(num,axis,time,self.channel), self.color, self.alpha, self.getColorTab(), self.overlayItem.min, self.overlayItem.max, self.autoAlphaChannel)       
         
@@ -148,15 +146,6 @@ class OverlayItemReference(object):
             self.channel = channel
         else:
             raise Exception
-
-#*******************************************************************************
-# O v e r l a y R e f e r e n c e M g r                                        *
-#*******************************************************************************
-
-class OverlayReferenceMgr(list):
-    def __init__(self):
-        list.__init__(self)
-    
 
 #*******************************************************************************
 # O v e r l a y I t e m                                                        *
@@ -337,101 +326,3 @@ class OverlayItem(object):
             colorlist.append(color)
             
         return colorlist    
-
-
-#*******************************************************************************
-# O v e r l a y M g r                                                          *
-#*******************************************************************************
-
-class OverlayMgr():
-    """
-    Keeps track of the different overlays and is instanced by each DataItem
-    supports the python dictionary interface for easy adding/updating of OverlayItems:
-    
-        mgr['GroupName1/SubgroupName/Itemname'] =  OverlayItem
-
-    OverlayItems that have the autoAdd Property set to True are immediately added to the currently
-    visible overlayWidget
-    """
-    def __init__(self,  dataItem, ilastik = None):
-        self._dict = {}
-        self.ilastik = ilastik
-        self.dataItem = dataItem
-        self.currentModuleName = ""
-        
-    def __getattr__(self,name):
-        if name == "dataMgr":
-            return self.dataItem.dataMgr
-        elif name == "dataItemImage":
-            return self.dataItem
-    
-    def remove(self,  key):
-        it = self._dict.pop(key,  None)
-        if it != None:
-            if self.ilastik != None:
-                self.ilastik.labelWidget.overlayWidget.removeOverlay(key)
-            it.remove()
-            
-    def __setitem__(self,  key,  value):
-        itemNew = False
-        value.overlayMgr = self
-        if issubclass(value.__class__,  OverlayItem):
-            if not self._dict.has_key(key):
-                #set the name of the overlayItem to the last part of the key
-                value.name = key.split('/')[-1]
-                itemNew = True
-                self._dict.__setitem__( key,  value)
-                res = value
-            else:
-                it = self._dict[key]
-                it.name = value.name = key.split('/')[-1]
-                it._data = value._data
-                it.color = value.color
-                res = it
-            #update the key
-            res.key = key
-        if itemNew:
-            self._addReference(res)
-        return res
-    
-    def changeKey(self, oldKey, newKey):
-        o = self[oldKey]
-        if o is not None:
-            if self[newKey] is None:
-                print oldKey, newKey
-                o.key = newKey
-                o.name = newKey.split('/')[-1]
-                self._dict.pop(oldKey)
-                self._dict[newKey] = o
-                if self.ilastik is not None:
-                    self.ilastik.labelWidget.overlayWidget.changeOverlayName(o, o.name)
-                    print o.name
-                return True
-        return False
-            
-    
-    def keys(self):
-        return self._dict.keys()
-    
-    def values(self):
-        return self._dict.values()
-    
-    def _addReference(self,  value):
-        print "Adding new overlay", value.key
-        if value.autoAdd is True and self.dataMgr is not None:
-            if self.ilastik != None and value.dataItemImage == self.ilastik._activeImage:
-                #print "Adding to active image"
-                self.ilastik.labelWidget.overlayWidget.addOverlayRef(value.getRef())
-            else:
-                #print "Current Module:", self.dataMgr._currentModuleName
-                #print "adding to non active image", value.dataItemImage
-                if value.dataItemImage.module[self.dataMgr._currentModuleName] is not None:
-                    value.dataItemImage.module[self.dataMgr._currentModuleName].addOverlayRef(value.getRef())
-            
-            
-    def __getitem__(self,  key):
-        #if the requested key does not exist, construct a group corresponding to the key
-        if self._dict.has_key(key):
-            return self._dict.__getitem__( key)
-        else:
-            return None

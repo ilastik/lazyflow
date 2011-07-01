@@ -27,7 +27,8 @@
 #    authors and should not be interpreted as representing official policies, either expressed
 #    or implied, of their employers.
 
-from PyQt4.QtCore import QPoint, QPointF, QRectF, QTimer, pyqtSignal, Qt
+from PyQt4.QtCore import QPoint, QPointF, QRectF, QTimer, pyqtSignal, Qt, \
+                         QSize
 from PyQt4.QtOpenGL import QGLWidget, QGLFramebufferObject
 from PyQt4.QtGui import *
 
@@ -109,7 +110,7 @@ class ImageScene(QGraphicsView):
     
     axisColor = [QColor(255,0,0,255), QColor(0,255,0,255), QColor(0,0,255,255)]
         
-    def __init__(self, imShape, axis, viewManager, drawManager, sharedOpenGLWidget = None):
+    def __init__(self, axis, viewManager, drawManager, sharedOpenGLWidget = None):
         """
         imShape: 3D shape of the block that this slice view displays.
                  first two entries denote the x,y extent of one slice,
@@ -117,19 +118,17 @@ class ImageScene(QGraphicsView):
         """
         QGraphicsView.__init__(self)
         
-        assert len(imShape) == 3
-        self.imShape = imShape
-        
         self.drawManager = drawManager
         self.viewManager = viewManager
         
         self.tempImageItems = []
         self.axis = axis
         self.sliceNumber = 0
-        self.sliceExtent = imShape[2]
+        self.sliceExtent = viewManager.imageExtent(axis)
         self.isDrawing = False
         self.view = self
-        self.image = QImage(imShape[0], imShape[1], QImage.Format_RGB888) #Format_ARGB32
+        print "ImageScene.__init__:",viewManager.imageShape(axis)
+        self.image = QImage(QSize(*viewManager.imageShape(axis)), QImage.Format_ARGB32)
         self.border = None
         self.allBorder = None
         self.factor = 1.0
@@ -177,8 +176,8 @@ class ImageScene(QGraphicsView):
             glTexImage2D(GL_TEXTURE_2D, 0,GL_RGB, self.scene.image.width(), self.scene.image.height(), 0, GL_RGB, GL_UNSIGNED_BYTE, ctypes.c_void_p(self.scene.image.bits().__int__()))
             
         self.view.setScene(self.scene)
-        self.scene.setSceneRect(0,0, imShape[0],imShape[1])
-        self.view.setSceneRect(0,0, imShape[0],imShape[1])
+        self.scene.setSceneRect(0,0, *viewManager.imageShape(axis))
+        self.view.setSceneRect(0,0, *viewManager.imageShape(axis))
         self.scene.bgColor = QColor(Qt.white)
         if os.path.isfile('gui/backGroundBrush.png'):
             self.scene.bgBrush = QBrush(QImage('gui/backGroundBrush.png'))
@@ -188,16 +187,13 @@ class ImageScene(QGraphicsView):
         self.view.setRenderHint(QPainter.Antialiasing, False)
         #self.view.setRenderHint(QPainter.SmoothPixmapTransform, False)
 
-        self.patchAccessor = PatchAccessor(imShape[0],imShape[1],64)
+        self.patchAccessor = PatchAccessor(*viewManager.imageShape(axis),blockSize=64)
         print "PatchCount :", self.patchAccessor.patchCount
 
         self.imagePatches = range(self.patchAccessor.patchCount)
         for i, p in enumerate(self.imagePatches):
             b = self.patchAccessor.getPatchBounds(i, 0)
             self.imagePatches[i] = QImage(b[1]-b[0], b[3] -b[2], QImage.Format_RGB888)
-
-        self.pixmap = QPixmap.fromImage(self.image)
-        self.imageItem = QGraphicsPixmapItem(self.pixmap)
         
         #Unfortunately, setting the style like this make the scroll bars look
         #really crappy...
@@ -219,7 +215,7 @@ class ImageScene(QGraphicsView):
         brush.setStyle( Qt.DiagCrossPattern )
         allBorderPath = QPainterPath()
         allBorderPath.setFillRule(Qt.WindingFill)
-        allBorderPath.addRect(0, 0, imShape[0], imShape[1])
+        allBorderPath.addRect(0, 0, *viewManager.imageShape(axis))
         self.allBorder = QGraphicsPathItem(allBorderPath)
         self.allBorder.setBrush(brush)
         self.allBorder.setPen(QPen(Qt.NoPen))
@@ -269,15 +265,18 @@ class ImageScene(QGraphicsView):
         update the border margin indicator (left, right, top, bottom)
         to reflect the new given margin
         """
+        
+        imShape = self.viewManager.imageShape(self.axis)
+        
         self.margin = margin
         if self.border:
             self.scene.removeItem(self.border)
         borderPath = QPainterPath()
         borderPath.setFillRule(Qt.WindingFill)
-        borderPath.addRect(0,0, margin, self.imShape[1])
-        borderPath.addRect(0,0, self.imShape[0], margin)
-        borderPath.addRect(self.imShape[0]-margin,0, margin, self.imShape[1])
-        borderPath.addRect(0,self.imShape[1]-margin, self.imShape[0], margin)
+        borderPath.addRect(0,0, margin, imShape[1])
+        borderPath.addRect(0,0, imShape[0], margin)
+        borderPath.addRect(imShape[0]-margin,0, margin, imShape[1])
+        borderPath.addRect(0,imShape[1]-margin, imShape[0], margin)
         self.border = QGraphicsPathItem(borderPath)
         brush = QBrush(QColor(0,0,255))
         brush.setStyle( Qt.Dense7Pattern )
@@ -322,8 +321,6 @@ class ImageScene(QGraphicsView):
         self.drawTimer.stop()
         del self.drawTimer
         del self.ticker
-        
-        print "finished thread"
 
     def displayNewSlice(self, image, overlays = (), fastPreview = True, normalizeData = False):
         #if, in slicing direction, we are within the margin of the image border
@@ -332,9 +329,11 @@ class ImageScene(QGraphicsView):
                      self.sliceExtent - self.sliceNumber < self.margin) \
                     and self.sliceExtent > 1
         self.allBorder.setVisible(allBorder)
-
+        print "ImageScene:displayNewSlice", image.__class__, image
+        print overlays, type(overlays)
+        for o in overlays:
+            print "    ",o
         self.imageSceneRenderer.renderImage(image, overlays)
-
         
     def saveSlice(self, filename):
         print "Saving in ", filename, "slice #", self.sliceNumber, "axis", self.axis
@@ -362,10 +361,12 @@ class ImageScene(QGraphicsView):
         self.drawing.emit(self.axis, self.mousePos)
     
     def beginDrawing(self, pos):
+        imShape = self.viewManager.imageShape(self.axis)
+        
         InteractionLogger.log("%f: beginDrawing`()" % (time.clock()))   
         self.mousePos = pos
         self.isDrawing  = True
-        line = self.drawManager.beginDrawing(pos, self.imShape)
+        line = self.drawManager.beginDrawing(pos, imShape)
         line.setZValue(99)
         self.tempImageItems.append(line)
         self.scene.addItem(line)
@@ -840,20 +841,22 @@ if __name__ == '__main__':
     #make the program quit on Ctrl+C
     import signal
     signal.signal(signal.SIGINT, signal.SIG_DFL)
+    from testing import testVolume, AnnotatedImageData
         
     class ImageSceneTest(QApplication):    
         def __init__(self, args):
             app = QApplication.__init__(self, args)
 
-            self.data = (numpy.random.rand(128,256,512)*255).astype(numpy.uint8)
-            axis = 0
+            self.data = testVolume(40)
+            axis = 1
             
             viewManager = ViewManager(self.data)
             drawManager = DrawManager()
             
-            self.imageScene = ImageScene(self.data.shape, axis, viewManager, drawManager)
+            self.imageScene = ImageScene(axis, viewManager, drawManager)
+            self.imageScene.drawingEnabled = True
             
-            self.testChangeSlice(64,axis)
+            self.testChangeSlice(20, axis)
         
             self.imageScene.sliceChanged.connect(self.testChangeSlice)
             
@@ -861,9 +864,11 @@ if __name__ == '__main__':
             
 
         def testChangeSlice(self, num, axis):
-            self.image = OverlaySlice(self.data[:,:,num], color = QColor("black"), alpha = 1, colorTable = None, min = None, max = None, autoAlphaChannel = True)
-            self.overlays = [self.image]
+            s = 3*[slice(None,None,None)]
+            s[axis] = num
             
+            self.image = OverlaySlice(self.data[s], color = QColor("black"), alpha = 1, colorTable = None, min = None, max = None, autoAlphaChannel = True)
+            self.overlays = [self.image]
             
             self.imageScene.displayNewSlice(self.image, self.overlays, fastPreview = True, normalizeData = False)
             print "changeSlice num=%d, axis=%d" % (num, axis)

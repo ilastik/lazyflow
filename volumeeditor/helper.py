@@ -29,7 +29,7 @@
 
 from PyQt4.QtCore import pyqtSignal, QObject, QThread, Qt, QSize, QPointF, QRectF
 from PyQt4.QtGui  import QWidget, QPen, QGraphicsScene, QColor, QGraphicsLineItem, \
-                         QImage, QPainter
+                         QImage, QPainter, QGraphicsLineItem
 
 from ilastik.core.volume import DataAccessor
 
@@ -38,6 +38,13 @@ import threading
 import time
 
 from collections import deque
+
+def is2D(shape5D):
+    assert(len(shape5D) == 5)
+    return shape5D[1] == 1 
+def is3D(shape5D):
+    assert(len(shape5D) == 5)
+    return shape5D[1] > 1
 
 #*******************************************************************************
 # I m a g e W i t h P r o p e r t i e s                                        *
@@ -92,6 +99,20 @@ class ViewManager(QObject):
         self._channel = channel
         self._beginStackIndex = 0
         self._endStackIndex   = 1
+    
+    def imageShape(self, axis):
+        """returns the 2D shape of slices perpendicular to axis"""
+        shape = self._image.shape
+        if len(shape) == 2:
+            return shape
+        else:
+            shape = list(shape)
+            del shape[axis]
+            return numpy.asarray(shape)
+    
+    def imageExtent(self, axis):
+        """returns the 1D extent of the image along axis"""
+        return self._image.shape[axis]
         
     def setTime(self, time):
         if self._time != time:
@@ -101,6 +122,10 @@ class ViewManager(QObject):
     @property    
     def time(self):
         return self._time
+    
+    @property
+    def shape(self):
+        return self._image.shape
         
     def setSlice(self, num, axis):
         if num < 0 or num >= self._image.shape[axis]:

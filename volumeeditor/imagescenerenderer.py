@@ -165,6 +165,7 @@ class ImageSceneRenderThread(QThread):
             tempdat[:,:,2] = origitemColor.blueF()*itemdata[:]
             return qimage2ndarray.array2qimage(tempdat.swapaxes(0,1), normalize)
         else: #autoAlphaChannel == True
+            print itemdata.shape
             image1 = qimage2ndarray.array2qimage(itemdata.swapaxes(0,1), normalize)
             image0 = QImage(itemdata.shape[0],itemdata.shape[1],QImage.Format_ARGB32)
             image0.fill(origitemColor.rgba())

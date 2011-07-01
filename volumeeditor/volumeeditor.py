@@ -38,7 +38,7 @@ Dataset Editor Dialog based on PyQt4
 #    1f810747c21380eda916c2c5b7b5d1893f92663e
 #    e65f5bad2cd9fdaefbe7ceaafa0cce0e071b56e4
 
-from PyQt4.QtCore import Qt, pyqtSignal
+from PyQt4.QtCore import Qt, pyqtSignal, QTimer
 from PyQt4.QtGui import QApplication, QWidget, QPixmapCache, QLabel, QSpinBox, \
                         QCheckBox, QShortcut, QKeySequence, QSplitter, \
                         QVBoxLayout, QHBoxLayout, QPushButton, QToolButton
@@ -55,7 +55,8 @@ from imagescene import ImageScene
 from ilastikdeps.gui.view3d import OverviewScene
 from helper import ImageWithProperties, \
 DummyLabelWidget, DummyOverlayListWidget, ImageSaveThread, HistoryManager, \
-DrawManager, ViewManager, InteractionLogger, LabelState, VolumeUpdate
+DrawManager, ViewManager, InteractionLogger, LabelState, VolumeUpdate, \
+is3D, is2D
 
 #*******************************************************************************
 # V o l u m e E d i t o r                                                      *
@@ -70,16 +71,12 @@ class VolumeEditor(QWidget):
     def useOpenGL(self):
         return self.sharedOpenglWidget is not None
     
-    def __init__(self, image, parent,  name="", font=None,
-                 readonly=False, size=(400, 300), sharedOpenglWidget = None):
+    def __init__(self, shape, parent,  name="", font=None,
+                 readonly=False, size=(400, 300), sharedOpenglWidget = None, viewManager = None):
         QWidget.__init__(self, parent)
         
-        if issubclass(image.__class__, ImageWithProperties):
-            self.image = image
-        elif issubclass(image.__class__, DataAccessor):
-            self.image = ImageWithProperties(image)
-        else:
-            self.image = ImageWithProperties(DataAccessor(image))
+        assert(len(shape) == 5)
+        self._shape = shape
             
         self.ilastik = parent   # FIXME: dependency cycle
         self.name = name
@@ -108,23 +105,23 @@ class VolumeEditor(QWidget):
         self.save_thread = ImageSaveThread(self)
         self._history = HistoryManager(self)
         self.drawManager = DrawManager()
-        self.viewManager = ViewManager(image)
+        self.viewManager = viewManager
 
         self.pendingLabels = []
 
 
         self.imageScenes = []
-        self.imageScenes.append(ImageScene((self.image.shape[2], self.image.shape[3], self.image.shape[1]), 0, self.viewManager, self.drawManager, self.sharedOpenGLWidget))
+        self.imageScenes.append(ImageScene(0, self.viewManager, self.drawManager, self.sharedOpenGLWidget))
         
-        self.overview = OverviewScene(self, self.image.shape[1:4])
+        self.overview = OverviewScene(self, self._shape[1:4])
         
         self.overview.changedSlice.connect(self.changeSlice)
         self.changedSlice.connect(self.overview.ChangeSlice)
 
-        if self.image.is3D():
+        if is3D(self._shape):
             # 3D image          
-            self.imageScenes.append(ImageScene((self.image.shape[1], self.image.shape[3], self.image.shape[2]), 1, self.viewManager, self.drawManager, self.sharedOpenGLWidget))
-            self.imageScenes.append(ImageScene((self.image.shape[1], self.image.shape[2], self.image.shape[3]), 2, self.viewManager, self.drawManager, self.sharedOpenGLWidget))
+            self.imageScenes.append(ImageScene(1, self.viewManager, self.drawManager, self.sharedOpenGLWidget))
+            self.imageScenes.append(ImageScene(2, self.viewManager, self.drawManager, self.sharedOpenGLWidget))
             self.grid = QuadView(self)
             self.grid.addWidget(0, self.imageScenes[2])
             self.grid.addWidget(1, self.imageScenes[0])
@@ -157,7 +154,7 @@ class VolumeEditor(QWidget):
         viewingLayout = QVBoxLayout()
         viewingLayout.setContentsMargins(10,2,0,2)
         viewingLayout.setSpacing(0)
-        if self.image.is3D():
+        if is3D(self._shape):
             viewingLayout.addWidget(self.grid)
             self.grid.setContentsMargins(0,0,10,0)
         else:
@@ -214,12 +211,13 @@ class VolumeEditor(QWidget):
         self.toolBoxLayout.addWidget(self.channelSpinLabel)
         self.toolBoxLayout.addLayout(channelLayout)
         
-        if self.image.shape[-1] == 1 or self.image.rgb is True: #only show when needed
+        #TODO:
+        # == 3 checks for RGB image
+        if self._shape[-1] == 1 or self._shape[-1] == 3: #only show when needed
             self.channelSpin.setVisible(False)
             self.channelSpinLabel.setVisible(False)
             self.channelEditBtn.setVisible(False)
-        self.channelSpin.setRange(0,self.image.shape[-1] - 1)
-
+        self.channelSpin.setRange(0,self._shape[-1] - 1)
 
         #Overlay selector
         self.overlayWidget = DummyOverlayListWidget(self)
@@ -230,11 +228,6 @@ class VolumeEditor(QWidget):
         self.setAttribute(Qt.WA_DeleteOnClose)
         self.setWindowTitle(self.tr("Volume") + \
                             "%s" % (" - "+str(self.name) if str(self.name) else ""))
-
-        #start viewing in the center of the volume
-        self.changeSliceX(numpy.floor((self.image.shape[1] - 1) / 2))
-        self.changeSliceY(numpy.floor((self.image.shape[2] - 1) / 2))
-        self.changeSliceZ(numpy.floor((self.image.shape[3] - 1) / 2))
         
         # some auxiliary stuff
         self.__initShortcuts()
@@ -257,12 +250,13 @@ class VolumeEditor(QWidget):
         self.update()
         if self.grid:
             self.grid.update()
-            
-        # show overview    BUGBUG: must be notified when paintet
-        self.overview.display(1)
-        self.overview.display(2)
-        self.overview.display(3)
-            
+        
+        #start viewing in the center of the volume
+        def initialPosition():
+            self.changeSliceX(numpy.floor((self._shape[1] - 1) / 2))
+            self.changeSliceY(numpy.floor((self._shape[2] - 1) / 2))
+            self.changeSliceZ(numpy.floor((self._shape[3] - 1) / 2))
+        QTimer.singleShot(0, initialPosition)
         
             
     def __shortcutHelper(self, keySequence, group, description, parent, function, context = None, enabled = None):
@@ -325,10 +319,10 @@ class VolumeEditor(QWidget):
 
     def on_saveAsImage(self):
         sliceOffsetCheck = False
-        if self.image.shape[1]>1:
+        if self._shape[1]>1:
             #stack z-view is stored in imageScenes[2], for no apparent reason
             sliceOffsetCheck = True
-        timeOffsetCheck = self.image.shape[0]>1
+        timeOffsetCheck = self._shape[0]>1
         formatList = QImageWriter.supportedImageFormats()
         formatList = [x for x in formatList if x in ['png', 'tif']]
         expdlg = exportDialog.ExportDialog(formatList, timeOffsetCheck, sliceOffsetCheck, None, parent=self.ilastik)
@@ -403,13 +397,15 @@ class VolumeEditor(QWidget):
         self.toolBoxLayout.insertWidget( 1, self.overlayWidget)        
         self.ilastik.project.dataMgr[self.ilastik._activeImageNumber].overlayMgr.ilastik = self.ilastik
 
-    def setRgbMode(self, mode):
+    def setRgbMode(self, mode): 
         """
         change display mode of 3-channel images to either rgb, or 3-channels
         mode can bei either  True or False
         """
-        if self.image.shape[-1] == 3:
-            self.image.rgb = mode
+        if self._shape[-1] == 3:
+            print "setRgbMode: not implemented"
+            sys.exit(1)
+            #self.image.rgb = mode
             self.channelSpin.setVisible(not mode)
             self.channelSpinLabel.setVisible(not mode)
 
@@ -587,7 +583,7 @@ class VolumeEditor(QWidget):
     def setChannel(self, channel):
         if len(self.overlayWidget.overlays) > 0:
             ov = self.overlayWidget.getOverlayRef("Raw Data")
-            if ov.shape[-1] == self.image.shape[-1]:
+            if ov.shape[-1] == self._shape[-1]:
                 self.overlayWidget.getOverlayRef("Raw Data").channel = channel
             
         self.viewManager.setChannel(time)
@@ -738,8 +734,8 @@ if __name__ == "__main__":
     #make the program quit on Ctrl+C
     import signal
     signal.signal(signal.SIGINT, signal.SIG_DFL)
-    from ilastik.core.overlayMgr import OverlaySlice, OverlayItem
-    from ilastik.core.volume import DataAccessor
+    from ilastikdeps.core.overlayMgr import OverlaySlice, OverlayItem
+    from ilastikdeps.core.volume import DataAccessor
     
     def img(N):
         def meshgrid2(*arrs):
@@ -788,10 +784,8 @@ if __name__ == "__main__":
                 self.data = (numpy.random.rand(N,2*N, 10)*255).astype(numpy.uint8)
             elif testmode == "cuboid":
                 N = 100
-                self.data = (numpy.random.rand(N,2*N, 3*N)*255).astype(numpy.uint8)
-                image = img(N).astype(numpy.uint8)
-                print image.shape
-                self.data[0:N,0:N,0:N] = img(N)
+                from testing import testVolume
+                self.data = testVolume(N)
             else:
                 raise RuntimeError("Invalid testing mode")
             
@@ -799,7 +793,12 @@ if __name__ == "__main__":
             if useGL:
                 sharedOpenglWidget=QGLWidget()
             
-            self.dialog = VolumeEditor(self.data, None, sharedOpenglWidget=sharedOpenglWidget)
+            from helper import ViewManager
+            vm = ViewManager(self.data)
+            self.dialog = VolumeEditor((1,)+self.data.shape+(1,), None, sharedOpenglWidget=sharedOpenglWidget, viewManager=vm)
+            for i in range(3):
+                self.dialog.imageScenes[i].drawingEnabled = True
+            
             self.dataOverlay = OverlayItem(DataAccessor(self.data), alpha=1.0, color=Qt.black, colorTable=OverlayItem.createDefaultColorTable('GRAY', 256), autoVisible=True, autoAlphaChannel=False)
             self.dialog.overlayWidget.overlays = [self.dataOverlay.getRef()]
             
