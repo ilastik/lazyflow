@@ -61,7 +61,7 @@ class Hud(QFrame):
             self._maximum = maximum
 
             # configure self
-            self.setStyleSheet("QFrame {background-color: white; color: black; border-radius: 4px;} ")
+            self.setStyleSheet("QFrame {background-color: white; color: black; border-radius: 0px;}")
             self.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
 
             self.setLayout(QHBoxLayout())
@@ -160,6 +160,7 @@ class ImageScene(QGraphicsView):
 
         if self.sliceExtent > 1:
             self.setLayout(QVBoxLayout())
+            self.layout().setContentsMargins(0,0,0,0)
 
             axisLabels = ["X:", "Y:", "Z:"]
             self.hud = Hud(0, self.sliceExtent - 1, axisLabels[self.axis])
