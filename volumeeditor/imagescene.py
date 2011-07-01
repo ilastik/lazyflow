@@ -61,6 +61,10 @@ class Hud(QFrame):
         self._maximum = maximum
 
         # configure self
+        #
+        # a border-radius of >0px to make the Hud appear rounded
+        # does not work together with an QGLWidget, the corners just appear black
+        # instead of transparent
         self.setStyleSheet("QFrame {background-color: white; color: black; border-radius: 0px;}")
         self.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
 
