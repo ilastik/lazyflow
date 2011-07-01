@@ -64,6 +64,9 @@ class VolumeEditor(QWidget):
     onOverlaySelected = pyqtSignal(int)
     newLabelsPending = pyqtSignal()
     
+    zoomInFactor  = 1.1
+    zoomOutFactor = 0.9
+    
     @property
     def useOpenGL(self):
         return self.sharedOpenglWidget is not None
@@ -446,9 +449,9 @@ class VolumeEditor(QWidget):
         
         if k_ctrl is True:        
             if event.delta() > 0:
-                scaleFactor = 1.1
+                scaleFactor = VolumeEditor.zoomInFactor
             else:
-                scaleFactor = 0.9
+                scaleFactor = VolumeEditor.zoomOutFactor
             self.imageScenes[0].doScale(scaleFactor)
             self.imageScenes[1].doScale(scaleFactor)
             self.imageScenes[2].doScale(scaleFactor)
