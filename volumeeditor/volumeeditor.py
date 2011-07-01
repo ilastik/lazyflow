@@ -27,10 +27,6 @@
 #    authors and should not be interpreted as representing official policies, either expressed
 #    or implied, of their employers.
 
-"""
-Dataset Editor Dialog based on PyQt4
-"""
-
 # TODO
 # TODO
 # TODO
@@ -253,8 +249,7 @@ class VolumeEditor(QWidget):
             self.changeSliceY(numpy.floor((self._shape[2] - 1) / 2))
             self.changeSliceZ(numpy.floor((self._shape[3] - 1) / 2))
         QTimer.singleShot(0, initialPosition)
-        
-            
+              
     def _shortcutHelper(self, keySequence, group, description, parent, function, context = None, enabled = None):
         shortcut = QShortcut(QKeySequence(keySequence), parent, member=function, ambiguousMember=function)
         if context != None:
@@ -336,6 +331,9 @@ class VolumeEditor(QWidget):
         
     #Override: QWidget
     def focusNextPrevChild(self, forward = True):
+        """this method is overwritten from QWidget
+           so that the user can cycle through the three slice views
+           using TAB (without giving focus to other widgets in-between)"""
         if forward is True:
             self.focusAxis += 1
             if self.focusAxis > 2:
