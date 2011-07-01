@@ -27,7 +27,8 @@
 #    authors and should not be interpreted as representing official policies, either expressed
 #    or implied, of their employers.
 
-from PyQt4.QtCore import pyqtSignal, QObject, QThread, Qt, QSize, QPointF, QRectF
+from PyQt4.QtCore import pyqtSignal, QObject, QThread, Qt, QSize, QPointF, QRectF, \
+                         QRect, QPoint
 from PyQt4.QtGui  import QWidget, QPen, QGraphicsScene, QColor, QGraphicsLineItem, \
                          QImage, QPainter, QGraphicsLineItem
 
@@ -423,8 +424,10 @@ class DrawManager(QObject):
     def __init__(self):
         QObject.__init__(self)
         self.shape = None
+        self.bb    = QRect() #bounding box enclosing the drawing
         self.brushSize = self.defaultBrushSize
         self.drawColor = self.defaultColor
+
         self.penVis  = QPen(self.drawColor, self.brushSize, Qt.SolidLine, Qt.RoundCap, Qt.RoundJoin)
         self.penDraw = QPen(self.drawColor, self.brushSize, Qt.SolidLine, Qt.RoundCap, Qt.RoundJoin)
         self.pos = None
@@ -451,17 +454,11 @@ class DrawManager(QObject):
         cp.color = self.drawColor
         return cp
 
-    def initBoundingBox(self):
-        self.leftMost = self.shape[0]
-        self.rightMost = 0
-        self.topMost = self.shape[1]
-        self.bottomMost = 0
-
     def growBoundingBox(self):
-        self.leftMost = max(0,self.leftMost - self.brushSize -1)
-        self.topMost = max(0,self.topMost - self.brushSize -1 )
-        self.rightMost = min(self.shape[0],self.rightMost + self.brushSize + 1)
-        self.bottomMost = min(self.shape[1],self.bottomMost + self.brushSize + 1)
+        self.bb.setLeft(  max(0, self.bb.left()-self.brushSize-1))
+        self.bb.setTop(   max(0, self.bb.top()-self.brushSize-1 ))
+        self.bb.setRight( min(self.shape[0], self.bb.right()+self.brushSize+1))
+        self.bb.setBottom(min(self.shape[1], self.bb.bottom()+self.brushSize+1))
 
     def toggleErase(self):
         self.erasing = not(self.erasing)
@@ -500,7 +497,7 @@ class DrawManager(QObject):
         
     def beginDrawing(self, pos, shape):
         self.shape = shape
-        self.initBoundingBox()
+        self.bb = QRectF(0, 0, self.shape[0], self.shape[1])
         self.scene.clear()
         if self.erasing:
             self.penVis.setColor(self.erasingColor)
@@ -514,16 +511,13 @@ class DrawManager(QObject):
         self.moveTo(pos)
         self.growBoundingBox()
 
-        tempi = QImage(self.rightMost - self.leftMost, self.bottomMost - self.topMost, QImage.Format_ARGB32_Premultiplied) #TODO: format
+        tempi = QImage(QSize(self.bb.width(), self.bb.height()), QImage.Format_ARGB32_Premultiplied) #TODO: format
         tempi.fill(0)
         painter = QPainter(tempi)
         
-        self.scene.render(painter, QRectF(0,0, self.rightMost - self.leftMost, self.bottomMost - self.topMost),
-            QRectF(self.leftMost, self.topMost, self.rightMost - self.leftMost, self.bottomMost - self.topMost))
+        self.scene.render(painter, QRectF(QPointF(0,0), self.bb.size()), self.bb)
         
-        oldLeft = self.leftMost
-        oldTop = self.topMost
-        return (oldLeft, oldTop, tempi) #TODO: hackish, probably return a class ??
+        return (self.bb.left(), self.bb.top(), tempi) #TODO: hackish, probably return a class ??
 
     def dumpDraw(self, pos):
         res = self.endDrawing(pos)
@@ -542,14 +536,14 @@ class DrawManager(QObject):
         x = pos.x()
         y = pos.y()
         #update bounding Box :
-        if x > self.rightMost:
-            self.rightMost = x
-        if x < self.leftMost:
-            self.leftMost = x
-        if y > self.bottomMost:
-            self.bottomMost = y
-        if y < self.topMost:
-            self.topMost = y
+        if x > self.bb.right():
+            self.bb.setRight(x)
+        if x < self.bb.left():
+            self.bb.setLeft(x)
+        if y > self.bb.bottom():
+            self.bb.setBottom(y)
+        if y < self.bb.top():
+            self.bb.setTop(y)
         return lineVis
 
 #*******************************************************************************
