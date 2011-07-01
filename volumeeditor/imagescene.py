@@ -118,6 +118,8 @@ class ImageScene(QGraphicsView):
         """
         QGraphicsView.__init__(self)
         
+        assert(axis in [0,1,2])
+        
         self.drawManager = drawManager
         self.viewManager = viewManager
         
@@ -579,21 +581,27 @@ class ImageScene(QGraphicsView):
     #TODO oli
     def mouseMoveEvent(self,event):
         if self.dragMode == True:
+            #the mouse was moved because the user wants to change
+            #the viewport
             self.deltaPan = QPointF(event.pos() - self.lastPanPoint)
             self.panning()
             self.lastPanPoint = event.pos()
             return
         if self.ticker.isActive():
+            #the view is still scrolling
+            #do nothing until it comes to a complete stop
             return
-            
-        self.mousePos = mousePos = self.mousePos = self.mapToScene(event.pos())
+        
+        #the mouse was moved because the user is drawing
+        #or he wants to otherwise interact with the data!
+        self.mousePos = mousePos = self.mapToScene(event.pos())
         x = self.x = mousePos.x()
         y = self.y = mousePos.y()
 
-        valid = x > 0 and x < self.image.width() and y > 0 and y < self.image.height()# and len(self.volumeEditor.overlayWidget.overlays) > 0:                
+        valid = x > 0 and x < self.image.width() and y > 0 and y < self.image.height()                
         self.mouseMoved.emit(self.axis, x, y, valid)
                 
-        if self.isDrawing == True:
+        if self.isDrawing:
             line = self.drawManager.moveTo(mousePos)
             line.setZValue(99)
             self.tempImageItems.append(line)

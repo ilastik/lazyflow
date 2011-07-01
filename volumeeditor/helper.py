@@ -414,20 +414,26 @@ class DrawManager(QObject):
     brushSizeChanged = pyqtSignal(int)
     brushColorChanged = pyqtSignal(QColor)
     
+    minBrushSize = 1
+    maxBrushSize = 61
+    defaultBrushSize = 3
+    defaultColor     = Qt.white
+    erasingColor     = Qt.black
+    
     def __init__(self):
         QObject.__init__(self)
         self.shape = None
-        self.brushSize = 3
-        #self.initBoundingBox()
-        self.penVis = QPen(Qt.white, 3, Qt.SolidLine, Qt.RoundCap, Qt.RoundJoin)
-        self.penDraw = QPen(Qt.white, 3, Qt.SolidLine, Qt.RoundCap, Qt.RoundJoin)
-        self.penDraw.setColor(Qt.white)
+        self.brushSize = self.defaultBrushSize
+        self.drawColor = self.defaultColor
+        self.penVis  = QPen(self.drawColor, self.brushSize, Qt.SolidLine, Qt.RoundCap, Qt.RoundJoin)
+        self.penDraw = QPen(self.drawColor, self.brushSize, Qt.SolidLine, Qt.RoundCap, Qt.RoundJoin)
         self.pos = None
         self.erasing = False
-        self.lines = []
-        self.scene = QGraphicsScene()
         
-        self.color = Qt.white
+        #an empty scene, where we add all drawn line segments
+        #a QGraphicsLineItem, and which we can use to then
+        #render to an image
+        self.scene = QGraphicsScene()
 
     def copy(self):
         """
@@ -440,10 +446,9 @@ class DrawManager(QObject):
         cp.penDraw = self.penDraw
         cp.pos = self.pos
         cp.erasing = self.erasing
-        cp.lines = self.lines
         cp.scene = self.scene
         cp.imageScenes = self.imageScenes
-        cp.color = self.color
+        cp.color = self.drawColor
         return cp
 
     def initBoundingBox(self):
@@ -463,11 +468,11 @@ class DrawManager(QObject):
 
     def setErasing(self):
         self.erasing = True
-        self.brushColorChanged.emit(Qt.black)
+        self.brushColorChanged.emit(self.erasingColor)
     
     def disableErasing(self):
         self.erasing = False
-        self.brushColorChanged.emit(self.color())
+        self.brushColorChanged.emit(self.drawColor)
 
     def setBrushSize(self, size):      
         self.brushSize = size
@@ -480,29 +485,28 @@ class DrawManager(QObject):
     
     def brushSmaller(self):
         b = self.brushSize
-        if b > 1:
+        if b > self.minBrushSize:
             self.setBrushSize(b-1)
         
     def brushBigger(self):
         b = self.brushSize
-        if self.brushSize < 61:
+        if self.brushSize < self.maxBrushSize:
             self.drawManager.setBrushSize(b+1)
         
     def setBrushColor(self, color):
-        self.color = color
+        self.drawColor = color
         self.penVis.setColor(color)
-        self.emit.brushColorChanged(self.color)
+        self.emit.brushColorChanged(self.drawColor)
         
     def beginDrawing(self, pos, shape):
         self.shape = shape
         self.initBoundingBox()
         self.scene.clear()
-        if self.erasing == True:
-            self.penVis.setColor(Qt.black)
+        if self.erasing:
+            self.penVis.setColor(self.erasingColor)
         else:
-            self.penVis.setColor(self.color)
+            self.penVis.setColor(self.drawColor)
         self.pos = QPointF(pos.x()+0.0001, pos.y()+0.0001)
-        
         line = self.moveTo(pos)
         return line
 
@@ -527,10 +531,10 @@ class DrawManager(QObject):
         return res
 
     def moveTo(self, pos):    
-        lineVis = QGraphicsLineItem(self.pos.x(), self.pos.y(),pos.x(), pos.y())
+        lineVis = QGraphicsLineItem(self.pos.x(), self.pos.y(), pos.x(), pos.y())
         lineVis.setPen(self.penVis)
         
-        line = QGraphicsLineItem(self.pos.x(), self.pos.y(),pos.x(), pos.y())
+        line = QGraphicsLineItem(self.pos.x(), self.pos.y(), pos.x(), pos.y())
         line.setPen(self.penDraw)
         self.scene.addItem(line)
 
