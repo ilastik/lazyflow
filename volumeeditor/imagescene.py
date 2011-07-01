@@ -330,12 +330,8 @@ class ImageScene(QGraphicsView):
         #we set the border overlay indicator to visible
         allBorder = (self.sliceNumber < self.margin or\
                      self.sliceExtent - self.sliceNumber < self.margin) \
-                    and self.sliceExtent > 1
+                     and self.sliceExtent > 1
         self.allBorder.setVisible(allBorder)
-        print "ImageScene:displayNewSlice", image.__class__, image
-        print overlays, type(overlays)
-        for o in overlays:
-            print "    ",o
         self.imageSceneRenderer.renderImage(image, overlays)
         
     def saveSlice(self, filename):
