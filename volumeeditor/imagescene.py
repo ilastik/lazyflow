@@ -216,7 +216,7 @@ class ImageScene(QGraphicsView):
         # invisible cursor to enable custom cursor
         self.hiddenCursor = QCursor(Qt.BlankCursor)
         
-        # For screen recording BlankCursor dont work
+        # For screen recording BlankCursor doesn't work
         #self.hiddenCursor = QCursor(Qt.ArrowCursor)
         
         #self.connect(self, SIGNAL("destroyed()"), self.cleanUp)
