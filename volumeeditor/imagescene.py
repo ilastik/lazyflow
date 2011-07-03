@@ -175,14 +175,8 @@ class ImageScene(QGraphicsView):
         self.view.setScene(self.scene)
         self.scene.setSceneRect(0,0, *viewManager.imageShape(axis))
         self.view.setSceneRect(0,0, *viewManager.imageShape(axis))
-        self.scene.bgColor = QColor(Qt.white)
-        if os.path.isfile('gui/backGroundBrush.png'):
-            self.scene.bgBrush = QBrush(QImage('gui/backGroundBrush.png'))
-        else:
-            self.scene.bgBrush = QBrush(QColor(Qt.black))
 
         self.view.setRenderHint(QPainter.Antialiasing, False)
-        #self.view.setRenderHint(QPainter.SmoothPixmapTransform, False)
         
         #Unfortunately, setting the style like this make the scroll bars look
         #really crappy...
@@ -637,7 +631,6 @@ class CustomGraphicsScene(QGraphicsScene):
         QGraphicsScene.__init__(self)
         self.glWidget = glWidget
         self.useGL = (glWidget != None)
-        self.bgColor = QColor(Qt.green)
         
         self.image = None
         self.tex = -1
@@ -650,8 +643,7 @@ class CustomGraphicsScene(QGraphicsScene):
 
     def drawBackgroundGL(self, painter, rect):
         self.glWidget.context().makeCurrent()
-            
-        #glClearColor(self.bgColor.redF(),self.bgColor.greenF(),self.bgColor.blueF(),1.0)
+        
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
 
         if self.tex <= -1:
