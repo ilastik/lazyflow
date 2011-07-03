@@ -64,9 +64,9 @@ is3D, is2D
 #*******************************************************************************
 
 class VolumeEditor(QWidget):
-    changedSlice = pyqtSignal(int,int)
+    changedSlice      = pyqtSignal(int,int)
     onOverlaySelected = pyqtSignal(int)
-    newLabelsPending = pyqtSignal()
+    newLabelsPending  = pyqtSignal()
     
     zoomInFactor  = 1.1
     zoomOutFactor = 0.9
@@ -101,7 +101,7 @@ class VolumeEditor(QWidget):
         
         self.sharedOpenGLWidget = sharedOpenglWidget
 
-
+        #FIXME: Why is this needed?
         QPixmapCache.setCacheLimit(100000)
 
         self.save_thread = ImageSaveThread(self)
@@ -180,9 +180,7 @@ class VolumeEditor(QWidget):
         self.toolBoxLayout = QVBoxLayout()
         self.toolBoxLayout.setMargin(5)
         self.toolBox.setLayout(self.toolBoxLayout)
-        #self.toolBox.setMaximumWidth(190)
-        #self.toolBox.setMinimumWidth(190)
-
+        
         # Add label widget to toolBoxLayout
         self.labelWidget = None
 
@@ -197,7 +195,7 @@ class VolumeEditor(QWidget):
         for scene in self.imageScenes:
             currPosButton.toggled.connect(scene.setSliceIntersection)
 
-        # Channel Selector Combo Box in right side toolbox
+        #Channel Selector QComboBox in right side tool box
         self.channelSpin = QSpinBox()
         self.channelSpin.setEnabled(True)
         self.channelSpin.valueChanged.connect(self.setChannel)
@@ -223,16 +221,15 @@ class VolumeEditor(QWidget):
 
         #Overlay selector
         self.overlayWidget = None
-        #self.toolBoxLayout.addWidget(self.overlayWidget)
 
-        self.toolBoxLayout.setAlignment( Qt.AlignTop )
+        self.toolBoxLayout.setAlignment(Qt.AlignTop)
         
         # some auxiliary stuff
         self._initShortcuts()
         
         self.focusAxis =  0 #the currently focused axis
         
-        # setup the layout for display
+        #setup the layout for display
         self.splitter = QSplitter()
         self.splitter.setContentsMargins(0,0,0,0)
         tempWidget = QWidget()
@@ -341,7 +338,7 @@ class VolumeEditor(QWidget):
         """this method is overwritten from QWidget
            so that the user can cycle through the three slice views
            using TAB (without giving focus to other widgets in-between)"""
-        if forward is True:
+        if forward:
             self.focusAxis += 1
             if self.focusAxis > 2:
                 self.focusAxis = 0
@@ -384,7 +381,7 @@ class VolumeEditor(QWidget):
         """
         Public interface function for setting the overlayWidget toolBox
         """
-        if self.overlayWidget is not None:
+        if self.overlayWidget:
             self.toolBoxLayout.removeWidget(self.overlayWidget)
             self.overlayWidget.close()
             del self.overlayWidget
@@ -415,7 +412,7 @@ class VolumeEditor(QWidget):
             imageScene.fastRepaint = self.fastRepaint
 
     def setBorderMargin(self, margin):
-        if self.useBorderMargin is True:
+        if self.useBorderMargin:
             if self.borderMargin != margin:
                 print "new border margin:", margin
                 self.borderMargin = margin
@@ -424,6 +421,7 @@ class VolumeEditor(QWidget):
                 self.repaint()
         else:
             for imgScene in self.imageScenes:
+                #FIXME this looks wrong
                 imgScene.setBorderMarginIndicator(margin)
                 self.repaint()
 
@@ -447,7 +445,7 @@ class VolumeEditor(QWidget):
         keys = QApplication.keyboardModifiers()
         k_ctrl = (keys == Qt.ControlModifier)
         
-        if k_ctrl is True:        
+        if k_ctrl:        
             if event.delta() > 0:
                 scaleFactor = VolumeEditor.zoomInFactor
             else:
@@ -475,9 +473,6 @@ class VolumeEditor(QWidget):
 
             if len(self.imageScenes) > i:
                 self.imageScenes[i].displayNewSlice(tempImage, tempoverlays, fastPreview = False, normalizeData = self.normalizeData)
-                        
-    def show(self):
-        QWidget.show(self)
 
     def setLabels(self, offsets, axis, num, labels, erase):
         """
@@ -513,9 +508,7 @@ class VolumeEditor(QWidget):
                 tempoverlays.append(item.getOverlaySlice(self.viewManager.slicePosition[axis],axis, self.viewManager.time, 0))
 
         if len(self.overlayWidget.overlays) > 0:
-            tempImage = self.overlayWidget.getOverlayRef("Raw Data")._data.getSlice(num, axis, self.viewManager.time, self.viewManager.channel)
-        else:
-            tempImage = None            
+            tempImage = self.overlayWidget.getOverlayRef("Raw Data")._data.getSlice(num, axis, self.viewManager.time, self.viewManager.channel)       
 
         # FIXME there needs to be abstraction
         self.imageScenes[axis].imageSceneRenderer.updatePatches(patches, tempImage, tempoverlays)
@@ -615,7 +608,6 @@ class VolumeEditor(QWidget):
         
         #print "VolumeEditor.changeSlice: emitting 'changedSlice' signal num=%d, axis=%d" % (num,axis)
         self.changedSlice.emit(num, axis) # FIXME this triggers the update for live prediction 
-        
         self.repaint(axis)
         
         
