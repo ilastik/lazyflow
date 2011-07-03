@@ -112,6 +112,7 @@ class ImageScene(QGraphicsView):
                  the last entry is the extent in slice direction
         """
         QGraphicsView.__init__(self)
+        self.scene = CustomGraphicsScene(sharedOpenGLWidget)
         
         assert(axis in [0,1,2])
         
@@ -124,8 +125,8 @@ class ImageScene(QGraphicsView):
         self.sliceExtent = viewManager.imageExtent(axis)
         self.isDrawing = False
         self.view = self
-        print "ImageScene.__init__:",viewManager.imageShape(axis)
         self.image = QImage(QSize(*viewManager.imageShape(axis)), QImage.Format_ARGB32)
+        self.scene.image = self.image
         self.border = None
         self.allBorder = None
         self.factor = 1.0
@@ -134,23 +135,11 @@ class ImageScene(QGraphicsView):
         self.lastPanPoint = QPoint()
         self.dragMode = False
         self.deltaPan = QPointF(0,0)
-        self.x = 0.0
-        self.y = 0.0
-        
-        self.min = 0
-        self.max = 255
         
         self.drawingEnabled = False
         
         self.openglWidget = None
         self.sharedOpenGLWidget = sharedOpenGLWidget
-        # enable OpenGL acceleratino
-        if sharedOpenGLWidget is not None:
-            self.openglWidget = QGLWidget(shareWidget = sharedOpenGLWidget)
-            self.setViewport(self.openglWidget)
-            self.setViewportUpdateMode(QGraphicsView.FullViewportUpdate)
-            
-        self.scene = CustomGraphicsScene(self.openglWidget, self.image)
         
         self.fastRepaint = True
         self.drawUpdateInterval = 300
@@ -165,12 +154,24 @@ class ImageScene(QGraphicsView):
             self.layout().addWidget(self.hud)
             self.layout().addStretch()
         
-        if self.openglWidget is not None:
+        self.patchAccessor = PatchAccessor(*viewManager.imageShape(axis),blockSize=64)
+        
+        if self.scene.useGL:
+            self.openglWidget = QGLWidget(shareWidget = sharedOpenGLWidget)
+            self.setViewport(self.openglWidget)
+            self.setViewportUpdateMode(QGraphicsView.FullViewportUpdate)
+            
             self.openglWidget.context().makeCurrent()
             self.scene.tex = glGenTextures(1)
             glBindTexture(GL_TEXTURE_2D,self.scene.tex)
-            print "generating OpenGL texture of size %d x %d" % (self.scene.image.width(), self.scene.image.height())
-            glTexImage2D(GL_TEXTURE_2D, 0,GL_RGB, self.scene.image.width(), self.scene.image.height(), 0, GL_RGB, GL_UNSIGNED_BYTE, ctypes.c_void_p(self.scene.image.bits().__int__()))
+            #print "generating OpenGL texture of size %d x %d" % (self.scene.image.width(), self.scene.image.height())
+            glTexImage2D(GL_TEXTURE_2D, 0,GL_RGB, viewManager.imageShape(axis)[0], viewManager.imageShape(axis)[1], \
+                         0, GL_RGB, GL_UNSIGNED_BYTE, ctypes.c_void_p(self.image.bits().__int__()))
+
+            self.imagePatches = range(self.patchAccessor.patchCount)
+            for i, p in enumerate(self.imagePatches):
+                b = self.patchAccessor.getPatchBounds(i, 0)
+                self.imagePatches[i] = QImage(b[1]-b[0], b[3] -b[2], QImage.Format_RGB888)
             
         self.view.setScene(self.scene)
         self.scene.setSceneRect(0,0, *viewManager.imageShape(axis))
@@ -183,14 +184,6 @@ class ImageScene(QGraphicsView):
 
         self.view.setRenderHint(QPainter.Antialiasing, False)
         #self.view.setRenderHint(QPainter.SmoothPixmapTransform, False)
-
-        self.patchAccessor = PatchAccessor(*viewManager.imageShape(axis),blockSize=64)
-        print "PatchCount :", self.patchAccessor.patchCount
-
-        self.imagePatches = range(self.patchAccessor.patchCount)
-        for i, p in enumerate(self.imagePatches):
-            b = self.patchAccessor.getPatchBounds(i, 0)
-            self.imagePatches[i] = QImage(b[1]-b[0], b[3] -b[2], QImage.Format_RGB888)
         
         #Unfortunately, setting the style like this make the scroll bars look
         #really crappy...
@@ -252,10 +245,8 @@ class ImageScene(QGraphicsView):
 
         self.tempErase = False
         
-        
         self.imageSceneRenderer = ImageSceneRenderer(self)
-        
-        
+        self.imageSceneRenderer.updatesAvailable.connect(self.viewport().repaint)
         
     def setBorderMarginIndicator(self, margin):
         """
@@ -308,7 +299,6 @@ class ImageScene(QGraphicsView):
                 self.sliceIntersectionMarker.setPositionY(num)
             else:
                 return   
-
 
     def cleanUp(self):        
         self.ticker.stop()
@@ -616,7 +606,7 @@ class ImageScene(QGraphicsView):
         self.changeSlice(-10)
 
     def changeSlice(self, delta):
-        if self.isDrawing == True:
+        if self.isDrawing:
             self.endDrawing(self.mousePos)
             self.isDrawing = True
             self.drawManager.beginDrawing(self.mousePos, self.imShape)
@@ -640,16 +630,18 @@ class ImageScene(QGraphicsView):
 #*******************************************************************************
 
 class CustomGraphicsScene(QGraphicsScene):
-    def __init__(self, glWidget, image):
+    def __init__(self, glWidget):
         QGraphicsScene.__init__(self)
         self.glWidget = glWidget
         self.useGL = (glWidget != None)
-        self.image = image
-        self.images = []
         self.bgColor = QColor(Qt.green)
+        
+        self.image = None
         self.tex = -1
 
     def drawBackgroundSoftware(self, painter, rect):
+        if not self.image:
+            return
         painter.setClipRect(rect)
         painter.drawImage(0,0,self.image)
 

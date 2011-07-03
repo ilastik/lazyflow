@@ -25,6 +25,8 @@ if LooseVersion(OpenGL.__version__) < LooseVersion('3.0.1'):
     raise Exception('PyOpenGL version is less than 3.0.1')
 
 class ImageSceneRenderer(QObject):
+    updatesAvailable = pyqtSignal() 
+    
     def __init__(self, imageScene):
         QObject.__init__(self)
         self.imageScene = imageScene # TODO: remove dependency
@@ -56,14 +58,18 @@ class ImageSceneRenderer(QObject):
                         ctypes.c_void_p(patch.bits().__int__()))
     
     def renderingThreadFinished(self):
+        def haveNewData():
+            return self.thread.dataPending.isSet()
+        
         #only proceed if there is no new _data already in the rendering thread queue
-        if not self.thread.dataPending.isSet():
-
+        if not haveNewData():
             #if we are in opengl 2d render mode, update the texture
             if self.imageScene.openglWidget is not None:
                 self.imageScene.sharedOpenGLWidget.context().makeCurrent()
                 glBindTexture(GL_TEXTURE_2D, self.imageScene.scene.tex)
                 for patchNr in self.thread.outQueue:
+                    if haveNewData():
+                        break
                     b = self.imageScene.patchAccessor.getPatchBounds(patchNr, 0)
                     self.updateTexture(self.imageScene.imagePatches[patchNr], b)
                     
@@ -74,9 +80,9 @@ class ImageSceneRenderer(QObject):
                     self.imageScene.scene.removeItem(item)
                 self.imageScene.tempImageItems = []
  
-        #update the scene, and the 3d overview
-        print "updating slice view ", self.imageScene.axis
-        self.imageScene.viewport().repaint()
+        if not haveNewData():
+            self.updatesAvailable.emit()
+        
         self.thread.freeQueue.set()
 
 #*******************************************************************************

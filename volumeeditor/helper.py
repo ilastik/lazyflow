@@ -259,10 +259,10 @@ class LabelState(State):
         self.labelNumber = labelNumber
         self.labels = labels
         self.clock = time.clock()
-        self.dataBefore = volumeEditor.labelWidget.overlayItem.getSubSlice(self.offsets, self.labels.shape, self.num, self.axis, self.time, 0).copy()
+        self.dataBefore = volumeEditor.drawManager.drawOnto.getSubSlice(self.offsets, self.labels.shape, self.num, self.axis, self.time, 0).copy()
         
     def restore(self, volumeEditor):
-        temp = volumeEditor.labelWidget.overlayItem.getSubSlice(self.offsets, self.labels.shape, self.num, self.axis, self.time, 0).copy()
+        temp = volumeEditor.drawManager.drawOnto.getSubSlice(self.offsets, self.labels.shape, self.num, self.axis, self.time, 0).copy()
         restore  = numpy.where(self.labels > 0, self.dataBefore, 0)
         stuff = numpy.where(self.labels > 0, self.dataBefore + 1, 0)
         erase = numpy.where(stuff == 1, 1, 0)
@@ -418,6 +418,7 @@ class DrawManager(QObject):
     minBrushSize = 1
     maxBrushSize = 61
     defaultBrushSize = 3
+    defaultDrawnNumber = 1
     defaultColor     = Qt.white
     erasingColor     = Qt.black
     
@@ -427,11 +428,14 @@ class DrawManager(QObject):
         self.bb    = QRect() #bounding box enclosing the drawing
         self.brushSize = self.defaultBrushSize
         self.drawColor = self.defaultColor
+        self.drawnNumber = self.defaultDrawnNumber
 
         self.penVis  = QPen(self.drawColor, self.brushSize, Qt.SolidLine, Qt.RoundCap, Qt.RoundJoin)
         self.penDraw = QPen(self.drawColor, self.brushSize, Qt.SolidLine, Qt.RoundCap, Qt.RoundJoin)
         self.pos = None
         self.erasing = False
+        
+        self.drawOnto = None
         
         #an empty scene, where we add all drawn line segments
         #a QGraphicsLineItem, and which we can use to then
@@ -476,6 +480,10 @@ class DrawManager(QObject):
         self.penVis.setWidth(size)
         self.penDraw.setWidth(size)
         self.brushSizeChanged.emit(self.brushSize)
+    
+    def setDrawnNumber(self, num):
+        self.drawnNumber = num
+        self.drawnNumberChanged.emit(num)
         
     def getBrushSize(self):
         return self.brushSize

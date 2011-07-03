@@ -465,7 +465,6 @@ class VolumeEditor(QWidget):
             self.imageScenes[2].doScale(scaleFactor)
                        
     def repaint(self, axis = None):
-        print "repaint", axis
         if axis == None:
             axes = range(3)
         else:
@@ -641,21 +640,14 @@ class VolumeEditor(QWidget):
     # from imagescene
     
     def beginDraw(self, axis, pos):
-        self.labelWidget.ensureLabelOverlayVisible()
+        print "VolumeEditor.beginDraw FIXME self.labelWidget.ensureLabelOverlayVisible()"
         
     def endDraw(self, axis, pos):
         result = self.drawManager.endDrawing(pos)
         print "endDraw: result =", result
-        image = result[2]
-        ndarr = qimage2ndarray.rgb_view(image)
-        labels = ndarr[:,:,0]
-        labels = labels.swapaxes(0,1)
-        number = self.labelWidget.currentItem().number
-        labels = numpy.where(labels > 0, number, 0)
-        ls = LabelState('drawing', axis, self.viewManager.slicePosition[axis], result[0:2], labels.shape, self.viewManager.time, self, self.drawManager.erasing, labels, number)
-        self._history.append(ls)        
-        self.setLabels(result[0:2], axis, self.imageScenes[axis].hud.sliceSelector.value(), labels, self.drawManager.erasing)
-        self.pushLabelsToLabelWidget()
+        self.updateLabels(axis, pos)
+        #FIXME
+        #self.pushLabelsToLabelWidget()
 
     def pushLabelsToLabelWidget(self):
         newLabels = self.getPendingLabels()
@@ -667,11 +659,11 @@ class VolumeEditor(QWidget):
         ndarr = qimage2ndarray.rgb_view(image)
         labels = ndarr[:,:,0]
         labels = labels.swapaxes(0,1)
-        number = self.labelWidget.currentItem().number
+        number = self.drawManager.drawnNumber
         labels = numpy.where(labels > 0, number, 0)
         ls = LabelState('drawing', axis, self.viewManager.slicePosition[axis], result[0:2], labels.shape, self.viewManager.time, self, self.drawManager.erasing, labels, number)
         self._history.append(ls)        
-        self.setLabels(result[0:2], axis, self.imageScenes[axis].hud.sliceSelector.value(), labels, self.drawManager.erasing)
+        self.setLabels(result[0:2], axis, self.viewManager.slicePosition[axis], labels, self.drawManager.erasing)
         
     def getPendingLabels(self):
         temp = self.pendingLabels
