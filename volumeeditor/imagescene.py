@@ -40,13 +40,12 @@ import os.path, time
 import sip
 
 from ilastik.gui.iconMgr import ilastikIcons
-from helper import PatchAccessor
-from helper import ViewManager
-from helper import DrawManager
+from patchAccessor import PatchAccessor
+from viewManager import ViewManager
+from drawManager import DrawManager
 
 from imagescenerenderer import ImageSceneRenderer
-from helper import InteractionLogger, ViewManager, \
-                                            DrawManager
+from helper import InteractionLogger
 
 #*******************************************************************************
 # H u d                                                                        *

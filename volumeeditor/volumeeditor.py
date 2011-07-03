@@ -49,10 +49,14 @@ from ilastikdeps.gui.view3d import OverviewScene
 import ilastikdeps.gui.exportDialog as exportDialog
       
 from imagescene import ImageScene
+from imageSaveThread import ImageSaveThread
+from viewManager import ViewManager
+from drawManager import DrawManager
+
 
 from helper import ImageWithProperties, \
-DummyLabelWidget, DummyOverlayListWidget, ImageSaveThread, HistoryManager, \
-DrawManager, ViewManager, InteractionLogger, LabelState, VolumeUpdate, \
+DummyLabelWidget, DummyOverlayListWidget, HistoryManager, \
+InteractionLogger, LabelState, VolumeUpdate, \
 is3D, is2D
 
 #*******************************************************************************
@@ -487,9 +491,6 @@ class VolumeEditor(QWidget):
     def show(self):
         QWidget.show(self)
 
-
-
-
     def setLabels(self, offsets, axis, num, labels, erase):
         """
         offsets: labels is a 2D matrix in the image plane perpendicular to axis, which is offset from the origin
@@ -522,9 +523,6 @@ class VolumeEditor(QWidget):
         for item in reversed(self.overlayWidget.overlays):
             if item.visible:
                 tempoverlays.append(item.getOverlaySlice(self.viewManager.slicePosition[axis],axis, self.viewManager.time, 0))
-                
-        # tempoverlays = [item.getOverlaySlice(self.viewManager.slicePosition[axis],axis, self.viewManager.time, 0)\
-                        # for item in reversed(self.overlayWidget.overlays) if item.visible]
 
         if len(self.overlayWidget.overlays) > 0:
             tempImage = self.overlayWidget.getOverlayRef("Raw Data")._data.getSlice(num, axis, self.viewManager.time, self.viewManager.channel)
@@ -785,7 +783,6 @@ if __name__ == "__main__":
             if useGL:
                 sharedOpenglWidget=QGLWidget()
             
-            from helper import ViewManager
             vm = ViewManager(self.data)
             self.dialog = VolumeEditor((1,)+self.data.shape+(1,), None, sharedOpenglWidget=sharedOpenglWidget, viewManager=vm)
             for i in range(3):
