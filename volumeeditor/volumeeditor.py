@@ -111,7 +111,6 @@ class VolumeEditor(QWidget):
 
         self.pendingLabels = []
 
-
         self.imageScenes = []
         scene0 = ImageScene(0, self.viewManager, self.drawManager, self.sharedOpenGLWidget)
         self.imageScenes.append(scene0)
@@ -151,8 +150,6 @@ class VolumeEditor(QWidget):
             scene.hud.sliceSelector.valueChanged.connect(fn[scene.axis])
         self.viewManager.sliceChanged.connect(lambda num,axis: self.imageScenes[axis].hud.sliceSelector.setValue(num))            
             
-            
-            
         #Controls the trade-off of speed and flickering when scrolling through this slice view
         self.setFastRepaint(True)   
 
@@ -188,7 +185,6 @@ class VolumeEditor(QWidget):
 
         # Add label widget to toolBoxLayout
         self.labelWidget = None
-        #<><><> self.setLabelWidget(DummyLabelWidget())
 
         self.toolBoxLayout.addStretch()
             
@@ -229,12 +225,12 @@ class VolumeEditor(QWidget):
         self.overlayWidget = DummyOverlayListWidget(self)
         self.toolBoxLayout.addWidget(self.overlayWidget)
 
-
         self.toolBoxLayout.setAlignment( Qt.AlignTop )
         
         # some auxiliary stuff
         self._initShortcuts()
-        self.focusAxis =  0
+        
+        self.focusAxis =  0 #the currently focused axis
         
         # setup the layout for display
         self.splitter = QSplitter()
@@ -275,7 +271,6 @@ class VolumeEditor(QWidget):
         return shortcut
 
     def _initShortcuts(self):
-        ##undo/redo and other shortcuts
         self._shortcutHelper("Ctrl+Z", "Labeling", "History undo", self, self.historyUndo, Qt.ApplicationShortcut, True)
         self._shortcutHelper("Ctrl+Shift+Z", "Labeling", "History redo", self, self.historyRedo, Qt.ApplicationShortcut, True)  
         self._shortcutHelper("Ctrl+Y", "Labeling", "History redo", self, self.historyRedo, Qt.ApplicationShortcut, True)
@@ -302,7 +297,6 @@ class VolumeEditor(QWidget):
             self._shortcutHelper("Ctrl+Shift+Down", "Navigation", "10 slices down", scene, scene.sliceDown10, Qt.WidgetShortcut)
         
     def onLabelSelected(self):
-        print "xxxxxxxxxxxxxxxxxxxxxx onLabelSelected"
         item = self.labelWidget.currentItem()
         if item is not None:
             for imageScene in self.imageScenes:
@@ -342,9 +336,7 @@ class VolumeEditor(QWidget):
             
         except:
             pass
-        
-        
-    #Override: QWidget
+    
     def focusNextPrevChild(self, forward = True):
         """this method is overwritten from QWidget
            so that the user can cycle through the three slice views
@@ -386,7 +378,7 @@ class VolumeEditor(QWidget):
             del self.labelWidget
         self.labelWidget = widget
         self.labelWidget.itemSelectionChanged.connect(self.onLabelSelected)
-        self.toolBoxLayout.insertWidget( 0, self.labelWidget)
+        self.toolBoxLayout.insertWidget(0, self.labelWidget)
     
     def setOverlayWidget(self,  widget):
         """
@@ -644,6 +636,7 @@ class VolumeEditor(QWidget):
         #self.pushLabelsToLabelWidget()
 
     def pushLabelsToLabelWidget(self):
+        #FIXME
         newLabels = self.getPendingLabels()
         self.labelWidget.labelMgr.newLabels(newLabels)
         
@@ -665,44 +658,41 @@ class VolumeEditor(QWidget):
         return temp
     
     def updateCrossHairCursor(self, axis, x, y, valid):
-        if valid:
-            self.imageScenes[axis].crossHairCursor.showXYPosition(x,y)
-            
-            if axis == 0: # x-axis
-                if len(self.imageScenes) > 2:
-                    yView = self.imageScenes[1].crossHairCursor
-                    zView = self.imageScenes[2].crossHairCursor
-                    
-                    yView.setVisible(False)
-                    zView.showYPosition(x, y)
-            elif axis == 1: # y-axis
-                xView = self.imageScenes[0].crossHairCursor
+        if not valid:
+            return
+        
+        self.imageScenes[axis].crossHairCursor.showXYPosition(x,y)
+        
+        if axis == 0: # x-axis
+            if len(self.imageScenes) > 2:
+                yView = self.imageScenes[1].crossHairCursor
                 zView = self.imageScenes[2].crossHairCursor
                 
-                zView.showXPosition(x, y)
-                xView.setVisible(False)
-            else: # z-axis
-                xView = self.imageScenes[0].crossHairCursor
-                yView = self.imageScenes[1].crossHairCursor
-                    
-                xView.showXPosition(y, x)
-                yView.showXPosition(x, y)
+                yView.setVisible(False)
+                zView.showYPosition(x, y)
+        elif axis == 1: # y-axis
+            xView = self.imageScenes[0].crossHairCursor
+            zView = self.imageScenes[2].crossHairCursor
+            
+            zView.showXPosition(x, y)
+            xView.setVisible(False)
+        else: # z-axis
+            xView = self.imageScenes[0].crossHairCursor
+            yView = self.imageScenes[1].crossHairCursor
+                
+            xView.showXPosition(y, x)
+            yView.showXPosition(x, y)
     
     def updateInfoLabels(self, axis, x, y, valid):
         if not valid:
             return
         
-        (posX, posY, posZ) = self.imageScenes[axis].coordinateUnderCursor()
-
-        #if hasattr(self.overlayWidget, 'getOverlayRef'):
-        if axis == 0:
-            colorValues = self.overlayWidget.getOverlayRef("Raw Data").getOverlaySlice(posX, 0, time=0, channel=0)._data[x,y]
-        elif axis == 1:
-            colorValues = self.overlayWidget.getOverlayRef("Raw Data").getOverlaySlice(posY, 1, time=0, channel=0)._data[x,y]
-        else:
-            colorValues = self.overlayWidget.getOverlayRef("Raw Data").getOverlaySlice(posZ, 2, time=0, channel=0)._data[x,y]
-
+        pos = (posX, posY, posZ) = self.imageScenes[axis].coordinateUnderCursor()
+        colorValues = self.overlayWidget.getOverlayRef("Raw Data").getOverlaySlice(pos[axis], axis, time=0, channel=0)._data[x,y]
+        
         self.posLabel.setText("<b>x:</b> %03i  <b>y:</b> %03i  <b>z:</b> %03i" % (posX, posY, posZ))
+        
+        #FIXME RGB is a special case only
         if isinstance(colorValues, numpy.ndarray):
             self.pixelValuesLabel.setText("<b>R:</b> %03i  <b>G:</b> %03i  <b>B:</b> %03i" % (colorValues[0], colorValues[1], colorValues[2]))
         else:
