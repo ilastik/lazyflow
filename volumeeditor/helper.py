@@ -471,7 +471,7 @@ class DrawManager(QObject):
         self.erasing = False
         self.brushColorChanged.emit(self.drawColor)
 
-    def setBrushSize(self, size):      
+    def setBrushSize(self, size):
         self.brushSize = size
         self.penVis.setWidth(size)
         self.penDraw.setWidth(size)

@@ -110,7 +110,6 @@ class VolumeEditor(QWidget):
 
         self.imageScenes = []
         scene0 = ImageScene(0, self.viewManager, self.drawManager, self.sharedOpenGLWidget)
-        scene0.customContextMenuRequested.connect(self.onCustomContextMenuRequested)
         self.imageScenes.append(scene0)
         
         self.overview = OverviewScene(self, self._shape[1:4])
@@ -121,11 +120,9 @@ class VolumeEditor(QWidget):
         if is3D(self._shape):
             # 3D image          
             scene1 = ImageScene(1, self.viewManager, self.drawManager, self.sharedOpenGLWidget)
-            scene1.customContextMenuRequested.connect(self.onCustomContextMenuRequested)
             self.imageScenes.append(scene1)
             
             scene2 = ImageScene(2, self.viewManager, self.drawManager, self.sharedOpenGLWidget)
-            scene2.customContextMenuRequested.connect(self.onCustomContextMenuRequested)
             self.imageScenes.append(scene2)
             
             self.grid = QuadView(self)
@@ -135,7 +132,7 @@ class VolumeEditor(QWidget):
             self.grid.addWidget(3, self.overview)
             for i in xrange(3):
                 self.imageScenes[i].drawing.connect(self.updateLabels)
-                self.imageScenes[i].customContextMenuRequested.connect(self.onContext)
+                self.imageScenes[i].customContextMenuRequested.connect(self.onCustomContextMenuRequested)
         
         for scene in self.imageScenes:
             scene.mouseDoubleClicked.connect(self.setPosition)
@@ -261,6 +258,7 @@ class VolumeEditor(QWidget):
         QTimer.singleShot(0, initialPosition)
     
     def onCustomContextMenuRequested(self, pos):
+        print "Volumeeditor.onCustomContextMenuRequested"
         self.customContextMenuRequested.emit(pos)
               
     def _shortcutHelper(self, keySequence, group, description, parent, function, context = None, enabled = None):
@@ -679,10 +677,6 @@ class VolumeEditor(QWidget):
         temp = self.pendingLabels
         self.pendingLabels = []
         return temp
-      
-    def onContext(self, pos):
-        if type(self.labelWidget) == DummyLabelWidget: return
-        self.labelWidget.onImageSceneContext(self, pos)
     
     def updateCrossHairCursor(self, axis, x, y, valid):
         if valid:
