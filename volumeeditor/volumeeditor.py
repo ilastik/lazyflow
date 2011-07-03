@@ -109,7 +109,9 @@ class VolumeEditor(QWidget):
 
 
         self.imageScenes = []
-        self.imageScenes.append(ImageScene(0, self.viewManager, self.drawManager, self.sharedOpenGLWidget))
+        scene0 = ImageScene(0, self.viewManager, self.drawManager, self.sharedOpenGLWidget)
+        scene0.customContextMenuRequested.connect(self.onCustomContextMenuRequested)
+        self.imageScenes.append(scene0)
         
         self.overview = OverviewScene(self, self._shape[1:4])
         
@@ -118,8 +120,14 @@ class VolumeEditor(QWidget):
 
         if is3D(self._shape):
             # 3D image          
-            self.imageScenes.append(ImageScene(1, self.viewManager, self.drawManager, self.sharedOpenGLWidget))
-            self.imageScenes.append(ImageScene(2, self.viewManager, self.drawManager, self.sharedOpenGLWidget))
+            scene1 = ImageScene(1, self.viewManager, self.drawManager, self.sharedOpenGLWidget)
+            scene1.customContextMenuRequested.connect(self.onCustomContextMenuRequested)
+            self.imageScenes.append(scene1)
+            
+            scene2 = ImageScene(2, self.viewManager, self.drawManager, self.sharedOpenGLWidget)
+            scene2.customContextMenuRequested.connect(self.onCustomContextMenuRequested)
+            self.imageScenes.append(scene2)
+            
             self.grid = QuadView(self)
             self.grid.addWidget(0, self.imageScenes[2])
             self.grid.addWidget(1, self.imageScenes[0])
@@ -251,6 +259,9 @@ class VolumeEditor(QWidget):
             self.changeSliceY(numpy.floor((self._shape[2] - 1) / 2))
             self.changeSliceZ(numpy.floor((self._shape[3] - 1) / 2))
         QTimer.singleShot(0, initialPosition)
+    
+    def onCustomContextMenuRequested(self, pos):
+        self.customContextMenuRequested.emit(pos)
               
     def _shortcutHelper(self, keySequence, group, description, parent, function, context = None, enabled = None):
         shortcut = QShortcut(QKeySequence(keySequence), parent, member=function, ambiguousMember=function)

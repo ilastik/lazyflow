@@ -444,6 +444,13 @@ class ImageScene(QGraphicsView):
             if self.ticker.isActive():
                 self.deltaPan = QPointF(0, 0)
 
+        if event.buttons() == Qt.RightButton:
+            #make sure that we have the cursor at the correct position
+            #before we call the context menu
+            self.mouseMoveEvent(event)
+            self.customContextMenuRequested.emit(event.pos())
+            return
+
         if not self.drawingEnabled:
             print "ImageScene.mousePressEvent: drawing is not enabled"
             return
@@ -457,12 +464,6 @@ class ImageScene(QGraphicsView):
                 self.tempErase = True
             mousePos = self.mapToScene(event.pos())
             self.beginDrawing(mousePos)
-            
-        if event.buttons() == Qt.RightButton:
-            #make sure that we have the cursor at the correct position
-            #before we call the context menu
-            self.mouseMoveEvent(event)
-            self.onContext(event.pos())
             
     #TODO oli
     def mouseReleaseEvent(self, event):
