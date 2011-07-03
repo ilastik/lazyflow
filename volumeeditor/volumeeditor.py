@@ -57,7 +57,7 @@ from drawManager import DrawManager
 from helper import ImageWithProperties, \
 HistoryManager, \
 InteractionLogger, LabelState, VolumeUpdate, \
-is3D, is2D, DummyOverlayListWidget
+is3D, is2D
 
 #*******************************************************************************
 # V o l u m e E d i t o r                                                      *
@@ -222,8 +222,8 @@ class VolumeEditor(QWidget):
         self.channelSpin.setRange(0,self._shape[-1] - 1)
 
         #Overlay selector
-        self.overlayWidget = DummyOverlayListWidget(self)
-        self.toolBoxLayout.addWidget(self.overlayWidget)
+        self.overlayWidget = None
+        #self.toolBoxLayout.addWidget(self.overlayWidget)
 
         self.toolBoxLayout.setAlignment( Qt.AlignTop )
         

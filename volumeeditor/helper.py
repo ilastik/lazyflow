@@ -85,7 +85,6 @@ class InteractionLogger():
         if InteractionLogger._interactionLog != None:
             InteractionLogger._interactionLog.append(logEntry)
 
-
 #*******************************************************************************
 # S t a t e                                                                    *
 #*******************************************************************************
@@ -97,7 +96,6 @@ class State():
 
     def restore(self):
         pass
-
 
 #*******************************************************************************
 # L a b e l S t a t e                                                          *
@@ -127,10 +125,6 @@ class LabelState(State):
         volumeEditor.setLabels(self.offsets, self.axis, self.num, erase, True)
         if volumeEditor.sliceSelectors[self.axis].value() != self.num:
             volumeEditor.sliceSelectors[self.axis].setValue(self.num)
-        else:
-            #volumeEditor.repaint()
-            #repainting is already done automatically by the setLabels function
-            pass
         self.erasing = not(self.erasing)          
 
 #*******************************************************************************
@@ -178,7 +172,6 @@ class HistoryManager(QObject):
             histItemGrp.create_dataset('erasing',data=hist.erasing)
             histItemGrp.create_dataset('clock',data=hist.clock)
 
-
     def removeLabel(self, number):
         tobedeleted = []
         for index, item in enumerate(self._history):
@@ -188,8 +181,6 @@ class HistoryManager(QObject):
                 item.labels = numpy.where(item.labels == number, 0, item.labels)
                 item.labels = numpy.where(item.labels > number, item.labels - 1, item.labels)
             else:
-                #if item.erasing == False:
-                    #item.restore(self.volumeEditor)
                 tobedeleted.append(index - len(tobedeleted))
                 if index <= self.current:
                     self.current -= 1
@@ -233,16 +224,3 @@ class VolumeUpdate():
                 offsets[2]:offsets[2]+sizes[2],\
                 offsets[3]:offsets[3]+sizes[3],\
                 offsets[4]:offsets[4]+sizes[4]] = tempData
-
-#*******************************************************************************
-# D u m m y O v e r l a y L i s t W i d g e t                                  *
-#*******************************************************************************
-
-class DummyOverlayListWidget(QWidget):
-    def __init__(self,  parent):
-        QWidget.__init__(self)
-        self.volumeEditor = parent
-        self.overlays = []
-    def getOverlayRef(self, name):
-        #FIXME
-        return self.overlays[0]
