@@ -230,8 +230,12 @@ class ImageScene(QGraphicsView):
         self.crossHairCursor.setZValue(100)
         self.scene.addItem(self.crossHairCursor)
         
+        #FIXME: do we want to have these connects here or somewhere else?
         self.drawManager.brushSizeChanged.connect(self.crossHairCursor.setBrushSize)
+        self.drawManager.brushColorChanged.connect(self.crossHairCursor.setColor)
+        
         self.crossHairCursor.setBrushSize(self.drawManager.brushSize)
+        self.crossHairCursor.setColor(self.drawManager.drawColor)
 
         self.sliceIntersectionMarker = SliceIntersectionMarker(self.image.width(), self.image.height())
         if self.axis == 0:

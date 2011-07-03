@@ -55,9 +55,9 @@ from drawManager import DrawManager
 
 
 from helper import ImageWithProperties, \
-DummyLabelWidget, DummyOverlayListWidget, HistoryManager, \
+HistoryManager, \
 InteractionLogger, LabelState, VolumeUpdate, \
-is3D, is2D
+is3D, is2D, DummyOverlayListWidget
 
 #*******************************************************************************
 # V o l u m e E d i t o r                                                      *
@@ -188,7 +188,7 @@ class VolumeEditor(QWidget):
 
         # Add label widget to toolBoxLayout
         self.labelWidget = None
-        self.setLabelWidget(DummyLabelWidget())
+        #<><><> self.setLabelWidget(DummyLabelWidget())
 
         self.toolBoxLayout.addStretch()
             
@@ -387,10 +387,6 @@ class VolumeEditor(QWidget):
         self.labelWidget = widget
         self.labelWidget.itemSelectionChanged.connect(self.onLabelSelected)
         self.toolBoxLayout.insertWidget( 0, self.labelWidget)
-        if isinstance(widget, DummyLabelWidget):
-            oldMargins = list(self.toolBoxLayout.getContentsMargins())
-            oldMargins[1] = 0
-            self.toolBoxLayout.setContentsMargins(oldMargins[0],oldMargins[1],oldMargins[2],oldMargins[3])
     
     def setOverlayWidget(self,  widget):
         """

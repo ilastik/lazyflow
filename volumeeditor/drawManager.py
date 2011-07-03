@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-#    Copyright 2010 C Sommer, C Straehle, U Koethe, FA Hamprecht. All rights reserved.
+#    Copyright 2010, 2011 C Sommer, C Straehle, U Koethe, FA Hamprecht. All rights reserved.
 #    
 #    Redistribution and use in source and binary forms, with or without modification, are
 #    permitted provided that the following conditions are met:
@@ -43,15 +43,15 @@ import time
 #*******************************************************************************
 
 class DrawManager(QObject):
-    brushSizeChanged = pyqtSignal(int)
+    brushSizeChanged  = pyqtSignal(int)
     brushColorChanged = pyqtSignal(QColor)
     
-    minBrushSize = 1
-    maxBrushSize = 61
-    defaultBrushSize = 3
+    minBrushSize       = 1
+    maxBrushSize       = 61
+    defaultBrushSize   = 3
     defaultDrawnNumber = 1
-    defaultColor     = Qt.white
-    erasingColor     = Qt.black
+    defaultColor       = Qt.white
+    erasingColor       = Qt.black
     
     def __init__(self):
         QObject.__init__(self)
@@ -66,6 +66,7 @@ class DrawManager(QObject):
         self.pos = None
         self.erasing = False
         
+        #on which OverlayItem do we want to draw when self.drawingEnabled?
         self.drawOnto = None
         
         #an empty scene, where we add all drawn line segments
