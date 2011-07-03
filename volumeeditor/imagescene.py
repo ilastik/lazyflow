@@ -183,6 +183,7 @@ class ImageScene(QGraphicsView):
         #self.setStyleSheet("QWidget:!focus { border: 2px solid " + self.axisColor[self.axis].name() +"; border-radius: 4px; }\
         #                    QWidget:focus { border: 2px solid white; border-radius: 4px; }")
 
+        #FIXME: Is there are more elegant way to handle this?
         if self.axis is 0:
             self.view.rotate(90.0)
             self.view.scale(1.0,-1.0)
@@ -368,29 +369,27 @@ class ImageScene(QGraphicsView):
         grviewCenter  = self.mapToScene(self.viewport().rect().center())
 
         if event.delta() > 0:
-            if k_alt is True:
+            if k_alt:
                 self.changeSlice(10)
-            elif k_ctrl is True:
+            elif k_ctrl:
                 scaleFactor = 1.1
                 self.doScale(scaleFactor)
             else:
                 self.changeSlice(1)
         else:
-            if k_alt is True:
+            if k_alt:
                 self.changeSlice(-10)
-            elif k_ctrl is True:
+            elif k_ctrl:
                 scaleFactor = 0.9
                 self.doScale(scaleFactor)
             else:
                 self.changeSlice(-1)
-        if k_ctrl is True:
+        if k_ctrl:
             mousePosAfterScale = self.mapToScene(event.pos())
             offset = self.mousePos - mousePosAfterScale
             newGrviewCenter = grviewCenter + offset
             self.centerOn(newGrviewCenter)
             self.mouseMoveEvent(event)
-
-
 
 #FIXME uncommented to get rid of dependencies to volumeEditor
 #    def tabletEvent(self, event):
@@ -457,14 +456,13 @@ class ImageScene(QGraphicsView):
         if event.button() == Qt.MidButton:
             self.setCursor(QCursor())
             releasePoint = event.pos()
-            
             self.lastPanPoint = releasePoint
             self.dragMode = False
             self.ticker.start(20)
-        if self.isDrawing == True:
+        if self.isDrawing:
             mousePos = self.mapToScene(event.pos())
             self.endDrawing(mousePos)
-        if self.tempErase == True:
+        if self.tempErase:
             self.drawManager.disableErasing()
             self.tempErase = False
 
@@ -494,8 +492,9 @@ class ImageScene(QGraphicsView):
             y = min(0.0, y + a*ay)
         return QPointF(x, y)
 
-    #TODO oli
     def qBound(self, minVal, current, maxVal):
+        """PyQt4 does not wrap the qBound function from Qt's global namespace
+           This is equivalent."""
         return max(min(current, maxVal), minVal)
     
     def setdeaccelerateAxAy(self, x, y, a):
