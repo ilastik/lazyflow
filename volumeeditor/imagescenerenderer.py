@@ -27,57 +27,58 @@ if LooseVersion(OpenGL.__version__) < LooseVersion('3.0.1'):
 class ImageSceneRenderer(QObject):
     def __init__(self, imageScene):
         QObject.__init__(self)
-        self.imageScene = imageScene # TODO: remove dependency
-        self.patchAccessor = imageScene.patchAccessor
+        self._imageScene = imageScene # TODO: remove dependency
+        self._patchAccessor = imageScene.patchAccessor
         
-        self.min = 0
-        self.max = 255
+        self._min = 0
+        self._max = 255
         
-        self.thread = ImageSceneRenderThread(imageScene, imageScene.patchAccessor)
-        self.thread.finishedQueue.connect(self.renderingThreadFinished)
-        self.thread.start()
+        self._thread = ImageSceneRenderThread(imageScene, imageScene.patchAccessor)
+        self._thread.finishedQueue.connect(self._renderingThreadFinished)
+        self._thread.start()
 
     def renderImage(self, image, overlays = ()):
-        self.thread.queue.clear()
-        self.thread.newerDataPending.set()
+        self._thread.queue.clear()
+        self._thread.newerDataPending.set()
 
-        self.updatePatches(range(self.patchAccessor.patchCount), image, overlays)
+        self._updatePatches(range(self._patchAccessor.patchCount), image, overlays)
+
         
-    def updatePatches(self, patchNumbers, image, overlays = ()):
+    def _updatePatches(self, patchNumbers, image, overlays = ()):
         if patchNumbers is None:
             return
-        workPackage = [patchNumbers, image, overlays, self.min, self.max]
-        self.thread.queue.append(workPackage)
-        self.thread.dataPending.set()
+        workPackage = [patchNumbers, image, overlays, self._min, self._max]
+        self._thread.queue.append(workPackage)
+        self._thread.dataPending.set()
 
-    def updateTexture(self, patch, b):
+    def _updateTexture(self, patch, b):
         glTexSubImage2D(GL_TEXTURE_2D, 0, b[0], b[2], b[1]-b[0], b[3]-b[2], \
                         GL_RGB, GL_UNSIGNED_BYTE, \
                         ctypes.c_void_p(patch.bits().__int__()))
     
-    def renderingThreadFinished(self):
+    def _renderingThreadFinished(self):
         #only proceed if there is no new _data already in the rendering thread queue
-        if not self.thread.dataPending.isSet():
+        if not self._thread.dataPending.isSet():
 
             #if we are in opengl 2d render mode, update the texture
-            if self.imageScene.openglWidget is not None:
-                self.imageScene.sharedOpenGLWidget.context().makeCurrent()
-                glBindTexture(GL_TEXTURE_2D, self.imageScene.scene.tex)
-                for patchNr in self.thread.outQueue:
-                    b = self.imageScene.patchAccessor.getPatchBounds(patchNr, 0)
-                    self.updateTexture(self.imageScene.imagePatches[patchNr], b)
+            if self._imageScene.openglWidget is not None:
+                self._imageScene.sharedOpenGLWidget.context().makeCurrent()
+                glBindTexture(GL_TEXTURE_2D, self._imageScene.scene.tex)
+                for patchNr in self._thread.outQueue:
+                    b = self._imageScene.patchAccessor.getPatchBounds(patchNr, 0)
+                    self._updateTexture(self._imageScene.imagePatches[patchNr], b)
                     
-            self.thread.outQueue.clear()
+            self._thread.outQueue.clear()
             #if all updates have been rendered remove tempitems
-            if self.thread.queue.__len__() == 0:
-                for item in self.imageScene.tempImageItems:
-                    self.imageScene.scene.removeItem(item)
-                self.imageScene.tempImageItems = []
+            if self._thread.queue.__len__() == 0:
+                for item in self._imageScene.tempImageItems:
+                    self._imageScene.scene.removeItem(item)
+                self._imageScene.tempImageItems = []
  
         #update the scene, and the 3d overview
-        print "updating slice view ", self.imageScene.axis
-        self.imageScene.viewport().repaint()
-        self.thread.freeQueue.set()
+        print "updating slice view ", self._imageScene.axis
+        self._imageScene.viewport().repaint()
+        self._thread.freeQueue.set()
 
 #*******************************************************************************
 # I m a g e S c e n e R e n d e r T h r e a d                                  *
@@ -104,47 +105,11 @@ class ImageSceneRenderThread(QThread):
         self.stopped = False
         
         print "initialized ImageSceneRenderThread"
-    
-    def convertImageUInt8(self, itemdata, itemcolorTable):
-        if itemdata.dtype == numpy.uint8 or itemcolorTable == None:
-            return itemdata
-        if itemcolorTable is None and itemdata.dtype == numpy.uint16:
-            print '*** Normalizing your data for display purpose'
-            print '*** I assume you have 12bit data'
-            return (itemdata*255.0/4095.0).astype(numpy.uint8)
-    
-        #if the item is larger we take the values module 256
-        #since QImage supports only 8Bit Indexed images
-        olditemdata = itemdata              
-        itemdata = numpy.ndarray(olditemdata.shape, 'float32')
-        if olditemdata.dtype == numpy.uint32:
-            return numpy.right_shift(numpy.left_shift(olditemdata,24),24)[:]
-        elif olditemdata.dtype == numpy.uint64:
-            return numpy.right_shift(numpy.left_shift(olditemdata,56),56)[:]
-        elif olditemdata.dtype == numpy.int32:
-            return numpy.right_shift(numpy.left_shift(olditemdata,24),24)[:]
-        elif olditemdata.dtype == numpy.int64:
-            return numpy.right_shift(numpy.left_shift(olditemdata,56),56)[:]
-        elif olditemdata.dtype == numpy.uint16:
-            return numpy.right_shift(numpy.left_shift(olditemdata,8),8)[:]
-        #raise TypeError(str(olditemdata.dtype) + ' <- unsupported image _data type (in the rendering thread, you know) ')
-        # TODO: Workaround: tried to fix the problem
-        # with the segmentation display, somehow it arrieves
-        # here in float32
-        print TypeError(str(olditemdata.dtype) + ': unsupported dtype of overlay in ImageSceneRenderThread.run()')
-
-    def isRGB(self, image):
-        return len(image.shape) > 2 and image.shape[2] > 1
-
-    def asQColor(self, color):
-        if isinstance(color,  long) or isinstance(color,  int):
-            return QColor.fromRgba(long(color))
-        return color
 
     def callMyFunction(self, itemdata, origitem, origitemColor, itemcolorTable):
-        uint8image = self.convertImageUInt8(itemdata, itemcolorTable)
+        uint8image = _convertImageUInt8(itemdata, itemcolorTable)
 
-        if itemcolorTable != None and self.isRGB(uint8image):
+        if itemcolorTable != None and _isRGB(uint8image):
             return qimage2ndarray.array2qimage(uint8image.swapaxes(0,1), normalize=False)
         if itemcolorTable != None:
             image0 = qimage2ndarray.gray2qimage(uint8image.swapaxes(0,1), normalize=False)
@@ -156,7 +121,7 @@ class ImageSceneRenderThread(QThread):
         else:
             normalize = False
                                         
-        if origitem.autoAlphaChannel is False and self.isRGB(itemdata):
+        if origitem.autoAlphaChannel is False and _isRGB(itemdata):
             return qimage2ndarray.array2qimage(itemdata.swapaxes(0,1), normalize)
         if origitem.autoAlphaChannel is False:
             tempdat = numpy.zeros(itemdata.shape[0:2] + (3,), 'float32')
@@ -198,13 +163,13 @@ class ImageSceneRenderThread(QThread):
                 itemcolorTable = origitem.colorTable
                 
                 imagedata = origitem._data[bounds[0]:bounds[1],bounds[2]:bounds[3]]
-                image0 = self.callMyFunction(imagedata, origitem, self.asQColor(origitem.color), itemcolorTable)
+                image0 = self.callMyFunction(imagedata, origitem, _asQColor(origitem.color), itemcolorTable)
                 p.drawImage(0,0, image0)
 
             p.end()
             self.outQueue.append(patchNr)
 
-    def runImpl(self):
+    def _runImpl(self):
         self.finishedQueue.emit()
         self.dataPending.wait()
         self.newerDataPending.clear()
@@ -215,4 +180,43 @@ class ImageSceneRenderThread(QThread):
     
     def run(self):
         while not self.stopped:
-            self.runImpl()
+            self._runImpl()
+
+
+
+def _convertImageUInt8(itemdata, itemcolorTable):
+    if itemdata.dtype == numpy.uint8 or itemcolorTable == None:
+        return itemdata
+    if itemcolorTable is None and itemdata.dtype == numpy.uint16:
+        print '*** Normalizing your data for display purpose'
+        print '*** I assume you have 12bit data'
+        return (itemdata*255.0/4095.0).astype(numpy.uint8)
+    
+    #if the item is larger we take the values module 256
+    #since QImage supports only 8Bit Indexed images
+    olditemdata = itemdata              
+    itemdata = numpy.ndarray(olditemdata.shape, 'float32')
+    if olditemdata.dtype == numpy.uint32:
+        return numpy.right_shift(numpy.left_shift(olditemdata,24),24)[:]
+    elif olditemdata.dtype == numpy.uint64:
+        return numpy.right_shift(numpy.left_shift(olditemdata,56),56)[:]
+    elif olditemdata.dtype == numpy.int32:
+        return numpy.right_shift(numpy.left_shift(olditemdata,24),24)[:]
+    elif olditemdata.dtype == numpy.int64:
+        return numpy.right_shift(numpy.left_shift(olditemdata,56),56)[:]
+    elif olditemdata.dtype == numpy.uint16:
+        return numpy.right_shift(numpy.left_shift(olditemdata,8),8)[:]
+    #raise TypeError(str(olditemdata.dtype) + ' <- unsupported image _data type (in the rendering thread, you know) ')
+    # TODO: Workaround: tried to fix the problem
+    # with the segmentation display, somehow it arrieves
+    # here in float32
+    print TypeError(str(olditemdata.dtype) + ': unsupported dtype of overlay in ImageSceneRenderThread.run()')
+
+def _isRGB( image ):
+    return len(image.shape) > 2 and image.shape[2] > 1
+
+def _asQColor( color ):
+    if isinstance(color,  long) or isinstance(color,  int):
+        return QColor.fromRgba(long(color))
+    return color
+
