@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-#    Copyright 2010 C Sommer, C Straehle, U Koethe, FA Hamprecht. All rights reserved.
+#    Copyright 2010, 2011 C Sommer, C Straehle, U Koethe, FA Hamprecht. All rights reserved.
 #    
 #    Redistribution and use in source and binary forms, with or without modification, are
 #    permitted provided that the following conditions are met:
@@ -38,9 +38,7 @@ please also have a look at :
 
 overlays seem to enjoy heavy usage in the gui part of the program, 
 still i decided to put them here in the core part!?!
-
 """
-
 
 from ilastik.core.volume import DataAccessor
 
@@ -62,7 +60,6 @@ class OverlaySlice():
         self._data = data
         self.min = min
         self.max = max
-
 
 #*******************************************************************************
 # O v e r l a y I t e m R e f e r e n c e                                      *
@@ -120,12 +117,10 @@ class OverlayItemReference(object):
             return self.overlayItem.name
         elif name == "key":
             return self.overlayItem.key
-        raise AttributeError,  name
-        
+        raise AttributeError,  name   
         
     def setAlpha(self, alpha):
         self.alpha = alpha
-        
         
     def setColor(self, color):
         self.color = color
@@ -153,10 +148,12 @@ class OverlayItemReference(object):
 
 class OverlayItem(object):
     """
-    A Item that holds some scalar or multichannel _data and their drawing related settings.
+    An item that holds some scalar or multichannel _data and their drawing related settings.
     OverlayItems are held by the OverlayMgr
     """
-    def __init__(self, data, color = 0, alpha = 0.4, colorTable = None, autoAdd = False, autoVisible = False,  linkColorTable = False, autoAlphaChannel = True, min = None, max = None):
+    def __init__(self, data, color = 0, alpha = 0.4, colorTable = None, \
+                 autoAdd = False, autoVisible = False, linkColorTable = False, \
+                 autoAlphaChannel = True, min = None, max = None):
         #whether this overlay can be displayed in 3D using
         #extraction of meshes
         self.displayable3D = False
@@ -208,23 +205,19 @@ class OverlayItem(object):
     def getSubSlice(self, offsets, sizes, num, axis, time = 0, channel = 0):
         return self._data.getSubSlice(offsets, sizes, num, axis, time, channel)
 
-        
     def setSubSlice(self, offsets, data, num, axis, time = 0, channel = 0):
         self._data.setSubSlice(offsets, data, num, axis, time, channel)
                           
-    
     def getColor(self):
-        if self.linkColor is False:
+        if not self.linkColor:
             return self.defaultColor
         else:
             return self.colorGetter()
-                          
     
     def setColorGetter(self,colorGetter, colorGetterArguments):
         self.colorGetter = colorGetter
         self.colorGetterArguments = colorGetterArguments
         self.linkColor = True
-    
     
     def getRef(self):
         ref = OverlayItemReference(self)
@@ -237,7 +230,6 @@ class OverlayItem(object):
             r.remove()
         self.references = []
         self._data = None
-
 
     def changeKey(self, newKey):
         if self.overlayMgr is not None:
@@ -257,10 +249,12 @@ class OverlayItem(object):
 
     @classmethod
     def qrgb(cls, r, g, b):
+        #FIXME use qRGB
         return long(0xff << 24) | ((r & 0xff) << 16) | ((g & 0xff) << 8) | (b & 0xff)
     
     @classmethod
     def qgray(cls, r, g, b):
+        #FIXME use qGray
         return (r*11+g*16+b*5)/32
     
     @classmethod

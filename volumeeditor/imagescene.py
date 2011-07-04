@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-#    Copyright 2010 C Sommer, C Straehle, U Koethe, FA Hamprecht. All rights reserved.
+#    Copyright 2010, 2011 C Sommer, C Straehle, U Koethe, FA Hamprecht. All rights reserved.
 #    
 #    Redistribution and use in source and binary forms, with or without modification, are
 #    permitted provided that the following conditions are met:
@@ -40,13 +40,12 @@ import os.path, time
 import sip
 
 from ilastik.gui.iconMgr import ilastikIcons
-from helper import PatchAccessor
-from helper import ViewManager
-from helper import DrawManager
+from patchAccessor import PatchAccessor
+from viewManager import ViewManager
+from drawManager import DrawManager
 
 from imagescenerenderer import ImageSceneRenderer
-from helper import InteractionLogger, ViewManager, \
-                                            DrawManager
+from helper import InteractionLogger
 
 #*******************************************************************************
 # H u d                                                                        *
@@ -61,19 +60,15 @@ class Hud(QFrame):
         self._maximum = maximum
 
         # configure self
+        #
+        # a border-radius of >0px to make the Hud appear rounded
+        # does not work together with an QGLWidget, the corners just appear black
+        # instead of transparent
         self.setStyleSheet("QFrame {background-color: white; color: black; border-radius: 0px;}")
         self.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
 
         self.setLayout(QHBoxLayout())
         self.layout().setContentsMargins(3,1,3,1)
-
-        # zoom button
-        self.zoomButton = QPushButton()
-        self.zoomButton.setIcon(QIcon(QPixmap(ilastikIcons.AddSelx22)))
-        self.zoomButton.setStyleSheet("background-color: white; border: 1px solid black; border-radius: 6px;")
-        self.zoomButton.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
-        self.layout().addWidget(self.zoomButton)
-        self.layout().addSpacing(5)
 
         # dimension label
         self.dimLabel = QLabel(coordinateLabel)
@@ -106,7 +101,6 @@ class ImageScene(QGraphicsView):
     endDraw            = pyqtSignal(int, QPointF)
     mouseMoved         = pyqtSignal(int, int, int, bool)
     mouseDoubleClicked = pyqtSignal(int, int, int)
-    toggleMaximized    = pyqtSignal(int)
     
     axisColor = [QColor(255,0,0,255), QColor(0,255,0,255), QColor(0,0,255,255)]
         
@@ -117,6 +111,9 @@ class ImageScene(QGraphicsView):
                  the last entry is the extent in slice direction
         """
         QGraphicsView.__init__(self)
+        self.scene = CustomGraphicsScene(sharedOpenGLWidget)
+        
+        assert(axis in [0,1,2])
         
         self.drawManager = drawManager
         self.viewManager = viewManager
@@ -127,8 +124,8 @@ class ImageScene(QGraphicsView):
         self.sliceExtent = viewManager.imageExtent(axis)
         self.isDrawing = False
         self.view = self
-        print "ImageScene.__init__:",viewManager.imageShape(axis)
         self.image = QImage(QSize(*viewManager.imageShape(axis)), QImage.Format_ARGB32)
+        self.scene.image = self.image
         self.border = None
         self.allBorder = None
         self.factor = 1.0
@@ -137,23 +134,11 @@ class ImageScene(QGraphicsView):
         self.lastPanPoint = QPoint()
         self.dragMode = False
         self.deltaPan = QPointF(0,0)
-        self.x = 0.0
-        self.y = 0.0
-        
-        self.min = 0
-        self.max = 255
         
         self.drawingEnabled = False
         
         self.openglWidget = None
         self.sharedOpenGLWidget = sharedOpenGLWidget
-        # enable OpenGL acceleratino
-        if sharedOpenGLWidget is not None:
-            self.openglWidget = QGLWidget(shareWidget = sharedOpenGLWidget)
-            self.setViewport(self.openglWidget)
-            self.setViewportUpdateMode(QGraphicsView.FullViewportUpdate)
-            
-        self.scene = CustomGraphicsScene(self.openglWidget, self.image)
         
         self.fastRepaint = True
         self.drawUpdateInterval = 300
@@ -164,43 +149,41 @@ class ImageScene(QGraphicsView):
 
             axisLabels = ["X:", "Y:", "Z:"]
             self.hud = Hud(0, self.sliceExtent - 1, axisLabels[self.axis])
-            self.hud.zoomButton.clicked.connect(self.imageSceneFullScreen)
 
             self.layout().addWidget(self.hud)
             self.layout().addStretch()
         
-        if self.openglWidget is not None:
+        self.patchAccessor = PatchAccessor(*viewManager.imageShape(axis),blockSize=64)
+        
+        if self.scene.useGL:
+            self.openglWidget = QGLWidget(shareWidget = sharedOpenGLWidget)
+            self.setViewport(self.openglWidget)
+            self.setViewportUpdateMode(QGraphicsView.FullViewportUpdate)
+            
             self.openglWidget.context().makeCurrent()
             self.scene.tex = glGenTextures(1)
             glBindTexture(GL_TEXTURE_2D,self.scene.tex)
-            print "generating OpenGL texture of size %d x %d" % (self.scene.image.width(), self.scene.image.height())
-            glTexImage2D(GL_TEXTURE_2D, 0,GL_RGB, self.scene.image.width(), self.scene.image.height(), 0, GL_RGB, GL_UNSIGNED_BYTE, ctypes.c_void_p(self.scene.image.bits().__int__()))
+            #print "generating OpenGL texture of size %d x %d" % (self.scene.image.width(), self.scene.image.height())
+            glTexImage2D(GL_TEXTURE_2D, 0,GL_RGB, viewManager.imageShape(axis)[0], viewManager.imageShape(axis)[1], \
+                         0, GL_RGB, GL_UNSIGNED_BYTE, ctypes.c_void_p(self.image.bits().__int__()))
+
+            self.imagePatches = range(self.patchAccessor.patchCount)
+            for i, p in enumerate(self.imagePatches):
+                b = self.patchAccessor.getPatchBounds(i, 0)
+                self.imagePatches[i] = QImage(b[1]-b[0], b[3] -b[2], QImage.Format_RGB888)
             
         self.view.setScene(self.scene)
         self.scene.setSceneRect(0,0, *viewManager.imageShape(axis))
         self.view.setSceneRect(0,0, *viewManager.imageShape(axis))
-        self.scene.bgColor = QColor(Qt.white)
-        if os.path.isfile('gui/backGroundBrush.png'):
-            self.scene.bgBrush = QBrush(QImage('gui/backGroundBrush.png'))
-        else:
-            self.scene.bgBrush = QBrush(QColor(Qt.black))
 
         self.view.setRenderHint(QPainter.Antialiasing, False)
-        #self.view.setRenderHint(QPainter.SmoothPixmapTransform, False)
-
-        self.patchAccessor = PatchAccessor(*viewManager.imageShape(axis),blockSize=64)
-        print "PatchCount :", self.patchAccessor.patchCount
-
-        self.imagePatches = range(self.patchAccessor.patchCount)
-        for i, p in enumerate(self.imagePatches):
-            b = self.patchAccessor.getPatchBounds(i, 0)
-            self.imagePatches[i] = QImage(b[1]-b[0], b[3] -b[2], QImage.Format_RGB888)
         
         #Unfortunately, setting the style like this make the scroll bars look
         #really crappy...
         #self.setStyleSheet("QWidget:!focus { border: 2px solid " + self.axisColor[self.axis].name() +"; border-radius: 4px; }\
         #                    QWidget:focus { border: 2px solid white; border-radius: 4px; }")
 
+        #FIXME: Is there are more elegant way to handle this?
         if self.axis is 0:
             self.view.rotate(90.0)
             self.view.scale(1.0,-1.0)
@@ -233,7 +216,7 @@ class ImageScene(QGraphicsView):
         # invisible cursor to enable custom cursor
         self.hiddenCursor = QCursor(Qt.BlankCursor)
         
-        # For screen recording BlankCursor dont work
+        # For screen recording BlankCursor doesn't work
         #self.hiddenCursor = QCursor(Qt.ArrowCursor)
         
         #self.connect(self, SIGNAL("destroyed()"), self.cleanUp)
@@ -242,8 +225,12 @@ class ImageScene(QGraphicsView):
         self.crossHairCursor.setZValue(100)
         self.scene.addItem(self.crossHairCursor)
         
+        #FIXME: do we want to have these connects here or somewhere else?
         self.drawManager.brushSizeChanged.connect(self.crossHairCursor.setBrushSize)
+        self.drawManager.brushColorChanged.connect(self.crossHairCursor.setColor)
+        
         self.crossHairCursor.setBrushSize(self.drawManager.brushSize)
+        self.crossHairCursor.setColor(self.drawManager.drawColor)
 
         self.sliceIntersectionMarker = SliceIntersectionMarker(self.image.width(), self.image.height())
         if self.axis == 0:
@@ -256,10 +243,8 @@ class ImageScene(QGraphicsView):
 
         self.tempErase = False
         
-        
         self.imageSceneRenderer = ImageSceneRenderer(self)
-        
-        
+        self.imageSceneRenderer.updatesAvailable.connect(self.viewport().repaint)
         
     def setBorderMarginIndicator(self, margin):
         """
@@ -285,9 +270,6 @@ class ImageScene(QGraphicsView):
         self.border.setPen(QPen(Qt.NoPen))
         self.border.setZValue(200)
         self.scene.addItem(self.border)
-
-    def imageSceneFullScreen(self):
-        self.toggleMaximized.emit(self.axis)
 
     def setSliceIntersection(self, state):
         self.sliceIntersectionMarker.setVisibility(state)
@@ -316,7 +298,6 @@ class ImageScene(QGraphicsView):
             else:
                 return   
 
-
     def cleanUp(self):        
         self.ticker.stop()
         self.drawTimer.stop()
@@ -328,12 +309,8 @@ class ImageScene(QGraphicsView):
         #we set the border overlay indicator to visible
         allBorder = (self.sliceNumber < self.margin or\
                      self.sliceExtent - self.sliceNumber < self.margin) \
-                    and self.sliceExtent > 1
+                     and self.sliceExtent > 1
         self.allBorder.setVisible(allBorder)
-        print "ImageScene:displayNewSlice", image.__class__, image
-        print overlays, type(overlays)
-        for o in overlays:
-            print "    ",o
         self.imageSceneRenderer.renderImage(image, overlays)
         
     def saveSlice(self, filename):
@@ -392,29 +369,27 @@ class ImageScene(QGraphicsView):
         grviewCenter  = self.mapToScene(self.viewport().rect().center())
 
         if event.delta() > 0:
-            if k_alt is True:
+            if k_alt:
                 self.changeSlice(10)
-            elif k_ctrl is True:
+            elif k_ctrl:
                 scaleFactor = 1.1
                 self.doScale(scaleFactor)
             else:
                 self.changeSlice(1)
         else:
-            if k_alt is True:
+            if k_alt:
                 self.changeSlice(-10)
-            elif k_ctrl is True:
+            elif k_ctrl:
                 scaleFactor = 0.9
                 self.doScale(scaleFactor)
             else:
                 self.changeSlice(-1)
-        if k_ctrl is True:
+        if k_ctrl:
             mousePosAfterScale = self.mapToScene(event.pos())
             offset = self.mousePos - mousePosAfterScale
             newGrviewCenter = grviewCenter + offset
             self.centerOn(newGrviewCenter)
             self.mouseMoveEvent(event)
-
-
 
 #FIXME uncommented to get rid of dependencies to volumeEditor
 #    def tabletEvent(self, event):
@@ -455,6 +430,13 @@ class ImageScene(QGraphicsView):
             if self.ticker.isActive():
                 self.deltaPan = QPointF(0, 0)
 
+        if event.buttons() == Qt.RightButton:
+            #make sure that we have the cursor at the correct position
+            #before we call the context menu
+            self.mouseMoveEvent(event)
+            self.customContextMenuRequested.emit(event.pos())
+            return
+
         if not self.drawingEnabled:
             print "ImageScene.mousePressEvent: drawing is not enabled"
             return
@@ -469,25 +451,18 @@ class ImageScene(QGraphicsView):
             mousePos = self.mapToScene(event.pos())
             self.beginDrawing(mousePos)
             
-        if event.buttons() == Qt.RightButton:
-            #make sure that we have the cursor at the correct position
-            #before we call the context menu
-            self.mouseMoveEvent(event)
-            self.onContext(event.pos())
-            
     #TODO oli
     def mouseReleaseEvent(self, event):
         if event.button() == Qt.MidButton:
             self.setCursor(QCursor())
             releasePoint = event.pos()
-            
             self.lastPanPoint = releasePoint
             self.dragMode = False
             self.ticker.start(20)
-        if self.isDrawing == True:
+        if self.isDrawing:
             mousePos = self.mapToScene(event.pos())
             self.endDrawing(mousePos)
-        if self.tempErase == True:
+        if self.tempErase:
             self.drawManager.disableErasing()
             self.tempErase = False
 
@@ -517,8 +492,9 @@ class ImageScene(QGraphicsView):
             y = min(0.0, y + a*ay)
         return QPointF(x, y)
 
-    #TODO oli
     def qBound(self, minVal, current, maxVal):
+        """PyQt4 does not wrap the qBound function from Qt's global namespace
+           This is equivalent."""
         return max(min(current, maxVal), minVal)
     
     def setdeaccelerateAxAy(self, x, y, a):
@@ -579,21 +555,27 @@ class ImageScene(QGraphicsView):
     #TODO oli
     def mouseMoveEvent(self,event):
         if self.dragMode == True:
+            #the mouse was moved because the user wants to change
+            #the viewport
             self.deltaPan = QPointF(event.pos() - self.lastPanPoint)
             self.panning()
             self.lastPanPoint = event.pos()
             return
         if self.ticker.isActive():
+            #the view is still scrolling
+            #do nothing until it comes to a complete stop
             return
-            
-        self.mousePos = mousePos = self.mousePos = self.mapToScene(event.pos())
+        
+        #the mouse was moved because the user is drawing
+        #or he wants to otherwise interact with the data!
+        self.mousePos = mousePos = self.mapToScene(event.pos())
         x = self.x = mousePos.x()
         y = self.y = mousePos.y()
 
-        valid = x > 0 and x < self.image.width() and y > 0 and y < self.image.height()# and len(self.volumeEditor.overlayWidget.overlays) > 0:                
+        valid = x > 0 and x < self.image.width() and y > 0 and y < self.image.height()                
         self.mouseMoved.emit(self.axis, x, y, valid)
                 
-        if self.isDrawing == True:
+        if self.isDrawing:
             line = self.drawManager.moveTo(mousePos)
             line.setZValue(99)
             self.tempImageItems.append(line)
@@ -620,7 +602,7 @@ class ImageScene(QGraphicsView):
         self.changeSlice(-10)
 
     def changeSlice(self, delta):
-        if self.isDrawing == True:
+        if self.isDrawing:
             self.endDrawing(self.mousePos)
             self.isDrawing = True
             self.drawManager.beginDrawing(self.mousePos, self.imShape)
@@ -644,23 +626,23 @@ class ImageScene(QGraphicsView):
 #*******************************************************************************
 
 class CustomGraphicsScene(QGraphicsScene):
-    def __init__(self, glWidget, image):
+    def __init__(self, glWidget):
         QGraphicsScene.__init__(self)
         self.glWidget = glWidget
         self.useGL = (glWidget != None)
-        self.image = image
-        self.images = []
-        self.bgColor = QColor(Qt.green)
+        
+        self.image = None
         self.tex = -1
 
     def drawBackgroundSoftware(self, painter, rect):
+        if not self.image:
+            return
         painter.setClipRect(rect)
         painter.drawImage(0,0,self.image)
 
     def drawBackgroundGL(self, painter, rect):
         self.glWidget.context().makeCurrent()
-            
-        #glClearColor(self.bgColor.redF(),self.bgColor.greenF(),self.bgColor.blueF(),1.0)
+        
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
 
         if self.tex <= -1:
