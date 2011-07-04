@@ -820,7 +820,7 @@ class SliceIntersectionMarker(QGraphicsItem) :
 
 if __name__ == '__main__':
     from PyQt4.QtGui import QApplication
-    from ilastik.core.overlayMgr import OverlaySlice 
+    from overlaySlice import OverlaySlice 
     #make the program quit on Ctrl+C
     import signal
     signal.signal(signal.SIGINT, signal.SIG_DFL)

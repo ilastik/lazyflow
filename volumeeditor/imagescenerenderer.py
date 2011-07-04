@@ -60,19 +60,19 @@ class ImageSceneRenderer(QObject):
     
     def _renderingThreadFinished(self):
         def haveNewData():
-            return self.thread.dataPending.isSet()
+            return self._thread.dataPending.isSet()
         
         #only proceed if there is no new _data already in the rendering thread queue
         if not haveNewData():
             #if we are in opengl 2d render mode, update the texture
-            if self.imageScene.openglWidget is not None:
-                self.imageScene.sharedOpenGLWidget.context().makeCurrent()
-                glBindTexture(GL_TEXTURE_2D, self.imageScene.scene.tex)
-                for patchNr in self.thread.outQueue:
+            if self._imageScene.openglWidget is not None:
+                self._imageScene.sharedOpenGLWidget.context().makeCurrent()
+                glBindTexture(GL_TEXTURE_2D, self._imageScene.scene.tex)
+                for patchNr in self._thread.outQueue:
                     if haveNewData():
                         break
-                    b = self.imageScene.patchAccessor.getPatchBounds(patchNr, 0)
-                    self.updateTexture(self.imageScene.imagePatches[patchNr], b)
+                    b = self._imageScene.patchAccessor.getPatchBounds(patchNr, 0)
+                    self.updateTexture(self._imageScene.imagePatches[patchNr], b)
                     
             self._thread.outQueue.clear()
             #if all updates have been rendered remove tempitems
