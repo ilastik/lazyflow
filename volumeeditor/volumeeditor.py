@@ -705,7 +705,8 @@ if __name__ == "__main__":
     #make the program quit on Ctrl+C
     import signal
     signal.signal(signal.SIGINT, signal.SIG_DFL)
-    from ilastikdeps.core.overlayMgr import OverlaySlice, OverlayItem
+    from overlaySlice import OverlaySlice
+    from overlayItem  import OverlayItem
     from ilastikdeps.core.volume import DataAccessor
     
     def img(N):
@@ -770,7 +771,14 @@ if __name__ == "__main__":
             
             self.dataOverlay = OverlayItem(DataAccessor(self.data), alpha=1.0, color=Qt.black, colorTable=OverlayItem.createDefaultColorTable('GRAY', 256), autoVisible=True, autoAlphaChannel=False)
             
-            #self.dialog.overlayWidget.overlays = [self.dataOverlay.getRef()]
+            class FakeOverlayWidget:
+                def __init__(self):
+                    self.overlays = None
+                def getOverlayRef(self, key):
+                    return self.overlays[0]
+            
+            self.dialog.overlayWidget = FakeOverlayWidget()
+            self.dialog.overlayWidget.overlays = [self.dataOverlay.getRef()]
             
             self.dialog.show()
             self.dialog.setPosition(0,0,0)
