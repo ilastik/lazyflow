@@ -252,6 +252,10 @@ class VolumeEditor(QWidget):
             self.changeSliceZ(numpy.floor((self._shape[3] - 1) / 2))
         QTimer.singleShot(0, initialPosition)
     
+    def setDrawingEnabled(self, enabled): 
+        for i in range(3):
+            self._imageScenes[i].drawingEnabled = enabled
+    
     def onCustomContextMenuRequested(self, pos):
         print "Volumeeditor.onCustomContextMenuRequested"
         self.customContextMenuRequested.emit(pos)
@@ -462,7 +466,7 @@ class VolumeEditor(QWidget):
             tempImage = None
             tempoverlays = []   
             for item in reversed(self.overlayWidget.overlays):
-                if item.visible: #and hasattr(item, 'getOverlaySlice'):
+                if item.visible:
                     tempoverlays.append(item.getOverlaySlice(self.viewManager.slicePosition[i], i, self.viewManager.time, item.channel))
             if len(self.overlayWidget.overlays) > 0 and self.overlayWidget.getOverlayRef("Raw Data") is not None:
                 tempImage = self.overlayWidget.getOverlayRef("Raw Data")._data.getSlice(self.viewManager.slicePosition[i], i, self.viewManager.time, self.overlayWidget.getOverlayRef("Raw Data").channel)
@@ -761,11 +765,11 @@ if __name__ == "__main__":
             
             vm = ViewManager(self.data)
             self.dialog = VolumeEditor((1,)+self.data.shape+(1,), None, sharedOpenglWidget=sharedOpenglWidget, viewManager=vm)
-            for i in range(3):
-                self.dialog.imageScenes[i].drawingEnabled = True
+            self.dialog.setDrawingEnabled(True)
             
             self.dataOverlay = OverlayItem(DataAccessor(self.data), alpha=1.0, color=Qt.black, colorTable=OverlayItem.createDefaultColorTable('GRAY', 256), autoVisible=True, autoAlphaChannel=False)
-            self.dialog.overlayWidget.overlays = [self.dataOverlay.getRef()]
+            
+            #self.dialog.overlayWidget.overlays = [self.dataOverlay.getRef()]
             
             self.dialog.show()
             self.dialog.setPosition(0,0,0)
@@ -787,4 +791,3 @@ if __name__ == "__main__":
     s.show()
     
     app.exec_()
-
