@@ -43,10 +43,10 @@ class ImageSceneRenderer(QObject):
         self._thread.queue.clear()
         self._thread.newerDataPending.set()
 
-        self._updatePatches(range(self._patchAccessor.patchCount), image, overlays)
+        self.updatePatches(range(self._patchAccessor.patchCount), image, overlays)
 
         
-    def _updatePatches(self, patchNumbers, image, overlays = ()):
+    def updatePatches(self, patchNumbers, image, overlays = ()):
         if patchNumbers is None:
             return
         workPackage = [patchNumbers, image, overlays, self._min, self._max]
@@ -72,7 +72,7 @@ class ImageSceneRenderer(QObject):
                     if haveNewData():
                         break
                     b = self._imageScene.patchAccessor.getPatchBounds(patchNr, 0)
-                    self.updateTexture(self._imageScene.imagePatches[patchNr], b)
+                    self._updateTexture(self._imageScene.imagePatches[patchNr], b)
                     
             self._thread.outQueue.clear()
             #if all updates have been rendered remove tempitems
