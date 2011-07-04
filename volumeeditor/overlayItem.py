@@ -27,39 +27,8 @@
 #    authors and should not be interpreted as representing official policies, either expressed
 #    or implied, of their employers.
 
-"""
-This file is about Overlays. To understand how they are used in the GUI of the Program 
-please also have a look at :
-
-    gui/labelWidget.py
-    gui/overlayWidget.py
-    gui/seedWidget.py
-    gui/overlaySelectionDlg.py
-
-overlays seem to enjoy heavy usage in the gui part of the program, 
-still i decided to put them here in the core part!?!
-"""
-
-from ilastik.core.volume import DataAccessor
-
-#*******************************************************************************
-# O v e r l a y S l i c e                                                      *
-#*******************************************************************************
-
-class OverlaySlice():
-    """
-    Helper class to encapsulate the overlay slice and its drawing related settings
-    for passing it around, mostly used in the volumeEditor (->move there ?)
-    """
-    def __init__(self, data, color, alpha, colorTable, min = None, max = None, autoAlphaChannel = True):
-        self.colorTable = colorTable
-        self.color = color
-        self.alpha = alpha
-        self.alphaChannel = None
-        self.autoAlphaChannel = autoAlphaChannel
-        self._data = data
-        self.min = min
-        self.max = max
+from ilastikdeps.core.volume import DataAccessor
+from overlaySlice import OverlaySlice
 
 #*******************************************************************************
 # O v e r l a y I t e m R e f e r e n c e                                      *
@@ -287,23 +256,23 @@ class OverlayItem(object):
     # COMPARED BUT BETTER MAKE SURE THAT THIS IS INDEED THE CASE.
     def createDefault16ColorColorTable(cls):
         sublist = []
-        sublist.append(OverlayItem.qrgb(69, 69, 69)) # dark grey
-        sublist.append(OverlayItem.qrgb(255, 0, 0))
-        sublist.append(OverlayItem.qrgb(0, 255, 0))
-        sublist.append(OverlayItem.qrgb(0, 0, 255))
+        sublist.append(OverlayItem.qrgb(69,  69,  69) ) # dark grey
+        sublist.append(OverlayItem.qrgb(255, 0,   0)  )
+        sublist.append(OverlayItem.qrgb(0,   255, 0)  )
+        sublist.append(OverlayItem.qrgb(0,   0,   255))
         
-        sublist.append(OverlayItem.qrgb(255, 255, 0))
-        sublist.append(OverlayItem.qrgb(0, 255, 255))
-        sublist.append(OverlayItem.qrgb(255, 0, 255))
+        sublist.append(OverlayItem.qrgb(255, 255, 0)  )
+        sublist.append(OverlayItem.qrgb(0,   255, 255))
+        sublist.append(OverlayItem.qrgb(255, 0,   255))
         sublist.append(OverlayItem.qrgb(255, 105, 180)) #hot pink!
         
         sublist.append(OverlayItem.qrgb(102, 205, 170)) #dark aquamarine
-        sublist.append(OverlayItem.qrgb(165,  42,  42)) #brown        
-        sublist.append(OverlayItem.qrgb(0, 0, 128)) #navy
-        sublist.append(OverlayItem.qrgb(255, 165, 0)) #orange
+        sublist.append(OverlayItem.qrgb(165, 42,  42) ) #brown        
+        sublist.append(OverlayItem.qrgb(0,   0,   128)) #navy
+        sublist.append(OverlayItem.qrgb(255, 165, 0)  ) #orange
         
         sublist.append(OverlayItem.qrgb(173, 255,  47)) #green-yellow
-        sublist.append(OverlayItem.qrgb(128,0, 128)) #purple
+        sublist.append(OverlayItem.qrgb(128, 0,   128)) #purple
         sublist.append(OverlayItem.qrgb(192, 192, 192)) #silver
         sublist.append(OverlayItem.qrgb(240, 230, 140)) #khaki
         colorlist = []
@@ -319,4 +288,4 @@ class OverlayItem(object):
             color = OverlayItem.qrgb(numpy.random.randint(255),numpy.random.randint(255),numpy.random.randint(255))
             colorlist.append(color)
             
-        return colorlist    
+        return colorlis

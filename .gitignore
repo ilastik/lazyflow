@@ -1,4 +1,5 @@
 *.pyc
+*.kdev4
 *.backup
 .project
 .pydevproject
