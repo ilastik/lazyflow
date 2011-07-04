@@ -53,6 +53,7 @@ from imageSaveThread import ImageSaveThread
 from viewManager import ViewManager
 from drawManager import DrawManager
 
+from overlaySlice import OverlaySlice
 
 from helper import ImageWithProperties, \
 HistoryManager, \
