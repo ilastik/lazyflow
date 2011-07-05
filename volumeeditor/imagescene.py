@@ -392,35 +392,6 @@ class ImageScene(QGraphicsView):
             self.centerOn(newGrviewCenter)
             self.mouseMoveEvent(event)
 
-#FIXME uncommented to get rid of dependencies to volumeEditor
-#    def tabletEvent(self, event):
-#        self.setFocus(True)
-#        
-#        if not self.volumeEditor.labelWidget.currentItem():
-#            return
-#        
-#        self.mousePos = mousePos = self.mapToScene(event.pos())
-#        
-#        if event.pointerType() == QTabletEvent.Eraser or QApplication.keyboardModifiers() == Qt.ShiftModifier:
-#            self.drawManager.setErasing()
-#        elif event.pointerType() == QTabletEvent.Pen and QApplication.keyboardModifiers() != Qt.ShiftModifier:
-#            self.drawManager.disableErasing()
-#        if self.isDrawing == True:
-#            if event.pressure() == 0:
-#                self.endDrawing(mousePos)
-#                self.volumeEditor.changeSlice(self.volumeEditor.viewManager.slicePosition[self.axis], self.axis)
-#            else:
-#                if self.drawManager.erasing:
-#                    #make the brush size bigger while erasing
-#                    self.drawManager.setBrushSize(int(event.pressure()*10))
-#                else:
-#                    self.drawManager.setBrushSize(int(event.pressure()*7))
-#        if self.isDrawing == False:
-#            if event.pressure() > 0:
-#                self.beginDrawing(mousePos)
-#                
-#        self.mouseMoveEvent(event)
-
     #TODO oli
     def mousePressEvent(self, event):
         if event.button() == Qt.MidButton:
