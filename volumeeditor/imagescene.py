@@ -705,7 +705,8 @@ if __name__ == '__main__':
             
             self.imageScene = ImageScene(axis, viewManager, drawManager)
             self.imageScene.drawingEnabled = True
-            
+            self.imageScene.mouseMoved.connect(lambda axis, x, y, valid: self.imageScene.crossHairCursor.showXYPosition(x,y))
+
             self.testChangeSlice(20, axis)
         
             self.imageScene.sliceChanged.connect(self.testChangeSlice)
