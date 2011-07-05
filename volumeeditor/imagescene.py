@@ -119,7 +119,7 @@ class ImageScene(QGraphicsView):
         
         self.drawManager = drawManager
         self.viewManager = viewManager
-        
+ 
         self.tempImageItems = []
         self.axis = axis
         self.sliceNumber = 0
@@ -244,8 +244,21 @@ class ImageScene(QGraphicsView):
 
         self.tempErase = False
         
+        #
+        # setup the imageSceneRenderer
+        #
         self.imageSceneRenderer = ImageSceneRenderer(self)
-        self.imageSceneRenderer.updatesAvailable.connect(self.viewport().repaint)
+
+        # improve the drawing speed of the
+        # graphicsscene' background
+        self.setCacheMode(QGraphicsView.CacheBackground)
+
+        # after the renderer finished,
+        # reset the background cache and redraw the scene
+        def refresh():
+            self.resetCachedContent()
+            self.viewport().repaint()
+        self.imageSceneRenderer.updatesAvailable.connect(refresh)
         
     def setBorderMarginIndicator(self, margin):
         """
