@@ -638,8 +638,15 @@ class CustomGraphicsScene(QGraphicsScene):
     def drawBackgroundSoftware(self, painter, rect):
         if not self.image:
             return
-        painter.setClipRect(rect)
-        painter.drawImage(0,0,self.image)
+        #This seems to be much faster than
+        #
+        # painter.setClipRect(rect)
+        # painter.drawImage(0,0,self.image)
+        #which apparently paints the _whole_ image and does not do clipping.
+        #
+        #The execution time of the following should scale with the monitor size
+        #only and not with the size of the 2D image:
+        painter.drawImage(rect,self.image,rect)
 
     def drawBackgroundGL(self, painter, rect):
         self.glWidget.context().makeCurrent()
