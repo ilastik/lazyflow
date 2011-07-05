@@ -43,6 +43,8 @@ from ilastik.gui.iconMgr import ilastikIcons
 from patchAccessor import PatchAccessor
 from viewManager import ViewManager
 from drawManager import DrawManager
+from crossHairCursor import CrossHairCursor
+from sliceIntersectionMarker import SliceIntersectionMarker
 
 from imagescenerenderer import ImageSceneRenderer
 from helper import InteractionLogger
@@ -674,147 +676,6 @@ class CustomGraphicsScene(QGraphicsScene):
             self.drawBackgroundSoftware(painter, rect)
 
 #*******************************************************************************
-# C r o s s H a i r C u r s o r                                                *
-#*******************************************************************************
-
-class CrossHairCursor(QGraphicsItem) :
-    modeYPosition  = 0
-    modeXPosition  = 1
-    modeXYPosition = 2
-    
-    def boundingRect(self):
-        return QRectF(0,0, self.width, self.height)
-    def __init__(self, width, height):
-        QGraphicsItem.__init__(self)
-        
-        self.width = width
-        self.height = height
-        
-        self.penDotted = QPen(Qt.red, 2, Qt.DotLine, Qt.RoundCap, Qt.RoundJoin)
-        self.penDotted.setCosmetic(True)
-        
-        self.penSolid = QPen(Qt.red, 2)
-        self.penSolid.setCosmetic(True)
-        
-        self.x = 0
-        self.y = 0
-        self.brushSize = 0
-        
-        self.mode = self.modeXYPosition
-    
-    def setColor(self, color):
-        self.penDotted = QPen(color, 2, Qt.DotLine, Qt.RoundCap, Qt.RoundJoin)
-        self.penDotted.setCosmetic(True)
-        self.penSolid  = QPen(color, 2)
-        self.penSolid.setCosmetic(True)
-        self.update()
-    
-    def showXPosition(self, x, y):
-        """only mark the x position by displaying a line f(y) = x"""
-        self.setVisible(True)
-        self.mode = self.modeXPosition
-        self.setPos(x, y - int(y))
-        
-    def showYPosition(self, y, x):
-        """only mark the y position by displaying a line f(x) = y"""
-        self.setVisible(True)
-        self.mode = self.modeYPosition
-        self.setPos(x - int(x), y)
-        
-    def showXYPosition(self, x,y):
-        """mark the (x,y) position by displaying a cross hair cursor
-           including a circle indicating the current brush size"""
-        self.setVisible(True)
-        self.mode = self.modeXYPosition
-        self.setPos(x,y)
-    
-    def paint(self, painter, option, widget=None):
-        painter.setPen(self.penDotted)
-        
-        if self.mode == self.modeXPosition:
-            painter.drawLine(QPointF(self.x+0.5, 0), QPointF(self.x+0.5, self.height))
-        elif self.mode == self.modeYPosition:
-            painter.drawLine(QPointF(0, self.y), QPointF(self.width, self.y))
-        else:
-            painter.drawLine(QPointF(self.x -0.5*self.brushSize -3 ,self.y), QPointF(self.x -0.5*self.brushSize, self.y))
-            painter.drawLine(QPointF(self.x+0.5*self.brushSize, self.y), QPointF(self.x+0.5*self.brushSize +3, self.y))
-
-            painter.drawLine(QPointF(self.x, self.y-0.5*self.brushSize - 3), QPointF(self.x, self.y-0.5*self.brushSize))
-            painter.drawLine(QPointF(self.x, self.y+0.5*self.brushSize), QPointF(self.x, self.y+0.5*self.brushSize + 3))
-
-            painter.setPen(self.penSolid)
-            painter.drawEllipse(QPointF(self.x, self.y), 0.5*self.brushSize, 0.5*self.brushSize)
-        
-    def setPos(self, x, y):
-        self.x = x
-        self.y = y
-        self.update()
-        
-    def setBrushSize(self, size):
-        self.brushSize = size
-        self.update()
-
-#*******************************************************************************
-# S l i c e I n t e r s e c t i o n M a r k e r                                *
-#*******************************************************************************
-
-class SliceIntersectionMarker(QGraphicsItem) :
-    
-    def boundingRect(self):
-        return QRectF(0,0, self.width, self.height)
-    
-    def __init__(self, width, height):
-        QGraphicsItem.__init__(self)
-        
-        self.width = width
-        self.height = height
-              
-        self.penX = QPen(Qt.red, 2)
-        self.penX.setCosmetic(True)
-        
-        self.penY = QPen(Qt.green, 2)
-        self.penY.setCosmetic(True)
-        
-        self.x = 0
-        self.y = 0
-        
-        self.isVisible = False
-
-    def setPosition(self, x, y):
-        self.x = x
-        self.y = y
-        self.update()
-        
-    def setPositionX(self, x):
-        self.setPosition(x, self.y)
-        
-    def setPositionY(self, y):
-        self.setPosition(self.x, y)  
-   
-    def setColor(self, colorX, colorY):
-        self.penX = QPen(colorX, 2)
-        self.penX.setCosmetic(True)
-        self.penY = QPen(colorY, 2)
-        self.penY.setCosmetic(True)
-        self.update()
-        
-    def setVisibility(self, state):
-        if state == True:
-            self.isVisible = True
-        else:
-            self.isVisible = False
-        self.update()
-    
-    def paint(self, painter, option, widget=None):
-        if self.isVisible:
-            painter.setPen(self.penY)
-            painter.drawLine(QPointF(0.0,self.y), QPointF(self.width, self.y))
-            
-            painter.setPen(self.penX)
-            painter.drawLine(QPointF(self.x, 0), QPointF(self.x, self.height))
-
-
-#*******************************************************************************
 # i f   _ _ n a m e _ _   = =   " _ _ m a i n _ _ "                            *
 #*******************************************************************************
 
@@ -858,6 +719,3 @@ if __name__ == '__main__':
 
     app = ImageSceneTest([""])
     app.exec_()
-
-
-
