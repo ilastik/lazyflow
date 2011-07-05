@@ -697,7 +697,9 @@ if __name__ == '__main__':
         def __init__(self, args):
             app = QApplication.__init__(self, args)
 
-            self.data = testVolume(40)
+            N = 1024
+            self.data = (numpy.random.rand(2*N ,5, N)*255).astype(numpy.uint8)
+
             axis = 1
             
             viewManager = ViewManager(self.data)
@@ -707,7 +709,7 @@ if __name__ == '__main__':
             self.imageScene.drawingEnabled = True
             self.imageScene.mouseMoved.connect(lambda axis, x, y, valid: self.imageScene.crossHairCursor.showXYPosition(x,y))
 
-            self.testChangeSlice(20, axis)
+            self.testChangeSlice(3, axis)
         
             self.imageScene.sliceChanged.connect(self.testChangeSlice)
             
