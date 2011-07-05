@@ -125,7 +125,6 @@ class ImageScene(QGraphicsView):
         self.sliceNumber = 0
         self.sliceExtent = viewManager.imageExtent(axis)
         self.isDrawing = False
-        self.view = self
         self.image = QImage(QSize(*viewManager.imageShape(axis)), QImage.Format_ARGB32)
         self.scene.image = self.image
         self.border = None
@@ -174,11 +173,11 @@ class ImageScene(QGraphicsView):
                 b = self.patchAccessor.getPatchBounds(i, 0)
                 self.imagePatches[i] = QImage(b[1]-b[0], b[3] -b[2], QImage.Format_RGB888)
             
-        self.view.setScene(self.scene)
+        self.setScene(self.scene)
         self.scene.setSceneRect(0,0, *viewManager.imageShape(axis))
-        self.view.setSceneRect(0,0, *viewManager.imageShape(axis))
+        self.setSceneRect(0,0, *viewManager.imageShape(axis))
 
-        self.view.setRenderHint(QPainter.Antialiasing, False)
+        self.setRenderHint(QPainter.Antialiasing, False)
         
         #Unfortunately, setting the style like this make the scroll bars look
         #really crappy...
@@ -187,8 +186,8 @@ class ImageScene(QGraphicsView):
 
         #FIXME: Is there are more elegant way to handle this?
         if self.axis is 0:
-            self.view.rotate(90.0)
-            self.view.scale(1.0,-1.0)
+            self.rotate(90.0)
+            self.scale(1.0,-1.0)
 
         self.setMouseTracking(True)
 
@@ -621,7 +620,7 @@ class ImageScene(QGraphicsView):
     def doScale(self, factor):
         self.factor = self.factor * factor
         InteractionLogger.log("%f: zoomFactor(factor) %f" % (time.clock(), self.factor))     
-        self.view.scale(factor, factor)
+        self.scale(factor, factor)
         
 #*******************************************************************************
 # C u s t o m G r a p h i c s S c e n e                                        *
