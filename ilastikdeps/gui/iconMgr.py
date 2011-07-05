@@ -28,7 +28,7 @@
 #    or implied, of their employers.
 
 import os
-import ilastik
+import ilastikdeps
 
 #*******************************************************************************
 # i l a s t i k I c o n s                                                      *
@@ -36,7 +36,7 @@ import ilastik
 
 class ilastikIcons(object):
     #get the absolute path of the 'ilastik' module
-    ilastikPath = os.path.dirname(ilastik.__file__)
+    ilastikPath = os.path.dirname(ilastikdeps.__file__)
     
     iconPath = ilastikPath+'/gui/icons/32x32/'
     Brush = iconPath + 'actions/edit-clear.png'

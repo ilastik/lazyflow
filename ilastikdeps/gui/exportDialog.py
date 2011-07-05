@@ -31,7 +31,7 @@ from PyQt4.QtCore import QFileInfo, QString, SIGNAL
 from PyQt4.QtGui import QComboBox, QDialog, QFileDialog, QHBoxLayout, QLabel,\
                         QLineEdit, QPushButton, QSpinBox, QVBoxLayout
 
-import ilastik.gui
+import ilastikdeps.gui
 
 #*******************************************************************************
 # E x p o r t D i a l o g                                                      *
@@ -96,9 +96,9 @@ class ExportDialog(QDialog):
         
 
     def slotDir(self):
-        path = ilastik.gui.LAST_DIRECTORY
+        path = ilastikdeps.gui.LAST_DIRECTORY
         dir = QFileDialog.getExistingDirectory(self, "", path)
-        ilastik.gui.LAST_DIRECTORY = QFileInfo(dir).path()
+        ilastikdeps.gui.LAST_DIRECTORY = QFileInfo(dir).path()
         self.path.setText(dir)
             
     def export(self):

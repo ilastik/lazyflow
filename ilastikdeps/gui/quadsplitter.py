@@ -32,7 +32,7 @@ from PyQt4.QtGui import *
 
 import sys
 
-from ilastik.gui.iconMgr import ilastikIcons 
+from ilastikdeps.gui.iconMgr import ilastikIcons 
 
 #*******************************************************************************
 # D o c k a b l e C o n t a i n e r                                            *
