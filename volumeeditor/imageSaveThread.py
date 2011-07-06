@@ -32,8 +32,6 @@ from PyQt4.QtCore import pyqtSignal, QObject, QThread, Qt, QSize, QPointF, QRect
 from PyQt4.QtGui  import QWidget, QPen, QGraphicsScene, QColor, QGraphicsLineItem, \
                          QImage, QPainter, QGraphicsLineItem
 
-from ilastikdeps.core.volume import DataAccessor
-
 import numpy
 import threading
 import time

@@ -27,8 +27,6 @@
 #    authors and should not be interpreted as representing official policies, either expressed
 #    or implied, of their employers.
 
-from ilastikdeps.core.volume import DataAccessor
-
 #*******************************************************************************
 # O v e r l a y S l i c e                                                      *
 #*******************************************************************************
