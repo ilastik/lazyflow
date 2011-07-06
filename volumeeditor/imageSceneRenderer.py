@@ -1,4 +1,4 @@
-from PyQt4.QtCore import QObject, QThread, pyqtSignal
+from PyQt4.QtCore import QObject, QThread, pyqtSignal, QRectF
 from PyQt4.QtGui import QPainter, QColor, QImage
 
 import numpy, qimage2ndarray
@@ -27,29 +27,37 @@ if LooseVersion(OpenGL.__version__) < LooseVersion('3.0.1'):
 class ImageSceneRenderer(QObject):
     updatesAvailable = pyqtSignal() 
     
-    def __init__(self, imageScene):
+    def __init__(self, patchAccessor, imagePatches, glWidget = None):
         QObject.__init__(self)
-        self._imageScene = imageScene # TODO: remove dependency
-        self._patchAccessor = imageScene.patchAccessor
-        
+        self._patchAccessor = patchAccessor
+        self._glWidget = glWidget
+        self._imagePatches = imagePatches
+
         self._min = 0
         self._max = 255
         
-        self._thread = ImageSceneRenderThread(imageScene, imageScene.patchAccessor)
+        self._thread = ImageSceneRenderThread(patchAccessor, imagePatches)
         self._thread.finishedQueue.connect(self._renderingThreadFinished)
         self._thread.start()
 
-    def renderImage(self, image, overlays = ()):
+    def renderImage(self, rect, image, overlays = ()):
+        #Abandon previous workloads
         self._thread.queue.clear()
         self._thread.newerDataPending.set()
-
-        self.updatePatches(range(self._patchAccessor.patchCount), image, overlays)
-
-        
-    def updatePatches(self, patchNumbers, image, overlays = ()):
-        if patchNumbers is None:
-            return
-        workPackage = [patchNumbers, image, overlays, self._min, self._max]
+        #Find all patches that intersect the given 'rect'.
+        from time import time
+        tic = time()
+        patches = []
+        for i in range(self._patchAccessor.patchCount):
+            r = self._patchAccessor.patchRectF(i)
+            if rect.intersects(r):
+                patches.append(i)
+        if len(patches) == 0: return
+        toc = time()
+        print toc-tic
+        #Update these patches using the thread below
+        print "ImageSceneRenderer.renderImage: render %d tiles of %d" % (len(patches), self._patchAccessor.patchCount)
+        workPackage = [patches, image, overlays, self._min, self._max]
         self._thread.queue.append(workPackage)
         self._thread.dataPending.set()
 
@@ -65,21 +73,23 @@ class ImageSceneRenderer(QObject):
         #only proceed if there is no new _data already in the rendering thread queue
         if not haveNewData():
             #if we are in opengl 2d render mode, update the texture
-            if self._imageScene.openglWidget is not None:
-                self._imageScene.sharedOpenGLWidget.context().makeCurrent()
-                glBindTexture(GL_TEXTURE_2D, self._imageScene.scene.tex)
-                for patchNr in self._thread.outQueue:
-                    if haveNewData():
-                        break
-                    b = self._imageScene.patchAccessor.getPatchBounds(patchNr, 0)
-                    self._updateTexture(self._imageScene.imagePatches[patchNr], b)
+
+#            if self._glWidget:
+#                self._glWidget.context().makeCurrent()
+#                glBindTexture(GL_TEXTURE_2D, self._glTexture)
+#                for patchNr in self._thread.outQueue:
+#                    if haveNewData(): break
+#                    b = self._imageScene.patchAccessor.getPatchBounds(patchNr, 0)
+#                    self._updateTexture(self._imagePatches[patchNr], b)
                     
             self._thread.outQueue.clear()
-            #if all updates have been rendered remove tempitems
-            if self._thread.queue.__len__() == 0:
-                for item in self._imageScene.tempImageItems:
-                    self._imageScene.scene.removeItem(item)
-                self._imageScene.tempImageItems = []
+
+#FIXME
+#if all updates have been rendered remove tempitems
+#            if self._thread.queue.__len__() == 0:
+#                for item in self._imageScene.tempImageItems:
+#                    self._imageScene.scene().removeItem(item)
+#                self._imageScene.tempImageItems = []
  
         if not haveNewData():
             self.updatesAvailable.emit()
@@ -93,14 +103,12 @@ class ImageSceneRenderer(QObject):
 class ImageSceneRenderThread(QThread):
     finishedQueue = pyqtSignal()
     
-    def __init__(self, imageScene, patchAccessor):
+    def __init__(self, patchAccessor, imagePatches):
         QThread.__init__(self, None)
-        #self.paintDevice = paintDevice
-        self.imageScene = imageScene #TODO make independent
-        self.patchAccessor = patchAccessor
+        self._patchAccessor = patchAccessor
+        self._imagePatches  = imagePatches
 
-        #self.queue = deque(maxlen=1) #python 2.6
-        self.queue = deque() #python 2.5
+        self.queue = deque(maxlen=1)
         self.outQueue = deque()
         self.dataPending = threading.Event()
         self.dataPending.clear()
@@ -147,32 +155,30 @@ class ImageSceneRenderThread(QThread):
         workPackage = self.queue.pop()
         if workPackage is None:
             return
-        patchNumbers, origimage, overlays , min, max = workPackage
+        patchNumbers, origimage, overlays, min, max = workPackage
         for patchNr in patchNumbers:
             if self.newerDataPending.isSet():
                 self.newerDataPending.clear()
                 break
-            bounds = self.patchAccessor.getPatchBounds(patchNr)
+            bounds = self._patchAccessor.getPatchBounds(patchNr)
 
-            if self.imageScene.openglWidget is None:
-                p = QPainter(self.imageScene.scene.image)
-                p.translate(bounds[0],bounds[2])
-            else:
-                p = QPainter(self.imageScene.imagePatches[patchNr])
+            imagePatch = self._imagePatches[patchNr]
+            p = QPainter(imagePatch)
 
             #add overlays
             for index, origitem in enumerate(overlays):
                 if index == 0 and origitem.alpha < 1.0:
-                    p.eraseRect(0,0,bounds[1]-bounds[0],bounds[3]-bounds[2])
+                    p.eraseRect(QPoint(0,0),bounds[1]-bounds[0],bounds[3]-bounds[2])
                 
                 p.setOpacity(origitem.alpha)
                 itemcolorTable = origitem.colorTable
                 
                 imagedata = origitem._data[bounds[0]:bounds[1],bounds[2]:bounds[3]]
                 image0 = self.callMyFunction(imagedata, origitem, _asQColor(origitem.color), itemcolorTable)
-                p.drawImage(0,0, image0)
 
+                p.drawImage(0,0, image0)
             p.end()
+            
             self.outQueue.append(patchNr)
 
     def _runImpl(self):
@@ -187,8 +193,6 @@ class ImageSceneRenderThread(QThread):
     def run(self):
         while not self.stopped:
             self._runImpl()
-
-
 
 def _convertImageUInt8(itemdata, itemcolorTable):
     if itemdata.dtype == numpy.uint8 or itemcolorTable == None:

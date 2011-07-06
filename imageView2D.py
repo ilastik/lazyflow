@@ -28,7 +28,7 @@
 #    or implied, of their employers.
 
 from PyQt4.QtCore import QPoint, QPointF, QRectF, QTimer, pyqtSignal, Qt, \
-                         QSize
+                         QSize, QRect
 from PyQt4.QtOpenGL import QGLWidget, QGLFramebufferObject
 from PyQt4.QtGui import *
 
@@ -45,8 +45,8 @@ from viewManager import ViewManager
 from drawManager import DrawManager
 from crossHairCursor import CrossHairCursor
 from sliceIntersectionMarker import SliceIntersectionMarker
-
-from imagescenerenderer import ImageSceneRenderer
+from imageSceneRenderer import ImageSceneRenderer
+from imageScene2D import ImageScene2D
 from helper import InteractionLogger
 
 #*******************************************************************************
@@ -95,8 +95,8 @@ class Hud(QFrame):
 #*******************************************************************************
 # I m a g e S c e n e                                                          *
 #*******************************************************************************
-#TODO: ImageScene should not care/know about what axis it is!
-class ImageScene(QGraphicsView):
+#TODO: ImageView2D should not care/know about what axis it is!
+class ImageView2D(QGraphicsView):
     sliceChanged       = pyqtSignal(int,int)
     drawing            = pyqtSignal(int, QPointF)
     beginDraw          = pyqtSignal(int, QPointF)
@@ -105,6 +105,19 @@ class ImageScene(QGraphicsView):
     mouseDoubleClicked = pyqtSignal(int, int, int)
     
     axisColor = [QColor(255,0,0,255), QColor(0,255,0,255), QColor(0,0,255,255)]
+    blockSize = 128
+    
+    @property
+    def sliceNumber(self):
+        return self._viewManager.position[self._axis]
+    
+    @property
+    def sliceExtent(self):
+        return self._viewManager.imageExtent(self._axis)
+    
+    @property
+    def shape2D(self):
+        return self._viewManager.imageShape(self._axis)
         
     def __init__(self, axis, viewManager, drawManager, sharedOpenGLWidget = None):
         """
@@ -113,30 +126,32 @@ class ImageScene(QGraphicsView):
                  the last entry is the extent in slice direction
         """
         QGraphicsView.__init__(self)
-        self.scene = CustomGraphicsScene(sharedOpenGLWidget)
-        
         assert(axis in [0,1,2])
+    
+        self.openglWidget = QGLWidget(shareWidget = sharedOpenGLWidget)
+        self.setViewport(self.openglWidget)
+        self.setViewportUpdateMode(QGraphicsView.FullViewportUpdate)
         
-        self.drawManager = drawManager
-        self.viewManager = viewManager
+        self.drawingEnabled = False
+        
+        self.setScene(ImageScene2D(viewManager.imageShape(axis),  sharedOpenGLWidget))
+        self._drawManager = drawManager
+        self._viewManager = viewManager
  
+        #FIXME: this should be private, but is currently used from
+        #       within the image scene renderer
         self.tempImageItems = []
-        self.axis = axis
-        self.sliceNumber = 0
-        self.sliceExtent = viewManager.imageExtent(axis)
-        self.isDrawing = False
-        self.image = QImage(QSize(*viewManager.imageShape(axis)), QImage.Format_ARGB32)
-        self.scene.image = self.image
+        
+        self._axis = axis
+        self._isDrawing = False
         self.border = None
         self.allBorder = None
         self.factor = 1.0
         
         #for panning
-        self.lastPanPoint = QPoint()
-        self.dragMode = False
-        self.deltaPan = QPointF(0,0)
-        
-        self.drawingEnabled = False
+        self._lastPanPoint = QPoint()
+        self._dragMode = False
+        self._deltaPan = QPointF(0,0)
         
         self.openglWidget = None
         self.sharedOpenGLWidget = sharedOpenGLWidget
@@ -149,43 +164,23 @@ class ImageScene(QGraphicsView):
             self.layout().setContentsMargins(0,0,0,0)
 
             axisLabels = ["X:", "Y:", "Z:"]
-            self.hud = Hud(0, self.sliceExtent - 1, axisLabels[self.axis])
+            self.hud = Hud(0, self.sliceExtent - 1, axisLabels[self._axis])
 
             self.layout().addWidget(self.hud)
             self.layout().addStretch()
         
-        self.patchAccessor = PatchAccessor(*viewManager.imageShape(axis),blockSize=64)
         
-        if self.scene.useGL:
-            self.openglWidget = QGLWidget(shareWidget = sharedOpenGLWidget)
-            self.setViewport(self.openglWidget)
-            self.setViewportUpdateMode(QGraphicsView.FullViewportUpdate)
-            
-            self.openglWidget.context().makeCurrent()
-            self.scene.tex = glGenTextures(1)
-            glBindTexture(GL_TEXTURE_2D,self.scene.tex)
-            #print "generating OpenGL texture of size %d x %d" % (self.scene.image.width(), self.scene.image.height())
-            glTexImage2D(GL_TEXTURE_2D, 0,GL_RGB, viewManager.imageShape(axis)[0], viewManager.imageShape(axis)[1], \
-                         0, GL_RGB, GL_UNSIGNED_BYTE, ctypes.c_void_p(self.image.bits().__int__()))
-
-            self.imagePatches = range(self.patchAccessor.patchCount)
-            for i, p in enumerate(self.imagePatches):
-                b = self.patchAccessor.getPatchBounds(i, 0)
-                self.imagePatches[i] = QImage(b[1]-b[0], b[3] -b[2], QImage.Format_RGB888)
-            
-        self.setScene(self.scene)
-        self.scene.setSceneRect(0,0, *viewManager.imageShape(axis))
-        self.setSceneRect(0,0, *viewManager.imageShape(axis))
+        #???? self.setSceneRect(0,0, *self.shape2D)
 
         self.setRenderHint(QPainter.Antialiasing, False)
         
         #Unfortunately, setting the style like this make the scroll bars look
         #really crappy...
-        #self.setStyleSheet("QWidget:!focus { border: 2px solid " + self.axisColor[self.axis].name() +"; border-radius: 4px; }\
+        #self.setStyleSheet("QWidget:!focus { border: 2px solid " + self._axisColor[self._axis].name() +"; border-radius: 4px; }\
         #                    QWidget:focus { border: 2px solid white; border-radius: 4px; }")
 
         #FIXME: Is there are more elegant way to handle this?
-        if self.axis is 0:
+        if self._axis is 0:
             self.rotate(90.0)
             self.scale(1.0,-1.0)
 
@@ -200,11 +195,11 @@ class ImageScene(QGraphicsView):
         brush.setStyle( Qt.DiagCrossPattern )
         allBorderPath = QPainterPath()
         allBorderPath.setFillRule(Qt.WindingFill)
-        allBorderPath.addRect(0, 0, *viewManager.imageShape(axis))
+        allBorderPath.addRect(0, 0, *self.shape2D)
         self.allBorder = QGraphicsPathItem(allBorderPath)
         self.allBorder.setBrush(brush)
         self.allBorder.setPen(QPen(Qt.NoPen))
-        self.scene.addItem(self.allBorder)
+        self.scene().addItem(self.allBorder)
         self.allBorder.setVisible(False)
         self.allBorder.setZValue(99)
 
@@ -222,32 +217,27 @@ class ImageScene(QGraphicsView):
         
         #self.connect(self, SIGNAL("destroyed()"), self.cleanUp)
 
-        self.crossHairCursor = CrossHairCursor(self.image.width(), self.image.height())
+        self.crossHairCursor = CrossHairCursor(*self.shape2D)
         self.crossHairCursor.setZValue(100)
-        self.scene.addItem(self.crossHairCursor)
+        self.scene().addItem(self.crossHairCursor)
         
         #FIXME: do we want to have these connects here or somewhere else?
-        self.drawManager.brushSizeChanged.connect(self.crossHairCursor.setBrushSize)
-        self.drawManager.brushColorChanged.connect(self.crossHairCursor.setColor)
+        self._drawManager.brushSizeChanged.connect(self.crossHairCursor.setBrushSize)
+        self._drawManager.brushColorChanged.connect(self.crossHairCursor.setColor)
         
-        self.crossHairCursor.setBrushSize(self.drawManager.brushSize)
-        self.crossHairCursor.setColor(self.drawManager.drawColor)
+        self.crossHairCursor.setBrushSize(self._drawManager.brushSize)
+        self.crossHairCursor.setColor(self._drawManager.drawColor)
 
-        self.sliceIntersectionMarker = SliceIntersectionMarker(self.image.width(), self.image.height())
-        if self.axis == 0:
+        self.sliceIntersectionMarker = SliceIntersectionMarker(*self.shape2D)
+        if self._axis == 0:
             self.sliceIntersectionMarker.setColor(self.axisColor[1], self.axisColor[2])
-        elif self.axis == 1:
+        elif self._axis == 1:
             self.sliceIntersectionMarker.setColor(self.axisColor[0], self.axisColor[2])
-        elif self.axis == 2:
+        elif self._axis == 2:
             self.sliceIntersectionMarker.setColor(self.axisColor[0], self.axisColor[1])    
-        self.scene.addItem(self.sliceIntersectionMarker)
+        self.scene().addItem(self.sliceIntersectionMarker)
 
         self.tempErase = False
-        
-        #
-        # setup the imageSceneRenderer
-        #
-        self.imageSceneRenderer = ImageSceneRenderer(self)
 
         # improve the drawing speed of the
         # graphicsscene' background
@@ -258,7 +248,9 @@ class ImageScene(QGraphicsView):
         def refresh():
             self.resetCachedContent()
             self.viewport().repaint()
-        self.imageSceneRenderer.updatesAvailable.connect(refresh)
+        
+        #!!!!!!!
+        self.scene()._ImageSceneRenderer.updatesAvailable.connect(refresh)
         
     def setBorderMarginIndicator(self, margin):
         """
@@ -266,45 +258,43 @@ class ImageScene(QGraphicsView):
         to reflect the new given margin
         """
         
-        imShape = self.viewManager.imageShape(self.axis)
-        
         self.margin = margin
         if self.border:
-            self.scene.removeItem(self.border)
+            self.scene().removeItem(self.border)
         borderPath = QPainterPath()
         borderPath.setFillRule(Qt.WindingFill)
-        borderPath.addRect(0,0, margin, imShape[1])
-        borderPath.addRect(0,0, imShape[0], margin)
-        borderPath.addRect(imShape[0]-margin,0, margin, imShape[1])
-        borderPath.addRect(0,imShape[1]-margin, imShape[0], margin)
+        borderPath.addRect(0,0, margin, self.shape2D[1])
+        borderPath.addRect(0,0, self.shape2D[0], margin)
+        borderPath.addRect(self.shape2D[0]-margin,0, margin, self.shape2D[1])
+        borderPath.addRect(0,self.shape2D[1]-margin, self.shape2D[0], margin)
         self.border = QGraphicsPathItem(borderPath)
         brush = QBrush(QColor(0,0,255))
         brush.setStyle( Qt.Dense7Pattern )
         self.border.setBrush(brush)
         self.border.setPen(QPen(Qt.NoPen))
         self.border.setZValue(200)
-        self.scene.addItem(self.border)
+        self.scene().addItem(self.border)
 
     def setSliceIntersection(self, state):
         self.sliceIntersectionMarker.setVisibility(state)
             
     def updateSliceIntersection(self, num, axis):
         #print "updateSliceIntersection(%d, %d)" % (num, axis)
-        if self.axis == 0:
+        if self._axis == 0:
             if axis == 1:
                 self.sliceIntersectionMarker.setPositionX(num)
             elif axis == 2:
                 self.sliceIntersectionMarker.setPositionY(num)
             else:
                 return
-        elif self.axis == 1:
+        elif self._axis == 1:
             if axis == 0:
                 self.sliceIntersectionMarker.setPositionX(num)
             elif axis == 2:
                 self.sliceIntersectionMarker.setPositionY(num)
             else:
                 return
-        elif self.axis == 2:
+        elif self._axis == 2:
             if axis == 0:
                 self.sliceIntersectionMarker.setPositionX(num)
             elif axis == 1:
@@ -325,16 +315,20 @@ class ImageScene(QGraphicsView):
                      self.sliceExtent - self.sliceNumber < self.margin) \
                      and self.sliceExtent > 1
         self.allBorder.setVisible(allBorder)
-        self.imageSceneRenderer.renderImage(image, overlays)
-        
+        #FIXME
+        self.scene()._ImageSceneRenderer.renderImage(self.viewportRect(), image, overlays)
+
+    def viewportRect(self):
+        return self.mapToScene(self.viewport().geometry()).boundingRect()
+
     def saveSlice(self, filename):
-        print "Saving in ", filename, "slice #", self.sliceNumber, "axis", self.axis
-        result_image = QImage(self.scene.image.size(), self.scene.image.format())
+        print "Saving in ", filename, "slice #", self.sliceNumber, "axis", self._axis
+        result_image = QImage(self.scene().image.size(), self.scene().image.format())
         p = QPainter(result_image)
         for patchNr in range(self.patchAccessor.patchCount):
             bounds = self.patchAccessor.getPatchBounds(patchNr)
             if self.openglWidget is None:
-                p.drawImage(0, 0, self.scene.image)
+                p.drawImage(0, 0, self.scene().image)
             else:
                 p.drawImage(bounds[0], bounds[2], self.imagePatches[patchNr])
         p.end()
@@ -350,29 +344,27 @@ class ImageScene(QGraphicsView):
         self.updatePatches(range(self.patchAccessor.patchCount),image, overlays)
     
     def notifyDrawing(self):
-        self.drawing.emit(self.axis, self.mousePos)
+        self.drawing.emit(self._axis, self.mousePos)
     
     def beginDrawing(self, pos):
-        imShape = self.viewManager.imageShape(self.axis)
-        
         InteractionLogger.log("%f: beginDrawing`()" % (time.clock()))   
         self.mousePos = pos
-        self.isDrawing  = True
-        line = self.drawManager.beginDrawing(pos, imShape)
+        self._isDrawing  = True
+        line = self._drawManager.beginDrawing(pos, self.shape2D)
         line.setZValue(99)
         self.tempImageItems.append(line)
-        self.scene.addItem(line)
+        self.scene().addItem(line)
         if self.drawUpdateInterval > 0:
             self.drawTimer.start(self.drawUpdateInterval) #update labels every some ms
             
-        self.beginDraw.emit(self.axis, pos)
+        self.beginDraw.emit(self._axis, pos)
         
     def endDrawing(self, pos):
         InteractionLogger.log("%f: endDrawing()" % (time.clock()))     
         self.drawTimer.stop()
-        self.isDrawing = False
+        self._isDrawing = False
         
-        self.endDraw.emit(self.axis, pos)
+        self.endDraw.emit(self._axis, pos)
 
     def wheelEvent(self, event):
         keys = QApplication.keyboardModifiers()
@@ -409,11 +401,11 @@ class ImageScene(QGraphicsView):
     def mousePressEvent(self, event):
         if event.button() == Qt.MidButton:
             self.setCursor(QCursor(Qt.SizeAllCursor))
-            self.lastPanPoint = event.pos()
+            self._lastPanPoint = event.pos()
             self.crossHairCursor.setVisible(False)
-            self.dragMode = True
+            self._dragMode = True
             if self.ticker.isActive():
-                self.deltaPan = QPointF(0, 0)
+                self._deltaPan = QPointF(0, 0)
 
         if event.buttons() == Qt.RightButton:
             #make sure that we have the cursor at the correct position
@@ -423,7 +415,7 @@ class ImageScene(QGraphicsView):
             return
 
         if not self.drawingEnabled:
-            print "ImageScene.mousePressEvent: drawing is not enabled"
+            print "ImageView2D.mousePressEvent: drawing is not enabled"
             return
         
         if event.buttons() == Qt.LeftButton:
@@ -431,7 +423,7 @@ class ImageScene(QGraphicsView):
             if self.ticker.isActive():
                 return
             if QApplication.keyboardModifiers() == Qt.ShiftModifier:
-                self.drawManager.setErasing()
+                self._drawManager.setErasing()
                 self.tempErase = True
             mousePos = self.mapToScene(event.pos())
             self.beginDrawing(mousePos)
@@ -441,25 +433,25 @@ class ImageScene(QGraphicsView):
         if event.button() == Qt.MidButton:
             self.setCursor(QCursor())
             releasePoint = event.pos()
-            self.lastPanPoint = releasePoint
-            self.dragMode = False
+            self._lastPanPoint = releasePoint
+            self._dragMode = False
             self.ticker.start(20)
-        if self.isDrawing:
+        if self._isDrawing:
             mousePos = self.mapToScene(event.pos())
             self.endDrawing(mousePos)
         if self.tempErase:
-            self.drawManager.disableErasing()
+            self._drawManager.disableErasing()
             self.tempErase = False
 
     #TODO oli
     def panning(self):
         hBar = self.horizontalScrollBar()
         vBar = self.verticalScrollBar()
-        vBar.setValue(vBar.value() - self.deltaPan.y())
+        vBar.setValue(vBar.value() - self._deltaPan.y())
         if self.isRightToLeft():
-            hBar.setValue(hBar.value() + self.deltaPan.x())
+            hBar.setValue(hBar.value() + self._deltaPan.x())
         else:
-            hBar.setValue(hBar.value() - self.deltaPan.x())
+            hBar.setValue(hBar.value() - self._deltaPan.x())
         
         
     #TODO oli
@@ -503,7 +495,7 @@ class ImageScene(QGraphicsView):
 
     #TODO oli
     def tickerEvent(self):
-        if self.deltaPan.x() == 0.0 and self.deltaPan.y() == 0.0 or self.dragMode == True:
+        if self._deltaPan.x() == 0.0 and self._deltaPan.y() == 0.0 or self._dragMode == True:
             self.ticker.stop()
             cursor = QCursor()
             mousePos = self.mapToScene(self.mapFromGlobal(cursor.pos()))
@@ -511,40 +503,41 @@ class ImageScene(QGraphicsView):
             y = mousePos.y()
             self.crossHairCursor.showXYPosition(x, y)
         else:
-            self.deltaPan = self.deaccelerate(self.deltaPan)
+            self._deltaPan = self.deaccelerate(self._deltaPan)
             self.panning()
     
     def coordinateUnderCursor(self):
         """returns the coordinate that is defined by hovering with the mouse
            over one of the slice views. It is _not_ the coordinate as defined
            by the three slice views"""
-        validArea = self.x > 0 and self.x < self.image.width() and self.y > 0 and self.y < self.image.height()
+        width, height = self.shape2D
+        validArea = self.x > 0 and self.x < width and self.y > 0 and self.y < height
         if not validArea:
             posX = posY = posZ = -1
             return (posX, posY, posZ)
             
-        if self.axis == 0:
+        if self._axis == 0:
             posY = self.x
             posZ = self.y
-            posX = self.viewManager.slicePosition[0]
-        elif self.axis == 1:
-            posY = self.viewManager.slicePosition[1]
+            posX = self._viewManager.slicePosition[0]
+        elif self._axis == 1:
+            posY = self._viewManager.slicePosition[1]
             posZ = self.y
             posX = self.x
         else:
             posY = self.y
-            posZ = self.viewManager.slicePosition[2]
+            posZ = self._viewManager.slicePosition[2]
             posX = self.x
         return (posX, posY, posZ)
     
     #TODO oli
     def mouseMoveEvent(self,event):
-        if self.dragMode == True:
+        if self._dragMode == True:
             #the mouse was moved because the user wants to change
             #the viewport
-            self.deltaPan = QPointF(event.pos() - self.lastPanPoint)
+            self._deltaPan = QPointF(event.pos() - self._lastPanPoint)
             self.panning()
-            self.lastPanPoint = event.pos()
+            self._lastPanPoint = event.pos()
             return
         if self.ticker.isActive():
             #the view is still scrolling
@@ -557,18 +550,19 @@ class ImageScene(QGraphicsView):
         x = self.x = mousePos.x()
         y = self.y = mousePos.y()
 
-        valid = x > 0 and x < self.image.width() and y > 0 and y < self.image.height()                
-        self.mouseMoved.emit(self.axis, x, y, valid)
+        width, height = self._viewManager.imageShape(self._axis)
+        valid = x > 0 and x < width and y > 0 and y < height                
+        self.mouseMoved.emit(self._axis, x, y, valid)
                 
-        if self.isDrawing:
-            line = self.drawManager.moveTo(mousePos)
+        if self._isDrawing:
+            line = self._drawManager.moveTo(mousePos)
             line.setZValue(99)
             self.tempImageItems.append(line)
-            self.scene.addItem(line)
+            self.scene().addItem(line)
 
     def mouseDoubleClickEvent(self, event):
         mousePos = self.mapToScene(event.pos())
-        self.mouseDoubleClicked.emit(self.axis, mousePos.x(), mousePos.y())
+        self.mouseDoubleClicked.emit(self._axis, mousePos.x(), mousePos.y())
 
     #===========================================================================
     # Navigate in Volume
@@ -587,13 +581,13 @@ class ImageScene(QGraphicsView):
         self.changeSlice(-10)
 
     def changeSlice(self, delta):
-        if self.isDrawing:
+        if self._isDrawing:
             self.endDrawing(self.mousePos)
-            self.isDrawing = True
-            self.drawManager.beginDrawing(self.mousePos, self.imShape)
+            self._isDrawing = True
+            self._drawManager.beginDrawing(self.mousePos, self.self.shape2D)
 
-        self.viewManager.changeSliceDelta(self.axis, delta)
-        InteractionLogger.log("%f: changeSliceDelta(axis, num) %d, %d" % (time.clock(), self.axis, delta))
+        self._viewManager.changeSliceDelta(self._axis, delta)
+        InteractionLogger.log("%f: changeSliceDelta(axis, num) %d, %d" % (time.clock(), self._axis, delta))
         
     def zoomOut(self):
         self.doScale(0.9)
@@ -605,65 +599,6 @@ class ImageScene(QGraphicsView):
         self.factor = self.factor * factor
         InteractionLogger.log("%f: zoomFactor(factor) %f" % (time.clock(), self.factor))     
         self.scale(factor, factor)
-        
-#*******************************************************************************
-# C u s t o m G r a p h i c s S c e n e                                        *
-#*******************************************************************************
-
-class CustomGraphicsScene(QGraphicsScene):
-    def __init__(self, glWidget):
-        QGraphicsScene.__init__(self)
-        self.glWidget = glWidget
-        self.useGL = (glWidget != None)
-        
-        self.image = None
-        self.tex = -1
-
-    def drawBackgroundSoftware(self, painter, rect):
-        if not self.image:
-            return
-        #This seems to be much faster than
-        #
-        # painter.setClipRect(rect)
-        # painter.drawImage(0,0,self.image)
-        #which apparently paints the _whole_ image and does not do clipping.
-        #
-        #The execution time of the following should scale with the monitor size
-        #only and not with the size of the 2D image:
-        painter.drawImage(rect,self.image,rect)
-
-    def drawBackgroundGL(self, painter, rect):
-        self.glWidget.context().makeCurrent()
-        
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
-
-        if self.tex <= -1:
-            return
-
-        #self.glWidget.drawTexture(QRectF(self.image.rect()),self.tex)
-        d = painter.device()
-        dc = sip.cast(d,QGLFramebufferObject)
-
-        rect = QRectF(self.image.rect())
-        tl = rect.topLeft()
-        br = rect.bottomRight()
-        
-        #flip coordinates since the texture is flipped
-        #this is due to qimage having another representation thatn OpenGL
-        rect.setCoords(tl.x(),br.y(),br.x(),tl.y())
-        
-        #switch corrdinates if qt version is small
-        painter.beginNativePainting()
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST)
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST)
-        dc.drawTexture(rect,self.tex)
-        painter.endNativePainting()
-
-    def drawBackground(self, painter, rect):
-        if self.useGL:
-            self.drawBackgroundGL(painter, rect)
-        else:
-            self.drawBackgroundSoftware(painter, rect)
 
 #*******************************************************************************
 # i f   _ _ n a m e _ _   = =   " _ _ m a i n _ _ "                            *
@@ -677,7 +612,7 @@ if __name__ == '__main__':
     signal.signal(signal.SIGINT, signal.SIG_DFL)
     from testing import testVolume, AnnotatedImageData
         
-    class ImageSceneTest(QApplication):    
+    class ImageView2DTest(QApplication):    
         def __init__(self, args):
             app = QApplication.__init__(self, args)
 
@@ -689,15 +624,15 @@ if __name__ == '__main__':
             viewManager = ViewManager(self.data)
             drawManager = DrawManager()
             
-            self.imageScene = ImageScene(axis, viewManager, drawManager)
-            self.imageScene.drawingEnabled = True
-            self.imageScene.mouseMoved.connect(lambda axis, x, y, valid: self.imageScene.crossHairCursor.showXYPosition(x,y))
+            self.ImageView2D = ImageView2D(axis, viewManager, drawManager)
+            self.ImageView2D.drawingEnabled = True
+            self.ImageView2D.mouseMoved.connect(lambda axis, x, y, valid: self.ImageView2D.crossHairCursor.showXYPosition(x,y))
 
             self.testChangeSlice(3, axis)
         
-            self.imageScene.sliceChanged.connect(self.testChangeSlice)
+            self.ImageView2D.sliceChanged.connect(self.testChangeSlice)
             
-            self.imageScene.show()
+            self.ImageView2D.show()
             
 
         def testChangeSlice(self, num, axis):
@@ -707,8 +642,8 @@ if __name__ == '__main__':
             self.image = OverlaySlice(self.data[s], color = QColor("black"), alpha = 1, colorTable = None, min = None, max = None, autoAlphaChannel = True)
             self.overlays = [self.image]
             
-            self.imageScene.displayNewSlice(self.image, self.overlays, fastPreview = True, normalizeData = False)
+            self.ImageView2D.displayNewSlice(self.image, self.overlays, fastPreview = True, normalizeData = False)
             print "changeSlice num=%d, axis=%d" % (num, axis)
 
-    app = ImageSceneTest([""])
+    app = ImageView2DTest([""])
     app.exec_()

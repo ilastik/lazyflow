@@ -85,8 +85,11 @@ class PatchAccessor():
         if y+1 >= self._cY:
             endy = self.size_y
 
-
         return [startx,endx,starty,endy]
+
+    def patchRectF(self, blockNum):
+        startx,endx,starty,endy = self.getPatchBounds(blockNum)
+        return QRectF(QPointF(startx, starty), QPointF(endx,endy))
 
     def getPatchesForRect(self,startx,starty,endx,endy):
         sx = int(numpy.floor(1.0 * startx / self._blockSize))

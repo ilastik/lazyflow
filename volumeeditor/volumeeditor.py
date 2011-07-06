@@ -47,7 +47,7 @@ from ilastikdeps.gui.quadsplitter import QuadView
 from ilastikdeps.gui.view3d import OverviewScene
 import ilastikdeps.gui.exportDialog as exportDialog
       
-from imagescene import ImageScene
+from imageView2D import ImageView2D
 from imageSaveThread import ImageSaveThread
 from viewManager import ViewManager
 from drawManager import DrawManager
@@ -110,7 +110,7 @@ class VolumeEditor(QWidget):
         self.pendingLabels = []
 
         self._imageScenes = []
-        scene0 = ImageScene(0, self.viewManager, self.drawManager, sharedOpenglWidget)
+        scene0 = ImageView2D(0, self.viewManager, self.drawManager, sharedOpenglWidget)
         self._imageScenes.append(scene0)
         
         self._overview = OverviewScene(self, self._shape[1:4])
@@ -120,10 +120,10 @@ class VolumeEditor(QWidget):
 
         if is3D(self._shape):
             # 3D image          
-            scene1 = ImageScene(1, self.viewManager, self.drawManager, sharedOpenglWidget)
+            scene1 = ImageView2D(1, self.viewManager, self.drawManager, sharedOpenglWidget)
             self._imageScenes.append(scene1)
             
-            scene2 = ImageScene(2, self.viewManager, self.drawManager, sharedOpenglWidget)
+            scene2 = ImageView2D(2, self.viewManager, self.drawManager, sharedOpenglWidget)
             self._imageScenes.append(scene2)
             
             self._grid = QuadView(self)
@@ -135,7 +135,7 @@ class VolumeEditor(QWidget):
                 self._imageScenes[i].drawing.connect(self.updateLabels)
                 self._imageScenes[i].customContextMenuRequested.connect(self.onCustomContextMenuRequested)
         
-        for scene in self._imageScenes:
+        for axis, scene in enumerate(self._imageScenes):
             scene.mouseDoubleClicked.connect(self.setPosition)
             scene.mouseMoved.connect(self.updateInfoLabels)
             scene.mouseMoved.connect(self.updateCrossHairCursor)
@@ -145,8 +145,8 @@ class VolumeEditor(QWidget):
 
             # connect hud slice selectors
             fn = [self.changeSliceX, self.changeSliceY, self.changeSliceZ]
-            scene.hud.sliceSelector.valueChanged.connect(fn[scene.axis])
-        self.viewManager.sliceChanged.connect(lambda num,axis: self._imageScenes[axis].hud.sliceSelector.setValue(num))            
+            scene.hud.sliceSelector.valueChanged.connect(fn[axis])
+        self.viewManager.sliceChanged.connect(lambda num, axis: self._imageScenes[axis].hud.sliceSelector.setValue(num))            
             
         #Controls the trade-off of speed and flickering when scrolling through this slice view
         self.setFastRepaint(True)   
@@ -611,9 +611,7 @@ class VolumeEditor(QWidget):
     def changeSlice(self, num, axis):
         self.viewManager.setSlice(num, axis)
         
-        if len(self._imageScenes) > axis:
-            self._imageScenes[axis].sliceNumber = num
-        
+        #FIXME: Shouldn't the view manager emit this signal?
         #print "VolumeEditor.changeSlice: emitting 'changedSlice' signal num=%d, axis=%d" % (num,axis)
         self.changedSlice.emit(num, axis) # FIXME this triggers the update for live prediction 
         self.repaint(axis)
