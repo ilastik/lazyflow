@@ -44,7 +44,7 @@ import numpy, qimage2ndarray
 
 from ilastikdeps.core.volume import DataAccessor
 from ilastikdeps.gui.quadsplitter import QuadView
-from ilastikdeps.gui.view3d import OverviewScene
+from view3d.view3d import OverviewScene
 import ilastikdeps.gui.exportDialog as exportDialog
       
 from imageView2D import ImageView2D

@@ -22,7 +22,7 @@ from GenerateModelsFromLabels_thread import *
 import platform #to check whether we are running on a Mac
 import copy
 
-from ilastikdeps.gui.slicingPlanesWidget import SlicingPlanesWidget
+from slicingPlanesWidget import SlicingPlanesWidget
 from ilastikdeps.gui.iconMgr import ilastikIcons
 
 def convertVTPtoOBJ(vtpFilename, objFilename):
