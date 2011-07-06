@@ -23,7 +23,12 @@ import platform #to check whether we are running on a Mac
 import copy
 
 from slicingPlanesWidget import SlicingPlanesWidget
-from ilastikdeps.gui.iconMgr import ilastikIcons
+
+# discover icon path
+from os import path
+import resources.icons
+_icondir = path.dirname(resources.icons.__file__)
+
 
 def convertVTPtoOBJ(vtpFilename, objFilename):
     f = open(vtpFilename, 'r')
@@ -239,7 +244,7 @@ class OverviewScene(QWidget):
         self.bCutter = bCutter
         
         bExportMesh = QToolButton()
-        bExportMesh.setIcon(QIcon(ilastikIcons.SaveAs))
+        bExportMesh.setIcon(QIcon(path.join(_icondir, 'document-save-as.png')))
         
         hbox.addWidget(b1)
         hbox.addWidget(b2)

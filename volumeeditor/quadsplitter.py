@@ -32,7 +32,14 @@ from PyQt4.QtGui import *
 
 import sys
 
-from ilastikdeps.gui.iconMgr import ilastikIcons 
+#
+# discover icon path
+#
+from os import path
+import resources.icons
+_icondir = path.dirname(resources.icons.__file__)
+
+
 
 #*******************************************************************************
 # D o c k a b l e C o n t a i n e r                                            *
@@ -54,7 +61,7 @@ class DockableContainer(QWidget):
         self.dockButton.setObjectName("%d" % (number))
         self.dockButton.setFlat(True)
         self.dockButton.setAutoFillBackground(True)
-        self.dockButton.setIcon(QIcon(QPixmap(ilastikIcons.ArrowUpx10)))
+        self.dockButton.setIcon(QIcon(QPixmap(path.join(_icondir, 'arrow_up.png'))))
         self.dockButton.setIconSize(QSize(10,10));
         self.dockButton.setFixedSize(10,10)
         self.dockButton.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
@@ -63,7 +70,7 @@ class DockableContainer(QWidget):
         self.maximizeButton.setObjectName("%d" % (number))
         self.maximizeButton.setFlat(True)
         self.maximizeButton.setAutoFillBackground(True)
-        self.maximizeButton.setIcon(QIcon(QPixmap(ilastikIcons.Maximizex10)))
+        self.maximizeButton.setIcon(QIcon(QPixmap(path.join(_icondir, 'maximize.png'))))
         self.maximizeButton.setIconSize(QSize(10,10));
         self.maximizeButton.setFixedSize(10,10)
         self.maximizeButton.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
@@ -100,9 +107,9 @@ class DockableContainer(QWidget):
     
     def setDocked(self, docked):
         if docked:
-            self.dockButton.setIcon(QIcon(QPixmap(ilastikIcons.ArrowUpx10)))
+            self.dockButton.setIcon(QIcon(QPixmap(path.join(_icondir, 'arrow_up.png'))))
         else:
-            self.dockButton.setIcon(QIcon(QPixmap(ilastikIcons.ArrowDownx10)))
+            self.dockButton.setIcon(QIcon(QPixmap(path.join(_icondir, 'arrow_down.png'))))
         
         if not docked:
             self.emit(SIGNAL('undock()'))
