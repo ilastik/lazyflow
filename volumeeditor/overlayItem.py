@@ -27,7 +27,6 @@
 #    authors and should not be interpreted as representing official policies, either expressed
 #    or implied, of their employers.
 
-from ilastikdeps.core.volume import DataAccessor
 from overlaySlice import OverlaySlice
 
 #*******************************************************************************
@@ -131,7 +130,7 @@ class OverlayItem(object):
         self.backgroundClasses = set()
         self.smooth3D = True
         
-        self._data = DataAccessor(data)
+        self._data = data
         self.linkColorTable = linkColorTable
         self.colorTable = colorTable
         self.defaultColor = color

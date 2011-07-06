@@ -42,7 +42,6 @@ from PyQt4.QtGui import QApplication, QWidget, QPixmapCache, QLabel, QSpinBox, \
 import time
 import numpy, qimage2ndarray
 
-from ilastikdeps.core.volume import DataAccessor
 from quadsplitter import QuadView
 from view3d.view3d import OverviewScene
 from exportDialog import ExportDialog
@@ -709,7 +708,7 @@ if __name__ == "__main__":
     signal.signal(signal.SIGINT, signal.SIG_DFL)
     from overlaySlice import OverlaySlice
     from overlayItem  import OverlayItem
-    from ilastikdeps.core.volume import DataAccessor
+    from _testing.volume import DataAccessor
     
     def img(N):
         def meshgrid2(*arrs):
