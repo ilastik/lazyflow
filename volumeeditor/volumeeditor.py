@@ -88,7 +88,7 @@ class VolumeEditor(QWidget):
         # enable interaction logger
         #InteractionLogger()   
 
-        #Bordermargin settings - they control the blue markers that signal the region from wich the
+        #Bordermargin settings - they control the blue markers that signal the region from which the
         #labels are not used for trainig
         self.useBorderMargin = False
         self.borderMargin = 0
@@ -445,6 +445,9 @@ class VolumeEditor(QWidget):
         event.accept()
 
     def wheelEvent(self, event):
+        #Implementing the wheel event for the whole 'volumeeditor' widget
+        #enables zooming all three slice views at once using the
+        #Ctrl+<mouse wheel> shortcut
         keys = QApplication.keyboardModifiers()
         k_ctrl = (keys == Qt.ControlModifier)
         
@@ -481,10 +484,10 @@ class VolumeEditor(QWidget):
         """
         offsets: labels is a 2D matrix in the image plane perpendicular to axis, which is offset from the origin
                  of the slice by the 2D offsets vector
-        axis:    the axis (x=0, y=1 or z=2 which is perpendicular to the image plane
+        axis:    the axis (x=0, y=1 or z=2) which is perpendicular to the image plane
         num:     position of the image plane perpendicular to axis on which the 'labels' were drawn (the slice number)
         labels   2D matrix of new labels
-        erase    boolean whether we are erasing or not. This changes how we interprete the update defined through
+        erase    boolean whether we are erasing or not. This changes how we interpret the update defined through
                  'labels'
         """
         
