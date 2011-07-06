@@ -31,8 +31,6 @@ from PyQt4.QtCore import QFileInfo, QString, SIGNAL
 from PyQt4.QtGui import QComboBox, QDialog, QFileDialog, QHBoxLayout, QLabel,\
                         QLineEdit, QPushButton, QSpinBox, QVBoxLayout
 
-import ilastikdeps.gui
-
 #*******************************************************************************
 # E x p o r t D i a l o g                                                      *
 #*******************************************************************************
