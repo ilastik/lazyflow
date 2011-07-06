@@ -54,8 +54,7 @@ from drawManager import DrawManager
 
 from overlaySlice import OverlaySlice
 
-from helper import ImageWithProperties, \
-HistoryManager, \
+from helper import HistoryManager, \
 InteractionLogger, LabelState, VolumeUpdate, \
 is3D, is2D
 

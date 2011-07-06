@@ -48,22 +48,6 @@ def is3D(shape5D):
     return shape5D[1] > 1
 
 #*******************************************************************************
-# I m a g e W i t h P r o p e r t i e s                                        *
-#*******************************************************************************
-
-class ImageWithProperties(DataAccessor):
-    """adds some nice properties to the image"""
-    
-    def __init__(self, dataAccessor):
-        DataAccessor.__init__(self, dataAccessor)
-    
-    def is2D(self):
-        return self.shape[1] == 1
-    
-    def is3D(self):
-        return self.shape[1] > 1
-
-#*******************************************************************************
 # I n t e r a c t i o n L o g g e r                                            *
 #*******************************************************************************
 
