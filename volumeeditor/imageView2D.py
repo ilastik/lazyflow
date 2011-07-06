@@ -39,7 +39,6 @@ import numpy
 import os.path, time
 import sip
 
-from ilastikdeps.gui.iconMgr import ilastikIcons
 from patchAccessor import PatchAccessor
 from viewManager import ViewManager
 from drawManager import DrawManager
