@@ -43,7 +43,7 @@ import time
 import numpy, qimage2ndarray
 
 from ilastikdeps.core.volume import DataAccessor
-from ilastikdeps.gui.quadsplitter import QuadView
+from quadsplitter import QuadView
 from view3d.view3d import OverviewScene
 import ilastikdeps.gui.exportDialog as exportDialog
       
