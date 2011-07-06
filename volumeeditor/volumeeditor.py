@@ -37,7 +37,7 @@
 from PyQt4.QtCore import Qt, pyqtSignal, QTimer
 from PyQt4.QtGui import QApplication, QWidget, QPixmapCache, QLabel, QSpinBox, \
                         QCheckBox, QShortcut, QKeySequence, QSplitter, \
-                        QVBoxLayout, QHBoxLayout, QPushButton, QToolButton
+                        QVBoxLayout, QHBoxLayout, QPushButton, QToolButton, QImageWriter
 
 import time
 import numpy, qimage2ndarray
@@ -45,7 +45,7 @@ import numpy, qimage2ndarray
 from ilastikdeps.core.volume import DataAccessor
 from quadsplitter import QuadView
 from view3d.view3d import OverviewScene
-import ilastikdeps.gui.exportDialog as exportDialog
+from exportDialog import ExportDialog
       
 from imageView2D import ImageView2D
 from imageSaveThread import ImageSaveThread
@@ -326,7 +326,7 @@ class VolumeEditor(QWidget):
         timeOffsetCheck = self._shape[0]>1
         formatList = QImageWriter.supportedImageFormats()
         formatList = [x for x in formatList if x in ['png', 'tif']]
-        expdlg = exportDialog.ExportDialog(formatList, timeOffsetCheck, sliceOffsetCheck, None, parent=self.ilastik)
+        expdlg = ExportDialog(formatList, timeOffsetCheck, sliceOffsetCheck, None, parent=self.ilastik)
         expdlg.exec_()
         try:
             tempname = str(expdlg.path.text()) + "/" + str(expdlg.prefix.text())
@@ -801,5 +801,6 @@ if __name__ == "__main__":
     s.addWidget(t2.dialog)
     
     s.show()
-    
+
     app.exec_()
+
