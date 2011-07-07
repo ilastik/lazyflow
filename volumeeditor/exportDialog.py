@@ -94,10 +94,11 @@ class ExportDialog(QDialog):
         
 
     def slotDir(self):
-        path = ilastikdeps.gui.LAST_DIRECTORY
-        dir = QFileDialog.getExistingDirectory(self, "", path)
-        ilastikdeps.gui.LAST_DIRECTORY = QFileInfo(dir).path()
-        self.path.setText(dir)
+        raise NotImplementedError
+        #path = ilastikdeps.gui.LAST_DIRECTORY
+        #dir = QFileDialog.getExistingDirectory(self, "", path)
+        #ilastikdeps.gui.LAST_DIRECTORY = QFileInfo(dir).path()
+        #self.path.setText(dir)
             
     def export(self):
         self.timeOffset = self.timeOffsetBox.value() if self.timeOffsetBox else 0
