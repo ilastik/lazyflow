@@ -73,7 +73,7 @@ class VolumeEditor(QWidget):
     def useOpenGL(self):
         return self.sharedOpenglWidget is not None
     
-    def __init__(self, shape, parent, sharedOpenglWidget = None, viewManager = None):
+    def __init__(self, shape, parent, useGL = False, viewManager = None):
         QWidget.__init__(self, parent)
         
         assert(len(shape) == 5)
@@ -108,7 +108,7 @@ class VolumeEditor(QWidget):
         self.pendingLabels = []
 
         self._imageScenes = []
-        scene0 = ImageView2D(0, self.viewManager, self.drawManager, sharedOpenglWidget)
+        scene0 = ImageView2D(0, self.viewManager, self.drawManager, useGL=useGL)
         self._imageScenes.append(scene0)
         
         self._overview = OverviewScene(self, self._shape[1:4])
@@ -118,10 +118,10 @@ class VolumeEditor(QWidget):
 
         if is3D(self._shape):
             # 3D image          
-            scene1 = ImageView2D(1, self.viewManager, self.drawManager, sharedOpenglWidget)
+            scene1 = ImageView2D(1, self.viewManager, self.drawManager, useGL=useGL)
             self._imageScenes.append(scene1)
             
-            scene2 = ImageView2D(2, self.viewManager, self.drawManager, sharedOpenglWidget)
+            scene2 = ImageView2D(2, self.viewManager, self.drawManager, useGL=useGL)
             self._imageScenes.append(scene2)
             
             self._grid = QuadView(self)
@@ -399,8 +399,9 @@ class VolumeEditor(QWidget):
         mode can bei either  True or False
         """
         if self._shape[-1] == 3:
-            print "setRgbMode: not implemented"
-            sys.exit(1)
+            #FIXME
+            #self.image does not exist anymore,
+            #so this is not possible
             #self.image.rgb = mode
             self._channelSpin.setVisible(not mode)
             self._channelSpinLabel.setVisible(not mode)
@@ -762,12 +763,8 @@ if __name__ == "__main__":
             else:
                 raise RuntimeError("Invalid testing mode")
             
-            sharedOpenglWidget = None
-            if useGL:
-                sharedOpenglWidget=QGLWidget()
-            
             vm = ViewManager(self.data)
-            self.dialog = VolumeEditor((1,)+self.data.shape+(1,), None, sharedOpenglWidget=sharedOpenglWidget, viewManager=vm)
+            self.dialog = VolumeEditor((1,)+self.data.shape+(1,), None, useGL=useGL, viewManager=vm)
             self.dialog.setDrawingEnabled(True)
             
             self.dataOverlay = OverlayItem(DataAccessor(self.data), alpha=1.0, color=Qt.black, colorTable=OverlayItem.createDefaultColorTable('GRAY', 256), autoVisible=True, autoAlphaChannel=False)

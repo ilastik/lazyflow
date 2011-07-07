@@ -113,16 +113,11 @@ class ImageView2D(QGraphicsView):
     @property
     def shape2D(self):
         return self._viewManager.imageShape(self._axis)
-     
-    @property
-    def useGL(self):
-        return self.sharedOpenGLWidget is not None
     
     def initializeGL(self):
-        if self.useGL:
-            self.scene().initializeGL()
+        self.scene().initializeGL()
    
-    def __init__(self, axis, viewManager, drawManager, sharedOpenGLWidget = None):
+    def __init__(self, axis, viewManager, drawManager, useGL=False):
         """
         imShape: 3D shape of the block that this slice view displays.
                  first two entries denote the x,y extent of one slice,
@@ -130,15 +125,13 @@ class ImageView2D(QGraphicsView):
         """
         QGraphicsView.__init__(self)
         assert(axis in [0,1,2])
-        self.openglWidget = None
-        self.sharedOpenGLWidget = sharedOpenGLWidget
-        self.setScene(ImageScene2D(viewManager.imageShape(axis),  sharedOpenGLWidget))
+        self._useGL = useGL
         
         #
         # Setup the Viewport for fast painting
         #
-        if self.useGL:
-            self.openglWidget = QGLWidget(shareWidget = sharedOpenGLWidget)
+        if self._useGL:
+            self.openglWidget = QGLWidget(self)
             self.setViewport(self.openglWidget)
             #we clear the background ourselves
             self.viewport().setAutoFillBackground(False)
@@ -146,6 +139,7 @@ class ImageView2D(QGraphicsView):
             #an OpenGL widget as a viewport
             #http://doc.qt.nokia.com/qq/qq26-openglcanvas.html
             self.setViewportUpdateMode(QGraphicsView.FullViewportUpdate)
+            self.setScene(ImageScene2D(viewManager.imageShape(axis),  self.viewport()))
             self.initializeGL()
         else:
             self.setViewportUpdateMode(QGraphicsView.MinimalViewportUpdate)
@@ -154,6 +148,7 @@ class ImageView2D(QGraphicsView):
             #image need only be blitted on the screen when we only move
             #the cursor
             self.setCacheMode(QGraphicsView.CacheBackground)
+            self.setScene(ImageScene2D(viewManager.imageShape(axis)))
         self.setRenderHint(QPainter.Antialiasing, False)
         
         self.drawingEnabled = False
@@ -179,15 +174,15 @@ class ImageView2D(QGraphicsView):
         self.fastRepaint = True
         self.drawUpdateInterval = 300
 
-        if self.sliceExtent > 1:
-            self.setLayout(QVBoxLayout())
-            self.layout().setContentsMargins(0,0,0,0)
+        #Heads up display 
+        self.setLayout(QVBoxLayout())
+        self.layout().setContentsMargins(0,0,0,0)
 
-            axisLabels = ["X:", "Y:", "Z:"]
-            self.hud = Hud(0, self.sliceExtent - 1, axisLabels[self._axis])
+        axisLabels = ["X:", "Y:", "Z:"]
+        self.hud = Hud(0, self.sliceExtent - 1, axisLabels[self._axis])
 
-            self.layout().addWidget(self.hud)
-            self.layout().addStretch()
+        self.layout().addWidget(self.hud)
+        self.layout().addStretch()
         
         #Unfortunately, setting the style like this make the scroll bars look
         #really crappy...
@@ -251,13 +246,16 @@ class ImageView2D(QGraphicsView):
         elif self._axis == 2:
             self.sliceIntersectionMarker.setColor(self.axisColor[0], self.axisColor[1])    
         self.scene().addItem(self.sliceIntersectionMarker)
+        #FIXME: Use a QAction here so that we do not have to synchronize
+        #between this initial state and the toggle button's initial state
+        self.sliceIntersectionMarker.setVisibility(True)
 
         self.tempErase = False
 
         # after the renderer finished,
         # reset the background cache and redraw the scene
         def refresh():
-            if not self.useGL:
+            if not self._useGL:
                 self.resetCachedContent()
             self.viewport().repaint()
         
@@ -465,7 +463,6 @@ class ImageView2D(QGraphicsView):
             hBar.setValue(hBar.value() + self._deltaPan.x())
         else:
             hBar.setValue(hBar.value() - self._deltaPan.x())
-        print "after panning, re-render"
         self.scene()._imageSceneRenderer.renderImage(self.viewportRect(), self.__porting_image, self.__porting_overlays)
         
         
@@ -617,7 +614,6 @@ class ImageView2D(QGraphicsView):
         InteractionLogger.log("%f: zoomFactor(factor) %f" % (time.clock(), self.factor))     
         self.scale(factor, factor)
         #FIXME
-        print "after zooming, re-render"
         self.scene()._imageSceneRenderer.renderImage(self.viewportRect(), self.__porting_image, self.__porting_overlays)
 
 #*******************************************************************************

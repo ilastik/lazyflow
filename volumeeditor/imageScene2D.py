@@ -34,7 +34,7 @@ from OpenGL.GL import *
 from patchAccessor import PatchAccessor
 from imageSceneRenderer import ImageSceneRenderer
 
-class ImagePatch(object):
+class ImagePatch(object):    
     def __init__(self, rectF):
         assert(type(rectF) == QRectF)
         
@@ -81,12 +81,13 @@ class ImagePatch(object):
 
 class ImageScene2D(QGraphicsScene):
     blockSize = 64
+    glUpdateDelay = 10 #update delay when a new patch arrives in ms
     
     @property
     def useGL(self):
         return self._glWidget is not None
     
-    def __init__(self, shape2D, glWidget):
+    def __init__(self, shape2D, glWidget = None):
         QGraphicsScene.__init__(self)
         self._glWidget = glWidget
         self._useGL = (glWidget != None)
@@ -111,8 +112,8 @@ class ImageScene2D(QGraphicsScene):
         self._updatableTiles.append(patchNr)
         
         #print "update patch %d" % (patchNr)
-        if self._useGL:    
-            QTimer.singleShot(20, self.update)
+        if self._useGL:
+            QTimer.singleShot(self.glUpdateDelay, self.update)
         else:
             self.invalidate(p.rectF, QGraphicsScene.BackgroundLayer)
 
