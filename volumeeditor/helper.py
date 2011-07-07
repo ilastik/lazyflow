@@ -32,8 +32,6 @@ from PyQt4.QtCore import pyqtSignal, QObject, QThread, Qt, QSize, QPointF, QRect
 from PyQt4.QtGui  import QWidget, QPen, QGraphicsScene, QColor, QGraphicsLineItem, \
                          QImage, QPainter, QGraphicsLineItem
 
-from ilastikdeps.core.volume import DataAccessor
-
 import numpy
 import threading
 import time
@@ -46,22 +44,6 @@ def is2D(shape5D):
 def is3D(shape5D):
     assert(len(shape5D) == 5)
     return shape5D[1] > 1
-
-#*******************************************************************************
-# I m a g e W i t h P r o p e r t i e s                                        *
-#*******************************************************************************
-
-class ImageWithProperties(DataAccessor):
-    """adds some nice properties to the image"""
-    
-    def __init__(self, dataAccessor):
-        DataAccessor.__init__(self, dataAccessor)
-    
-    def is2D(self):
-        return self.shape[1] == 1
-    
-    def is3D(self):
-        return self.shape[1] > 1
 
 #*******************************************************************************
 # I n t e r a c t i o n L o g g e r                                            *
