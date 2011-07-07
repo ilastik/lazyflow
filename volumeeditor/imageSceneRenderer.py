@@ -50,9 +50,9 @@ class ImageSceneRenderer(QObject):
                 patches.append(i)
         if len(patches) == 0: return
         toc = time()
-        print "time to find patches to render:",toc-tic,"s"
+        #print "time to find patches to render:",toc-tic,"s"
         #Update these patches using the thread below
-        print "ImageSceneRenderer.renderImage: render %d tiles of %d" % (len(patches), len(self._imagePatches))
+        #print "ImageSceneRenderer.renderImage: render %d tiles of %d" % (len(patches), len(self._imagePatches))
         workPackage = [patches, image, overlays, self._min, self._max]
         self._thread.queue.append(workPackage)
         self._thread.dataPending.set()
