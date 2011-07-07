@@ -27,7 +27,7 @@
 #    authors and should not be interpreted as representing official policies, either expressed
 #    or implied, of their employers.
 
-from PyQt4.QtCore import Qt, QRectF
+from PyQt4.QtCore import Qt, QRectF, QPointF
 from PyQt4.QtGui import QGraphicsItem, QPen
 
 #*******************************************************************************

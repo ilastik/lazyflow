@@ -399,8 +399,9 @@ class VolumeEditor(QWidget):
         mode can bei either  True or False
         """
         if self._shape[-1] == 3:
-            print "setRgbMode: not implemented"
-            sys.exit(1)
+            #FIXME
+            #self.image does not exist anymore,
+            #so this is not possible
             #self.image.rgb = mode
             self._channelSpin.setVisible(not mode)
             self._channelSpinLabel.setVisible(not mode)

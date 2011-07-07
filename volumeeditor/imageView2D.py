@@ -174,15 +174,15 @@ class ImageView2D(QGraphicsView):
         self.fastRepaint = True
         self.drawUpdateInterval = 300
 
-        if self.sliceExtent > 1:
-            self.setLayout(QVBoxLayout())
-            self.layout().setContentsMargins(0,0,0,0)
+        #Heads up display 
+        self.setLayout(QVBoxLayout())
+        self.layout().setContentsMargins(0,0,0,0)
 
-            axisLabels = ["X:", "Y:", "Z:"]
-            self.hud = Hud(0, self.sliceExtent - 1, axisLabels[self._axis])
+        axisLabels = ["X:", "Y:", "Z:"]
+        self.hud = Hud(0, self.sliceExtent - 1, axisLabels[self._axis])
 
-            self.layout().addWidget(self.hud)
-            self.layout().addStretch()
+        self.layout().addWidget(self.hud)
+        self.layout().addStretch()
         
         #Unfortunately, setting the style like this make the scroll bars look
         #really crappy...
@@ -246,6 +246,9 @@ class ImageView2D(QGraphicsView):
         elif self._axis == 2:
             self.sliceIntersectionMarker.setColor(self.axisColor[0], self.axisColor[1])    
         self.scene().addItem(self.sliceIntersectionMarker)
+        #FIXME: Use a QAction here so that we do not have to synchronize
+        #between this initial state and the toggle button's initial state
+        self.sliceIntersectionMarker.setVisibility(True)
 
         self.tempErase = False
 
