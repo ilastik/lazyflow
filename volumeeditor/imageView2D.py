@@ -32,12 +32,8 @@ from PyQt4.QtCore import QPoint, QPointF, QRectF, QTimer, pyqtSignal, Qt, \
 from PyQt4.QtOpenGL import QGLWidget, QGLFramebufferObject
 from PyQt4.QtGui import *
 
-from OpenGL.GL import *
-from OpenGL.GLU import *
-
 import numpy
 import os.path, time
-import sip
 
 from patchAccessor import PatchAccessor
 from viewManager import ViewManager
@@ -92,7 +88,7 @@ class Hud(QFrame):
 
 
 #*******************************************************************************
-# I m a g e S c e n e                                                          *
+# I m a g e V i e w 2 D                                                        *
 #*******************************************************************************
 #TODO: ImageView2D should not care/know about what axis it is!
 class ImageView2D(QGraphicsView):
@@ -117,7 +113,15 @@ class ImageView2D(QGraphicsView):
     @property
     def shape2D(self):
         return self._viewManager.imageShape(self._axis)
-        
+     
+    @property
+    def useGL(self):
+        return self.sharedOpenGLWidget is not None
+    
+    def initializeGL(self):
+        if self.useGL:
+            self.scene().initializeGL()
+   
     def __init__(self, axis, viewManager, drawManager, sharedOpenGLWidget = None):
         """
         imShape: 3D shape of the block that this slice view displays.
@@ -126,14 +130,34 @@ class ImageView2D(QGraphicsView):
         """
         QGraphicsView.__init__(self)
         assert(axis in [0,1,2])
-    
-        self.openglWidget = QGLWidget(shareWidget = sharedOpenGLWidget)
-        self.setViewport(self.openglWidget)
-        self.setViewportUpdateMode(QGraphicsView.FullViewportUpdate)
+        self.openglWidget = None
+        self.sharedOpenGLWidget = sharedOpenGLWidget
+        self.setScene(ImageScene2D(viewManager.imageShape(axis),  sharedOpenGLWidget))
+        
+        #
+        # Setup the Viewport for fast painting
+        #
+        if self.useGL:
+            self.openglWidget = QGLWidget(shareWidget = sharedOpenGLWidget)
+            self.setViewport(self.openglWidget)
+            #we clear the background ourselves
+            self.viewport().setAutoFillBackground(False)
+            #QGraphicsView cannot use partial updates when using 
+            #an OpenGL widget as a viewport
+            #http://doc.qt.nokia.com/qq/qq26-openglcanvas.html
+            self.setViewportUpdateMode(QGraphicsView.FullViewportUpdate)
+            self.initializeGL()
+        else:
+            self.setViewportUpdateMode(QGraphicsView.MinimalViewportUpdate)
+            #as rescaling images is slow if done in software,
+            #we use Qt's built-in background caching mode so that the cached
+            #image need only be blitted on the screen when we only move
+            #the cursor
+            self.setCacheMode(QGraphicsView.CacheBackground)
+        self.setRenderHint(QPainter.Antialiasing, False)
         
         self.drawingEnabled = False
         
-        self.setScene(ImageScene2D(viewManager.imageShape(axis),  sharedOpenGLWidget))
         self._drawManager = drawManager
         self._viewManager = viewManager
  
@@ -152,9 +176,6 @@ class ImageView2D(QGraphicsView):
         self._dragMode = False
         self._deltaPan = QPointF(0,0)
         
-        self.openglWidget = None
-        self.sharedOpenGLWidget = sharedOpenGLWidget
-        
         self.fastRepaint = True
         self.drawUpdateInterval = 300
 
@@ -167,11 +188,6 @@ class ImageView2D(QGraphicsView):
 
             self.layout().addWidget(self.hud)
             self.layout().addStretch()
-        
-        
-        #???? self.setSceneRect(0,0, *self.shape2D)
-
-        self.setRenderHint(QPainter.Antialiasing, False)
         
         #Unfortunately, setting the style like this make the scroll bars look
         #really crappy...
@@ -238,18 +254,12 @@ class ImageView2D(QGraphicsView):
 
         self.tempErase = False
 
-        # improve the drawing speed of the
-        # graphicsscene' background
-        self.setCacheMode(QGraphicsView.CacheBackground)
-
         # after the renderer finished,
         # reset the background cache and redraw the scene
         def refresh():
-            self.resetCachedContent()
+            if not self.useGL:
+                self.resetCachedContent()
             self.viewport().repaint()
-        
-        #!!!!!!!
-        self.scene()._ImageSceneRenderer.updatesAvailable.connect(refresh)
         
     def setBorderMarginIndicator(self, margin):
         """
@@ -314,8 +324,12 @@ class ImageView2D(QGraphicsView):
                      self.sliceExtent - self.sliceNumber < self.margin) \
                      and self.sliceExtent > 1
         self.allBorder.setVisible(allBorder)
+        
+        self.__porting_image    = image
+        self.__porting_overlays = overlays
+        
         #FIXME
-        self.scene()._ImageSceneRenderer.renderImage(self.viewportRect(), image, overlays)
+        self.scene()._imageSceneRenderer.renderImage(self.viewportRect(), image, overlays)
 
     def viewportRect(self):
         return self.mapToScene(self.viewport().geometry()).boundingRect()
@@ -451,6 +465,8 @@ class ImageView2D(QGraphicsView):
             hBar.setValue(hBar.value() + self._deltaPan.x())
         else:
             hBar.setValue(hBar.value() - self._deltaPan.x())
+        print "after panning, re-render"
+        self.scene()._imageSceneRenderer.renderImage(self.viewportRect(), self.__porting_image, self.__porting_overlays)
         
         
     #TODO oli
@@ -584,6 +600,8 @@ class ImageView2D(QGraphicsView):
             self.endDrawing(self.mousePos)
             self._isDrawing = True
             self._drawManager.beginDrawing(self.mousePos, self.self.shape2D)
+        #FIXME: Is this the right place?
+        self.scene().markTilesDirty()
 
         self._viewManager.changeSliceDelta(self._axis, delta)
         InteractionLogger.log("%f: changeSliceDelta(axis, num) %d, %d" % (time.clock(), self._axis, delta))
@@ -598,6 +616,9 @@ class ImageView2D(QGraphicsView):
         self.factor = self.factor * factor
         InteractionLogger.log("%f: zoomFactor(factor) %f" % (time.clock(), self.factor))     
         self.scale(factor, factor)
+        #FIXME
+        print "after zooming, re-render"
+        self.scene()._imageSceneRenderer.renderImage(self.viewportRect(), self.__porting_image, self.__porting_overlays)
 
 #*******************************************************************************
 # i f   _ _ n a m e _ _   = =   " _ _ m a i n _ _ "                            *

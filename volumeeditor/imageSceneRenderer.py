@@ -1,4 +1,4 @@
-from PyQt4.QtCore import QObject, QThread, pyqtSignal, QRectF
+from PyQt4.QtCore import QObject, QThread, pyqtSignal, QRectF, QRect
 from PyQt4.QtGui import QPainter, QColor, QImage
 
 import numpy, qimage2ndarray
@@ -25,18 +25,15 @@ if LooseVersion(OpenGL.__version__) < LooseVersion('3.0.1'):
     raise Exception('PyOpenGL version is less than 3.0.1')
 
 class ImageSceneRenderer(QObject):
-    updatesAvailable = pyqtSignal() 
-    
-    def __init__(self, patchAccessor, imagePatches, glWidget = None):
+    def __init__(self, imagePatches, glWidget = None):
         QObject.__init__(self)
-        self._patchAccessor = patchAccessor
         self._glWidget = glWidget
         self._imagePatches = imagePatches
 
         self._min = 0
         self._max = 255
         
-        self._thread = ImageSceneRenderThread(patchAccessor, imagePatches)
+        self._thread = ImageSceneRenderThread(imagePatches)
         self._thread.finishedQueue.connect(self._renderingThreadFinished)
         self._thread.start()
 
@@ -48,15 +45,14 @@ class ImageSceneRenderer(QObject):
         from time import time
         tic = time()
         patches = []
-        for i in range(self._patchAccessor.patchCount):
-            r = self._patchAccessor.patchRectF(i)
-            if rect.intersects(r):
+        for i,patch in enumerate(self._imagePatches):
+            if patch.dirty and rect.intersects(patch.rectF):
                 patches.append(i)
         if len(patches) == 0: return
         toc = time()
-        print toc-tic
+        print "time to find patches to render:",toc-tic,"s"
         #Update these patches using the thread below
-        print "ImageSceneRenderer.renderImage: render %d tiles of %d" % (len(patches), self._patchAccessor.patchCount)
+        print "ImageSceneRenderer.renderImage: render %d tiles of %d" % (len(patches), len(self._imagePatches))
         workPackage = [patches, image, overlays, self._min, self._max]
         self._thread.queue.append(workPackage)
         self._thread.dataPending.set()
@@ -67,33 +63,6 @@ class ImageSceneRenderer(QObject):
                         ctypes.c_void_p(patch.bits().__int__()))
     
     def _renderingThreadFinished(self):
-        def haveNewData():
-            return self._thread.dataPending.isSet()
-        
-        #only proceed if there is no new _data already in the rendering thread queue
-        if not haveNewData():
-            #if we are in opengl 2d render mode, update the texture
-
-#            if self._glWidget:
-#                self._glWidget.context().makeCurrent()
-#                glBindTexture(GL_TEXTURE_2D, self._glTexture)
-#                for patchNr in self._thread.outQueue:
-#                    if haveNewData(): break
-#                    b = self._imageScene.patchAccessor.getPatchBounds(patchNr, 0)
-#                    self._updateTexture(self._imagePatches[patchNr], b)
-                    
-            self._thread.outQueue.clear()
-
-#FIXME
-#if all updates have been rendered remove tempitems
-#            if self._thread.queue.__len__() == 0:
-#                for item in self._imageScene.tempImageItems:
-#                    self._imageScene.scene().removeItem(item)
-#                self._imageScene.tempImageItems = []
- 
-        if not haveNewData():
-            self.updatesAvailable.emit()
-        
         self._thread.freeQueue.set()
 
 #*******************************************************************************
@@ -102,10 +71,10 @@ class ImageSceneRenderer(QObject):
 
 class ImageSceneRenderThread(QThread):
     finishedQueue = pyqtSignal()
+    patchAvailable = pyqtSignal(int)
     
-    def __init__(self, patchAccessor, imagePatches):
+    def __init__(self, imagePatches):
         QThread.__init__(self, None)
-        self._patchAccessor = patchAccessor
         self._imagePatches  = imagePatches
 
         self.queue = deque(maxlen=1)
@@ -144,7 +113,6 @@ class ImageSceneRenderThread(QThread):
             tempdat[:,:,2] = origitemColor.blueF()*itemdata[:]
             return qimage2ndarray.array2qimage(tempdat.swapaxes(0,1), normalize)
         else: #autoAlphaChannel == True
-            print itemdata.shape
             image1 = qimage2ndarray.array2qimage(itemdata.swapaxes(0,1), normalize)
             image0 = QImage(itemdata.shape[0],itemdata.shape[1],QImage.Format_ARGB32)
             image0.fill(origitemColor.rgba())
@@ -160,24 +128,25 @@ class ImageSceneRenderThread(QThread):
             if self.newerDataPending.isSet():
                 self.newerDataPending.clear()
                 break
-            bounds = self._patchAccessor.getPatchBounds(patchNr)
-
-            imagePatch = self._imagePatches[patchNr]
-            p = QPainter(imagePatch)
+            patch = self._imagePatches[patchNr]
+            p = QPainter(patch.image)
+            r = patch.rectF
 
             #add overlays
             for index, origitem in enumerate(overlays):
                 if index == 0 and origitem.alpha < 1.0:
-                    p.eraseRect(QPoint(0,0),bounds[1]-bounds[0],bounds[3]-bounds[2])
+                    p.eraseRect(QPoint(0,0),QSize(r.width(), r.height()))
                 
                 p.setOpacity(origitem.alpha)
                 itemcolorTable = origitem.colorTable
                 
-                imagedata = origitem._data[bounds[0]:bounds[1],bounds[2]:bounds[3]]
+                imagedata = origitem._data[r.left():r.right()+1,r.top():r.bottom()+1]
                 image0 = self.callMyFunction(imagedata, origitem, _asQColor(origitem.color), itemcolorTable)
 
                 p.drawImage(0,0, image0)
             p.end()
+            patch.dirty = False
+            self.patchAvailable.emit(patchNr)
             
             self.outQueue.append(patchNr)
 
