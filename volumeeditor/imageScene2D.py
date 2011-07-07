@@ -41,7 +41,7 @@ class ImagePatch(object):
         self.rectF  = rectF
         self.rect   = QRect(round(rectF.x()),     round(rectF.y()), \
                             round(rectF.width()), round(rectF.height()))
-        self._image  = QImage(self.rect.width(), self.rect.height(), QImage.Format_RGB888)
+        self._image  = QImage(self.rect.width(), self.rect.height(), QImage.Format_ARGB32_Premultiplied)
         self.texture = -1
         self.dirty = True
 
