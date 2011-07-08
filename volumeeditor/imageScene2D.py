@@ -33,7 +33,7 @@ from PyQt4.QtOpenGL import QGLWidget
 from OpenGL.GL import *
 
 from patchAccessor import PatchAccessor
-from imageSceneRenderer import ImageSceneRenderThread
+from imageSceneRendering import ImageSceneRenderThread
 
 class ImagePatch(object):    
     def __init__(self, rectF):

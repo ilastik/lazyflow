@@ -1,69 +1,9 @@
-from PyQt4.QtCore import QObject, QThread, pyqtSignal, QRectF, QRect
+from PyQt4.QtCore import QObject, QThread, pyqtSignal
 from PyQt4.QtGui import QPainter, QColor, QImage
 
 import numpy, qimage2ndarray
 import threading
 from collections import deque
-
-try:
-    from OpenGL.GL import *
-except Exception, e:
-    print e
-    pass
-
-#*******************************************************************************
-# I m a g e S c e n e R e n d e r e r                                          *
-#*******************************************************************************
-
-# check minimal version of the opengl python wrapper
-#
-# to avoid copies, we want to call glTexImage2D(..., pixels)
-# with 'pixels' of type ctypes.c_void_p. This is not supported
-# in older versions of the wrapper code
-from distutils.version import LooseVersion 
-if LooseVersion(OpenGL.__version__) < LooseVersion('3.0.1'):
-    raise Exception('PyOpenGL version is less than 3.0.1')
-
-class ImageSceneRenderer(QObject):
-    def __init__(self, imagePatches, glWidget = None):
-        QObject.__init__(self)
-        self._glWidget = glWidget
-        self._imagePatches = imagePatches
-
-        self._min = 0
-        self._max = 255
-        
-        self._thread = ImageSceneRenderThread(imagePatches)
-        self._thread.finishedQueue.connect(self._renderingThreadFinished)
-        self._thread.start()
-
-    def renderImage(self, rect, image, overlays = ()):
-        #Abandon previous workloads
-        self._thread.queue.clear()
-        self._thread.newerDataPending.set()
-        #Find all patches that intersect the given 'rect'.
-        from time import time
-        tic = time()
-        patches = []
-        for i,patch in enumerate(self._imagePatches):
-            if patch.dirty and rect.intersects(patch.rectF):
-                patches.append(i)
-        if len(patches) == 0: return
-        toc = time()
-        #print "time to find patches to render:",toc-tic,"s"
-        #Update these patches using the thread below
-        #print "ImageSceneRenderer.renderImage: render %d tiles of %d" % (len(patches), len(self._imagePatches))
-        workPackage = [patches, image, overlays, self._min, self._max]
-        self._thread.queue.append(workPackage)
-        self._thread.dataPending.set()
-
-    def _updateTexture(self, patch, b):
-        glTexSubImage2D(GL_TEXTURE_2D, 0, b[0], b[2], b[1]-b[0], b[3]-b[2], \
-                        GL_RGB, GL_UNSIGNED_BYTE, \
-                        ctypes.c_void_p(patch.bits().__int__()))
-    
-    def _renderingThreadFinished(self):
-        self._thread.freeQueue.set()
 
 #*******************************************************************************
 # I m a g e S c e n e R e n d e r T h r e a d                                  *
