@@ -49,6 +49,14 @@ def posView2D(pos3d, axis):
 #*******************************************************************************
 
 class ViewManager(QObject):
+    '''Controler for navigating through the volume.
+
+    Handles the following signals:
+    cursorPosition -- position of the crosshair cursor
+    relativeSliceChange -- switch to a slice relative to the current
+    absoluteSliceChange -- switch to a slice based on an absolute value
+
+    '''
     sliceChanged = pyqtSignal(int,int)
     
     def __init__(self, imageView2Ds, image, time = 0, position = [0, 0, 0], channel = 0):
@@ -69,13 +77,22 @@ class ViewManager(QObject):
         axisLabels = ["X:", "Y:", "Z:"]
         for i in range(3):
             v = self._views[i]
-            v.mouseMoved.connect(partial(self._onCursorCoordinates, axis=i))
-            v.changeSliceDelta.connect(partial(self._changeSliceDelta, axis=i))
+            v.mouseMoved.connect(partial(self.onCursorPosition, axis=i))
+            v.changeSliceDelta.connect(partial(self.onRelativeSliceChange, axis=i))
             v.shape = self.imageShape(axis=i)
             v.slices = self.imageExtent(axis=i)
             v.name = axisLabels[i]
     
-    def _onCursorCoordinates(self, x, y, axis):
+    ##
+    ## incoming signal handling
+    ##
+    def onCursorPosition(self, x, y, axis):
+        '''Change position of the crosshair cursor.
+
+        x,y  -- cursor position on a certain image scene
+        axis -- perpendicular axis [0,1,2]
+ 
+        '''
         #we get the 2D coordinates x,y from the view that
         #shows the projection perpendicular to axis
         #set this view as active
@@ -94,7 +111,33 @@ class ViewManager(QObject):
             coor[1] = y
         #set the new coordinate
         self.cursorPos = coor
-    
+
+    def onRelativeSliceChange(self, delta, axis):
+        '''Change slice along a certain axis relative to current slice.
+
+        delta  -- add delta to current slice position [positive or negative int]
+        axis -- along which axis [0,1,2]
+ 
+        '''
+        print "CHANGE SLICE DELTA"
+        newSlice = self.slicingPos[axis] + delta
+        if newSlice < 0 or newSlice > self.imageExtent(axis):
+            return
+        newPos = copy.copy(self.slicingPos)
+        newPos[axis] = newSlice
+        self.slicingPos = newPos
+
+    def onAbsoluteSliceChange(self, value, axis):
+        '''Change slice along a certain axis.
+
+        value  -- slice number
+        axis -- along which axis [0,1,2]
+ 
+        '''
+        raise NotImplementedError
+
+
+
     @property
     def cursorPos(self):
         return self._cursorPos
@@ -140,16 +183,7 @@ class ViewManager(QObject):
             x,y = posView2D(self.slicingPos, axis)
             print "move marker to position", x ,y
             v._sliceIntersectionMarker.setPosition(x,y)
-    
-    def _changeSliceDelta(self, delta, axis):
-        print "CHANGE SLICE DELTA"
-        newSlice = self.slicingPos[axis] + delta
-        if newSlice < 0 or newSlice > self.imageExtent(axis):
-            return
-        newPos = copy.copy(self.slicingPos)
-        newPos[axis] = newSlice
-        self.slicingPos = newPos
-        
+            
     @property
     def activeView(self):
         return self._activeView
