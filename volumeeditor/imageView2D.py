@@ -386,30 +386,6 @@ class ImageView2D(QGraphicsView):
 
     def setSliceIntersection(self, state):
         self._sliceIntersectionMarker.setVisibility(state)
-            
-    def updateSliceIntersection(self, num, axis):
-        #print "updateSliceIntersection(%d, %d)" % (num, axis)
-        if self._axis == 0:
-            if axis == 1:
-                self._sliceIntersectionMarker.setPositionX(num)
-            elif axis == 2:
-                self._sliceIntersectionMarker.setPositionY(num)
-            else:
-                return
-        elif self._axis == 1:
-            if axis == 0:
-                self._sliceIntersectionMarker.setPositionX(num)
-            elif axis == 2:
-                self._sliceIntersectionMarker.setPositionY(num)
-            else:
-                return
-        elif self._axis == 2:
-            if axis == 0:
-                self._sliceIntersectionMarker.setPositionX(num)
-            elif axis == 1:
-                self._sliceIntersectionMarker.setPositionY(num)
-            else:
-                return   
 
     def cleanUp(self):        
         self.ticker.stop()

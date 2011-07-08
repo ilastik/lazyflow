@@ -106,9 +106,11 @@ class ViewManager(QObject):
     @property
     def slicingPos(self):
         return self._slicingPos
-    @cursorPos.setter
-    def slicingPos(self, coordinates):
-        self._slicingPos = coordinates
+    @slicingPos.setter
+    def slicingPos(self, pos):
+        print "setting slicing position to", pos
+        self._slicingPos = pos
+        self._updateSliceIntersection()
     
     def _updateCrossHairCursor(self):
         x,y = posView2D(self.cursorPos, axis=self.activeView)
@@ -132,6 +134,21 @@ class ViewManager(QObject):
                 
             xView.showXPosition(y, x)
             yView.showXPosition(x, y)
+    
+    def _updateSliceIntersection(self):
+        for axis, v in enumerate(self._views):
+            x,y = posView2D(self.slicingPos, axis)
+            print "move marker to position", x ,y
+            v._sliceIntersectionMarker.setPosition(x,y)
+    
+    def _changeSliceDelta(self, delta, axis):
+        print "CHANGE SLICE DELTA"
+        newSlice = self.slicingPos[axis] + delta
+        if newSlice < 0 or newSlice > self.imageExtent(axis):
+            return
+        newPos = copy.copy(self.slicingPos)
+        newPos[axis] = newSlice
+        self.slicingPos = newPos
         
     @property
     def activeView(self):
@@ -167,17 +184,17 @@ class ViewManager(QObject):
     def shape(self):
         return self._image.shape
         
-    def setSlice(self, num, axis):
-        if num < 0 or num >= self._image.shape[axis]:
-            #print "could not setSlice: shape=%r, but axis=%d and num=%d" % (self._image.shape, axis, num)
-            return
-        
-        if self._position[axis] != num:
-            self._position[axis] = num
-            self.sliceChanged.emit(num, axis)
-    
-    def _changeSliceDelta(self, delta, axis):
-        self.setSlice(self.position[axis] + delta, axis)
+#    def setSlice(self, num, axis):
+#        if num < 0 or num >= self._image.shape[axis]:
+#            #print "could not setSlice: shape=%r, but axis=%d and num=%d" % (self._image.shape, axis, num)
+#            return
+#        
+#        if self._position[axis] != num:
+#            self._position[axis] = num
+#            self.sliceChanged.emit(num, axis)
+#    
+#    def _changeSliceDelta(self, delta, axis):
+#        self.setSlice(self.position[axis] + delta, axis)
     
     @property        
     def slicePosition(self):

@@ -129,7 +129,6 @@ class VolumeEditor(QWidget):
         for axis, scene in enumerate(self._imageViews):
             scene.mouseDoubleClicked.connect(self.setPosition)
             scene.mouseMoved.connect(self.updateInfoLabels)
-            self.changedSlice.connect(scene.updateSliceIntersection)
             scene.beginDraw.connect(self.beginDraw)
             scene.endDraw.connect(self.endDraw)
 
