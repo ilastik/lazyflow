@@ -100,7 +100,6 @@ class ImageView2D(QGraphicsView):
     mouseDoubleClicked = pyqtSignal(int, int, int)
     
     axisColor = [QColor(255,0,0,255), QColor(0,255,0,255), QColor(0,0,255,255)]
-    blockSize = 128
     
     @property
     def sliceNumber(self):

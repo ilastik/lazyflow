@@ -42,6 +42,7 @@ import time
 
 class ViewManager(QObject):
     sliceChanged = pyqtSignal(int,int)
+    axisColor = [QColor(255,0,0,255), QColor(0,255,0,255), QColor(0,0,255,255)]
     
     def __init__(self, image, time = 0, position = [0, 0, 0], channel = 0):
         QObject.__init__(self)
