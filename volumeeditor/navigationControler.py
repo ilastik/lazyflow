@@ -76,6 +76,7 @@ class NavigationControler(QObject):
         print "setting slicing position to", pos
         self._slicingPos = pos
         self._updateSliceIntersection()
+        self._updateSlices()
 
     @property
     def activeView(self):
@@ -239,15 +240,17 @@ class NavigationControler(QObject):
             x,y = posView2D(self.slicingPos, axis)
             print "move marker to position", x ,y
             v._sliceIntersectionMarker.setPosition(x,y)
-#    def setSlice(self, num, axis):
-#        if num < 0 or num >= self._volume.shape[axis]:
-#            #print "could not setSlice: shape=%r, but axis=%d and num=%d" % (self._volume.shape, axis, num)
-#            return
-#        
-#        if self._position[axis] != num:
-#            self._position[axis] = num
-#            self.sliceChanged.emit(num, axis)
-#    
+
+    def _updateSlices(self):
+        print "update slices"
+        for i in 0,1,2:
+            self._setSlice(self.slicingPos[i], i)
+
+    def _setSlice(self, num, axis):
+        if num < 0 or num >= self._volume.shape[axis]:
+            raise Exception("NavigationControler._setSlice(): invalid slice number")
+        self._views[axis].onSliceChange(num, axis)
+    
 #    def _changeSliceDelta(self, delta, axis):
 #        self.setSlice(self.position[axis] + delta, axis)
 

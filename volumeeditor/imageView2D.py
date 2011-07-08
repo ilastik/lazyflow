@@ -36,7 +36,7 @@ import numpy
 import os.path, time
 
 from patchAccessor import PatchAccessor
-from viewManager import ViewManager
+from navigationControler import NavigationControler
 from drawManager import DrawManager
 from crossHairCursor import CrossHairCursor
 from sliceIntersectionMarker import SliceIntersectionMarker
@@ -204,14 +204,14 @@ class ImageView2D(QGraphicsView):
         
         for item in reversed(self.porting_overlaywidget.overlays):
             if item.visible:
-                overlays.append(item.getOverlaySlice(self._viewManager.slicePosition[self._axis], self._axis, self._viewManager.time, item.channel))
+                overlays.append(item.getOverlaySlice(num, self._axis, 0, item.channel))
         if len(self.porting_overlaywidget.overlays) == 0 \
            or self.porting_overlaywidget.getOverlayRef("Raw Data") is None:
             return
         
         rawData = self.porting_overlaywidget.getOverlayRef("Raw Data")._data
-        image = rawData.getSlice(self._viewManager.slicePosition[self._axis],\
-                                 self._axis, self._viewManager.time,\
+        image = rawData.getSlice(num,\
+                                 self._axis, 0,\
                                  self.porting_overlaywidget.getOverlayRef("Raw Data").channel)
 
         self.porting_image = image
