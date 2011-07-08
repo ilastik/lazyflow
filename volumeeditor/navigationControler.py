@@ -73,10 +73,13 @@ class NavigationControler(QObject):
         return self._slicingPos
     @slicingPos.setter
     def slicingPos(self, pos):
-        print "setting slicing position to", pos
+        oldSP = self._slicingPos
         self._slicingPos = pos
         self._updateSliceIntersection()
-        self._updateSlices()
+
+        for i in 0,1,2:
+            if pos[i] is not oldSP[i]:
+                self._updateSlice(pos[i], i)
 
     @property
     def activeView(self):
@@ -115,18 +118,14 @@ class NavigationControler(QObject):
     def __init__(self, imageView2Ds, volume, time = 0, channel = 0):
         QObject.__init__(self)
         assert len(imageView2Ds) == 3
+
+        # init fields
         self._views = imageView2Ds
         self._volume = volume
         self._beginStackIndex = 0
         self._endStackIndex   = 1
-    
-        self._cursorPos  = [0,0,0]
-        self._slicingPos = [0,0,0]
-        self._activeView = 0
-        self._time = time
-        self._channel = channel
-        self._axisColors = [QColor(255,0,0,255), QColor(0,255,0,255), QColor(0,0,255,255)]
-        
+
+        # init views
         axisLabels = ["X:", "Y:", "Z:"]
         for i in range(3):
             v = self._views[i]
@@ -135,9 +134,22 @@ class NavigationControler(QObject):
             v.shape = self.sliceShape(axis=i)
             v.slices = self.volumeExtent(axis=i)
             v.name = axisLabels[i]
-            
-            x,y = posView2D([0,1,2], axis=i)
-            v._sliceIntersectionMarker.setColor(self.axisColors[x], self.axisColors[y])
+
+        # init property fields
+        self._cursorPos  = [0,0,0]
+        self._slicingPos = [0,0,0]
+        self._activeView = 0
+        self._time = 0
+        self._channel = 0
+        self._axisColors = [QColor(255,0,0,255), QColor(0,255,0,255), QColor(0,0,255,255)]
+
+        # call property setters to trigger updates etc. 
+        self.cursorPos  = [0,0,0]
+        self.slicingPos = [0,0,0]
+        self.activeView = 0
+        self.time = time
+        self.channel = channel
+        self.axisColors = [QColor(255,0,0,255), QColor(0,255,0,255), QColor(0,0,255,255)]
 
 
     
@@ -241,16 +253,8 @@ class NavigationControler(QObject):
             print "move marker to position", x ,y
             v._sliceIntersectionMarker.setPosition(x,y)
 
-    def _updateSlices(self):
-        print "update slices"
-        for i in 0,1,2:
-            self._setSlice(self.slicingPos[i], i)
-
-    def _setSlice(self, num, axis):
+    def _updateSlice(self, num, axis):
         if num < 0 or num >= self._volume.shape[axis]:
             raise Exception("NavigationControler._setSlice(): invalid slice number")
         self._views[axis].onSliceChange(num, axis)
-    
-#    def _changeSliceDelta(self, delta, axis):
-#        self.setSlice(self.position[axis] + delta, axis)
 
