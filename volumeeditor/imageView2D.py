@@ -122,8 +122,41 @@ class ImageView2D(QGraphicsView):
     
     def onSliceChange(self, num, axis):
         if axis != self._axis: return
-        print "slice changed", num, axis
-        self.refresh()
+        
+        print "ImageView2D.onSliceChange", num, axis
+        
+        if not self._useGL:
+            #reset the background cache
+            self.resetCachedContent()
+        #make sure all tiles are regenerated
+        self.scene().markTilesDirty()
+        
+        #FIXME: this whole section needs porting
+        #
+        #Here, we need access to the overlay widget because it is not separated
+        #yet into a model - view part...
+        image = None
+        overlays = []
+        
+        if not self.porting_overlaywidget:
+            return
+        
+        for item in reversed(self.porting_overlaywidget.overlays):
+            if item.visible:
+                overlays.append(item.getOverlaySlice(self._viewManager.slicePosition[self._axis], self._axis, self._viewManager.time, item.channel))
+        if len(self.porting_overlaywidget.overlays) == 0 \
+           or self.porting_overlaywidget.getOverlayRef("Raw Data") is None:
+            return
+        
+        rawData = self.porting_overlaywidget.getOverlayRef("Raw Data")._data
+        image = rawData.getSlice(self._viewManager.slicePosition[self._axis],\
+                                 self._axis, self._viewManager.time,\
+                                 self.porting_overlaywidget.getOverlayRef("Raw Data").channel)
+
+        self.porting_image = image
+        self.porting_overlays = overlays
+        
+        self.scene()._imageSceneRenderer.renderImage(self.viewportRect(), image, overlays)   
    
     def __init__(self, axis, viewManager, drawManager, useGL=False):
         """
@@ -267,41 +300,7 @@ class ImageView2D(QGraphicsView):
 
         #initialize connections
         self.initConnects()
-        
-    def refresh(self):
-        # reset the background cache and redraw the scene
-        if not self._useGL:
-            self.resetCachedContent()
-        
-        image = None
-        overlays = []
-        
-        #FIXME: this whole section needs porting
-        #
-        #Here, we need access to the overlay widget because it is not separated
-        #yet into a model - view part...
-        if not self.porting_overlaywidget:
-            return
-        
-        for item in reversed(self.porting_overlaywidget.overlays):
-            if item.visible:
-                overlays.append(item.getOverlaySlice(self._viewManager.slicePosition[self._axis], self._axis, self._viewManager.time, item.channel))
-        if len(self.porting_overlaywidget.overlays) == 0 \
-           or self.porting_overlaywidget.getOverlayRef("Raw Data") is None:
-            return
-        
-        rawData = self.porting_overlaywidget.getOverlayRef("Raw Data")._data
-        image = rawData.getSlice(self._viewManager.slicePosition[self._axis],\
-                                 self._axis, self._viewManager.time,\
-                                 self.porting_overlaywidget.getOverlayRef("Raw Data").channel)
-
-        self.porting_image = image
-        self.porting_overlays = overlays
-        
-        self.scene()._imageSceneRenderer.renderImage(self.viewportRect(), image, overlays)
-
-        self.viewport().repaint()
-        
+           
     def setBorderMarginIndicator(self, margin):
         """
         update the border margin indicator (left, right, top, bottom)
@@ -622,9 +621,7 @@ class ImageView2D(QGraphicsView):
             self.endDrawing(self.mousePos)
             self._isDrawing = True
             self._drawManager.beginDrawing(self.mousePos, self.self.shape2D)
-        #FIXME: Is this the right place?
-        self.scene().markTilesDirty()
-
+        
         self._viewManager.changeSliceDelta(self._axis, delta)
         InteractionLogger.log("%f: changeSliceDelta(axis, num) %d, %d" % (time.clock(), self._axis, delta))
         
