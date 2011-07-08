@@ -69,10 +69,6 @@ class VolumeEditor(QWidget):
     zoomInFactor  = 1.1
     zoomOutFactor = 0.9
     
-    @property
-    def useOpenGL(self):
-        return self.sharedOpenglWidget is not None
-    
     def __init__(self, shape, parent, useGL = False, viewManager = None):
         QWidget.__init__(self, parent)
         
@@ -87,8 +83,8 @@ class VolumeEditor(QWidget):
 
         #Bordermargin settings - they control the blue markers that signal the region from which the
         #labels are not used for trainig
-        self.useBorderMargin = False
-        self.borderMargin = 0
+        self._useBorderMargin = False
+        self._borderMargin = 0
 
         #this setting controls the rescaling of the displayed _data to the full 0-255 range
         self.normalizeData = False
@@ -99,13 +95,13 @@ class VolumeEditor(QWidget):
 
         self._saveThread = ImageSaveThread(self)
         self._history = HistoryManager(self)
-        self.drawManager = DrawManager()
-        self.viewManager = viewManager
+        self._drawManager = DrawManager()
+        self._viewManager = viewManager
 
-        self.pendingLabels = []
+        self._pendingLabels = []
 
         self._imageViews = []
-        scene0 = ImageView2D(0, self.viewManager, self.drawManager, useGL=useGL)
+        scene0 = ImageView2D(0, self._viewManager, self._drawManager, useGL=useGL)
         self._imageViews.append(scene0)
         
         self._overview = OverviewScene(self, self._shape[1:4])
@@ -115,10 +111,10 @@ class VolumeEditor(QWidget):
 
         if is3D(self._shape):
             # 3D image          
-            scene1 = ImageView2D(1, self.viewManager, self.drawManager, useGL=useGL)
+            scene1 = ImageView2D(1, self._viewManager, self._drawManager, useGL=useGL)
             self._imageViews.append(scene1)
             
-            scene2 = ImageView2D(2, self.viewManager, self.drawManager, useGL=useGL)
+            scene2 = ImageView2D(2, self._viewManager, self._drawManager, useGL=useGL)
             self._imageViews.append(scene2)
             
             self._grid = QuadView(self)
@@ -141,7 +137,7 @@ class VolumeEditor(QWidget):
             # connect hud slice selectors
             fn = [self.changeSliceX, self.changeSliceY, self.changeSliceZ]
             scene.hud.sliceSelector.valueChanged.connect(fn[axis])
-        self.viewManager.sliceChanged.connect(lambda num, axis: self._imageViews[axis].hud.sliceSelector.setValue(num))            
+        self._viewManager.sliceChanged.connect(lambda num, axis: self._imageViews[axis].hud.sliceSelector.setValue(num))            
             
         #Controls the trade-off of speed and flickering when scrolling through this slice view
         self.setFastRepaint(True)   
@@ -281,8 +277,8 @@ class VolumeEditor(QWidget):
         self.shortcuts.append(self._shortcutHelper("a", "Navigation", "Switch to previous channel", self, self.previousChannel))
         
         for scene in self._imageViews:
-            self.shortcuts.append(self._shortcutHelper("n", "Labeling", "Increase brush size", scene, self.drawManager.brushSmaller, Qt.WidgetShortcut))
-            self.shortcuts.append(self._shortcutHelper("m", "Labeling", "Decrease brush size", scene, self.drawManager.brushBigger, Qt.WidgetShortcut))
+            self.shortcuts.append(self._shortcutHelper("n", "Labeling", "Increase brush size", scene, self._drawManager.brushSmaller, Qt.WidgetShortcut))
+            self.shortcuts.append(self._shortcutHelper("m", "Labeling", "Decrease brush size", scene, self._drawManager.brushBigger, Qt.WidgetShortcut))
         
             self.shortcuts.append(self._shortcutHelper("+", "Navigation", "Zoom in", scene, scene.zoomIn, Qt.WidgetShortcut))
             self.shortcuts.append(self._shortcutHelper("-", "Navigation", "Zoom out", scene, scene.zoomOut, Qt.WidgetShortcut))
@@ -411,8 +407,8 @@ class VolumeEditor(QWidget):
             self._channelSpinLabel.setVisible(not mode)
 
     def setUseBorderMargin(self, use):
-        self.useBorderMargin = use
-        self.setBorderMargin(self.borderMargin)
+        self._useBorderMargin = use
+        self.setBorderMargin(self._borderMargin)
 
     def setFastRepaint(self, fastRepaint):
         self.fastRepaint = fastRepaint
@@ -420,10 +416,10 @@ class VolumeEditor(QWidget):
             imageScene.fastRepaint = self.fastRepaint
 
     def setBorderMargin(self, margin):
-        if self.useBorderMargin:
-            if self.borderMargin != margin:
+        if self._useBorderMargin:
+            if self._borderMargin != margin:
                 print "new border margin:", margin
-                self.borderMargin = margin
+                self._borderMargin = margin
                 for imgScene in self._imageViews:
                     imgScene.setBorderMarginIndicator(margin)
                 self.repaint()
@@ -438,9 +434,9 @@ class VolumeEditor(QWidget):
         if self._imageViews[axis].hud.sliceSelector.value() != num:
             #this will emit the signal and change the slice
             self._imageViews[axis].hud.sliceSelector.setValue(num)
-        elif self.viewManager.time!=time:
+        elif self._viewManager.time!=time:
             #if only the time is changed, we don't want to update all 3 slices
-            self.viewManager.time = time
+            self._viewManager.time = time
             self.changeSlice(num, axis)
         else:
             #no need to update, just save the current image
@@ -477,18 +473,18 @@ class VolumeEditor(QWidget):
         """
         
         if axis == 0:
-            offsets5 = (self.viewManager.time,num,offsets[0],offsets[1],0)
+            offsets5 = (self._viewManager.time,num,offsets[0],offsets[1],0)
             sizes5 = (1,1,labels.shape[0], labels.shape[1],1)
         elif axis == 1:
-            offsets5 = (self.viewManager.time,offsets[0],num,offsets[1],0)
+            offsets5 = (self._viewManager.time,offsets[0],num,offsets[1],0)
             sizes5 = (1,labels.shape[0],1, labels.shape[1],1)
         else:
-            offsets5 = (self.viewManager.time,offsets[0],offsets[1],num,0)
+            offsets5 = (self._viewManager.time,offsets[0],offsets[1],num,0)
             sizes5 = (1,labels.shape[0], labels.shape[1],1,1)
         
         vu = VolumeUpdate(labels.reshape(sizes5),offsets5, sizes5, erase)
         vu.applyTo(self.labelWidget.overlayItem)
-        self.pendingLabels.append(vu)
+        self._pendingLabels.append(vu)
 
         patches = self._imageViews[axis].patchAccessor.getPatchesForRect(offsets[0], offsets[1],offsets[0]+labels.shape[0], offsets[1]+labels.shape[1])
 
@@ -496,10 +492,10 @@ class VolumeEditor(QWidget):
         tempoverlays = []
         for item in reversed(self.overlayWidget.overlays):
             if item.visible:
-                tempoverlays.append(item.getOverlaySlice(self.viewManager.slicePosition[axis],axis, self.viewManager.time, 0))
+                tempoverlays.append(item.getOverlaySlice(self._viewManager.slicePosition[axis],axis, self._viewManager.time, 0))
 
         if len(self.overlayWidget.overlays) > 0:
-            tempImage = self.overlayWidget.getOverlayRef("Raw Data")._data.getSlice(num, axis, self.viewManager.time, self.viewManager.channel)       
+            tempImage = self.overlayWidget.getOverlayRef("Raw Data")._data.getSlice(num, axis, self._viewManager.time, self._viewManager.channel)       
 
         # FIXME there needs to be abstraction
         self._imageViews[axis].imageSceneRenderer.updatePatches(patches, tempImage, tempoverlays)
@@ -516,10 +512,10 @@ class VolumeEditor(QWidget):
         self.repaint()
        
     def nextChannel(self):
-        self._channelSpin.setValue(self.viewManager.channel + 1)
+        self._channelSpin.setValue(self._viewManager.channel + 1)
 
     def previousChannel(self):
-        self._channelSpin.setValue(self.viewManager.channel - 1)
+        self._channelSpin.setValue(self._viewManager.channel - 1)
         
     def toggleFullscreenX(self):
         self.maximizeSliceView(0)
@@ -559,16 +555,16 @@ class VolumeEditor(QWidget):
             if ov.shape[-1] == self._shape[-1]:
                 self.overlayWidget.getOverlayRef("Raw Data").channel = channel
             
-        self.viewManager.setChannel(time)
+        self._viewManager.setChannel(time)
         #FIXME remove
         for i in range(3):
-            self.changeSlice(self.viewManager.slicePosition[i], i)
+            self.changeSlice(self._viewManager.slicePosition[i], i)
 
     def setTime(self, time):
-        self.viewManager.setTime(time)
+        self._viewManager.setTime(time)
         #FIXME remove
         for i in range(3):
-            self.changeSlice(self.viewManager.slicePosition[i], i)
+            self.changeSlice(self._viewManager.slicePosition[i], i)
             
     def setPosition(self, axis, x, y):
         print "setPosition(%d, %d, %d)" % (axis, x, y)
@@ -592,10 +588,10 @@ class VolumeEditor(QWidget):
         self.changeSlice(num, 2)
         
     def changeSlice(self, num, axis):
-        self.viewManager.setSlice(num, axis)
+        self._viewManager.setSlice(num, axis)
         
     def getVisibleState(self):
-        return self.viewManager.getVisibleState()
+        return self._viewManager.getVisibleState()
 
 
     # from imagescene
@@ -604,7 +600,7 @@ class VolumeEditor(QWidget):
         print "VolumeEditor.beginDraw FIXME self.labelWidget.ensureLabelOverlayVisible()"
         
     def endDraw(self, axis, pos):
-        result = self.drawManager.endDrawing(pos)
+        result = self._drawManager.endDrawing(pos)
         print "endDraw: result =", result
         self.updateLabels(axis, pos)
         #FIXME
@@ -616,20 +612,20 @@ class VolumeEditor(QWidget):
         self.labelWidget.labelMgr.newLabels(newLabels)
         
     def updateLabels(self, axis, mousePos):
-        result = self.drawManager.dumpDraw(mousePos)
+        result = self._drawManager.dumpDraw(mousePos)
         image = result[2]
         ndarr = qimage2ndarray.rgb_view(image)
         labels = ndarr[:,:,0]
         labels = labels.swapaxes(0,1)
-        number = self.drawManager.drawnNumber
+        number = self._drawManager.drawnNumber
         labels = numpy.where(labels > 0, number, 0)
-        ls = LabelState('drawing', axis, self.viewManager.slicePosition[axis], result[0:2], labels.shape, self.viewManager.time, self, self.drawManager.erasing, labels, number)
+        ls = LabelState('drawing', axis, self._viewManager.slicePosition[axis], result[0:2], labels.shape, self._viewManager.time, self, self._drawManager.erasing, labels, number)
         self._history.append(ls)        
-        self.setLabels(result[0:2], axis, self.viewManager.slicePosition[axis], labels, self.drawManager.erasing)
+        self.setLabels(result[0:2], axis, self._viewManager.slicePosition[axis], labels, self._drawManager.erasing)
         
     def getPendingLabels(self):
-        temp = self.pendingLabels
-        self.pendingLabels = []
+        temp = self._pendingLabels
+        self._pendingLabels = []
         return temp
     
     def updateCrossHairCursor(self, axis, x, y, valid):
