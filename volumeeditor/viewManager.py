@@ -58,6 +58,62 @@ class ViewManager(QObject):
 
     '''
     sliceChanged = pyqtSignal(int,int)
+
+    ##
+    ## properties
+    ##
+    @property
+    def cursorPos(self):
+        return self._cursorPos
+    @cursorPos.setter
+    def cursorPos(self, coordinates):
+        self._cursorPos = coordinates
+        self._updateCrossHairCursor()
+    
+    @property
+    def slicingPos(self):
+        return self._slicingPos
+    @slicingPos.setter
+    def slicingPos(self, pos):
+        print "setting slicing position to", pos
+        self._slicingPos = pos
+        self._updateSliceIntersection()
+
+    @property
+    def activeView(self):
+        return self._activeView
+    @activeView.setter
+    def activeView(self, view):
+        self._activeView = view
+
+    @property
+    def channel(self):
+        return self._channel
+
+    @property        
+    def slicePosition(self):
+        return self._position
+
+    def position(self):
+        return self._position
+
+    @property    
+    def time(self):
+        return self._time
+    
+    @property
+    def shape(self):
+        return self._image.shape
+
+    def setChannel(self, channel):
+        self._channel = channel
+
+    def setTime(self, time):
+        if self._time != time:
+            self._time = time
+            self.__updated()
+
+
     
     def __init__(self, imageView2Ds, image, time = 0, position = [0, 0, 0], channel = 0):
         QObject.__init__(self)
@@ -138,22 +194,6 @@ class ViewManager(QObject):
 
 
 
-    @property
-    def cursorPos(self):
-        return self._cursorPos
-    @cursorPos.setter
-    def cursorPos(self, coordinates):
-        self._cursorPos = coordinates
-        self._updateCrossHairCursor()
-    
-    @property
-    def slicingPos(self):
-        return self._slicingPos
-    @slicingPos.setter
-    def slicingPos(self, pos):
-        print "setting slicing position to", pos
-        self._slicingPos = pos
-        self._updateSliceIntersection()
     
     def _updateCrossHairCursor(self):
         x,y = posView2D(self.cursorPos, axis=self.activeView)
@@ -183,14 +223,7 @@ class ViewManager(QObject):
             x,y = posView2D(self.slicingPos, axis)
             print "move marker to position", x ,y
             v._sliceIntersectionMarker.setPosition(x,y)
-            
-    @property
-    def activeView(self):
-        return self._activeView
-    @activeView.setter
-    def activeView(self, view):
-        self._activeView = view
-    
+                
     def imageShape(self, axis):
         """returns the 2D shape of slices perpendicular to axis"""
         shape = self._image.shape
@@ -205,18 +238,7 @@ class ViewManager(QObject):
         """returns the 1D extent of the image along axis"""
         return self._image.shape[axis]
         
-    def setTime(self, time):
-        if self._time != time:
-            self._time = time
-            self.__updated()
     
-    @property    
-    def time(self):
-        return self._time
-    
-    @property
-    def shape(self):
-        return self._image.shape
         
 #    def setSlice(self, num, axis):
 #        if num < 0 or num >= self._image.shape[axis]:
@@ -230,20 +252,8 @@ class ViewManager(QObject):
 #    def _changeSliceDelta(self, delta, axis):
 #        self.setSlice(self.position[axis] + delta, axis)
     
-    @property        
-    def slicePosition(self):
-        return self._position
-
-    @property
-    def position(self):
-        return self._position
     
-    def setChannel(self, channel):
-        self._channel = channel
 
-    @property
-    def channel(self):
-        return self._channel
     
     def getVisibleState(self):
         return [self._time, self._position[0], self._position[1], self._position[2], self._channel]
