@@ -118,7 +118,7 @@ class ViewManager(QObject):
         return self._axisColors
 
     @axisColors.setter
-    def axisColors( self, colors )
+    def axisColors( self, colors ):
         self._axisColors = colors
     
     def __init__(self, imageView2Ds, image, time = 0, position = [0, 0, 0], channel = 0):
@@ -148,7 +148,7 @@ class ViewManager(QObject):
             v.name = axisLabels[i]
             
             x,y = posView2D([0,1,2], axis=i)
-            v._sliceIntersectionMarker.setColor(self.axisColor[x], self.axisColor[y])
+            v._sliceIntersectionMarker.setColor(self.axisColors[x], self.axisColors[y])
     
     ##
     ## incoming signal handling
