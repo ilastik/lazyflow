@@ -48,7 +48,7 @@ from exportDialog import ExportDialog
       
 from imageView2D import ImageView2D
 from imageSaveThread import ImageSaveThread
-from viewManager import ViewManager
+from navigationControler import NavigationControler
 from drawManager import DrawManager
 
 from overlaySlice import OverlaySlice
@@ -714,7 +714,7 @@ if __name__ == "__main__":
                 raise RuntimeError("Invalid testing mode")
             
             self.dialog = VolumeEditor((1,)+self.data.shape+(1,), None, useGL=useGL)
-            vm = ViewManager(self.dialog._imageViews, self.data)
+            nc = NavigationControler(self.dialog._imageViews, self.data)
             self.dialog.setDrawingEnabled(True)
             
             self.dataOverlay = OverlayItem(DataAccessor(self.data), alpha=1.0, color=Qt.black, colorTable=OverlayItem.createDefaultColorTable('GRAY', 256), autoVisible=True, autoAlphaChannel=False)

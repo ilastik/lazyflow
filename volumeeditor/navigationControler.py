@@ -131,8 +131,8 @@ class NavigationControler(QObject):
             v = self._views[i]
             v.mouseMoved.connect(partial(self.onCursorPosition, axis=i))
             v.changeSliceDelta.connect(partial(self.onRelativeSliceChange, axis=i))
-            v.shape = self.imageShape(axis=i)
-            v.slices = self.imageExtent(axis=i)
+            v.shape = self.sliceShape(axis=i)
+            v.slices = self.volumeExtent(axis=i)
             v.name = axisLabels[i]
             
             x,y = posView2D([0,1,2], axis=i)
