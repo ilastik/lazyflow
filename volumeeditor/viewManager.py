@@ -37,11 +37,12 @@ import threading
 import time, copy
 from functools import partial
 
-def posView2D(self, pos3d, axis):
+def posView2D(pos3d, axis):
+    pos2d = copy.deepcopy(pos3d)
     """convert from a 3D position to a 2D position on the slicing plane
        perpendicular to axis"""
-    del pos3d[axis]
-    return pos3d
+    del pos2d[axis]
+    return pos2d
 
 #*******************************************************************************
 # V i e w M a n a g e r                                                        *
@@ -61,29 +62,36 @@ class ViewManager(QObject):
         self._beginStackIndex = 0
         self._endStackIndex   = 1
     
-        self._cursorPos  = None
-        self._slicingPos = None
-        self._activeView = None
+        self._cursorPos  = [0,0,0]
+        self._slicingPos = [0,0,0]
+        self._activeView = 0
         
         axisLabels = ["X:", "Y:", "Z:"]
         for i in range(3):
             v = self._views[i]
-            v.mouseMoved.connect(partial(self._onCursorCoordinates, i))
+            v.mouseMoved.connect(partial(self._onCursorCoordinates, axis=i))
+            v.changeSliceDelta.connect(partial(self._changeSliceDelta, axis=i))
             v.shape = self.imageShape(axis=i)
             v.slices = self.imageExtent(axis=i)
             v.name = axisLabels[i]
     
-    def _onCursorCoordinates(self, axis, x, y):
+    def _onCursorCoordinates(self, x, y, axis):
+        #we get the 2D coordinates x,y from the view that
+        #shows the projection perpendicular to axis
+        #set this view as active
+        self.activeView = axis
+        print "ACTIVE VIEW:", axis, x, y
+        
         coor = copy.copy(self._cursorPos)
         if axis == 0:
-            self.coor[1] = x
-            self.coor[2] = y
+            coor[1] = x
+            coor[2] = y
         if axis == 1:
-            self.coor[0] = x
-            self.coor[2] = y
+            coor[0] = x
+            coor[2] = y
         if axis == 2:
-            self.coor[0] = x
-            self.coor[1] = y
+            coor[0] = x
+            coor[1] = y
         #set the new coordinate
         self.cursorPos = coor
     
@@ -104,24 +112,23 @@ class ViewManager(QObject):
     
     def _updateCrossHairCursor(self):
         x,y = posView2D(self.cursorPos, axis=self.activeView)
-        self._views[self.activeView].crossHairCursor.showXYPosition(x,y)
+        self._views[self.activeView]._crossHairCursor.showXYPosition(x,y)
         
         if self.activeView == 0: # x-axis
-            if len(self._imageViews) > 2:
-                yView = self._views[1].crossHairCursor
-                zView = self._views[2].crossHairCursor
-                
-                yView.setVisible(False)
-                zView.showYPosition(x, y)
+            yView = self._views[1]._crossHairCursor
+            zView = self._views[2]._crossHairCursor
+            
+            yView.setVisible(False)
+            zView.showYPosition(x, y)
         elif self.activeView == 1: # y-axis
-            xView = self._views[0].crossHairCursor
-            zView = self._views[2].crossHairCursor
+            xView = self._views[0]._crossHairCursor
+            zView = self._views[2]._crossHairCursor
             
             zView.showXPosition(x, y)
             xView.setVisible(False)
         else: # z-axis
-            xView = self._views[0].crossHairCursor
-            yView = self._views[1].crossHairCursor
+            xView = self._views[0]._crossHairCursor
+            yView = self._views[1]._crossHairCursor
                 
             xView.showXPosition(y, x)
             yView.showXPosition(x, y)
@@ -169,7 +176,7 @@ class ViewManager(QObject):
             self._position[axis] = num
             self.sliceChanged.emit(num, axis)
     
-    def changeSliceDelta(self, axis, delta):
+    def _changeSliceDelta(self, delta, axis):
         self.setSlice(self.position[axis] + delta, axis)
     
     @property        

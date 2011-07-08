@@ -129,7 +129,6 @@ class VolumeEditor(QWidget):
         for axis, scene in enumerate(self._imageViews):
             scene.mouseDoubleClicked.connect(self.setPosition)
             scene.mouseMoved.connect(self.updateInfoLabels)
-            scene.mouseMoved.connect(self.updateCrossHairCursor)
             self.changedSlice.connect(scene.updateSliceIntersection)
             scene.beginDraw.connect(self.beginDraw)
             scene.endDraw.connect(self.endDraw)
@@ -631,46 +630,21 @@ class VolumeEditor(QWidget):
         self._pendingLabels = []
         return temp
     
-    def updateCrossHairCursor(self, axis, x, y, valid):
-        if not valid:
-            return
-        
-        self._imageViews[axis].crossHairCursor.showXYPosition(x,y)
-        
-        if axis == 0: # x-axis
-            if len(self._imageViews) > 2:
-                yView = self._imageViews[1].crossHairCursor
-                zView = self._imageViews[2].crossHairCursor
-                
-                yView.setVisible(False)
-                zView.showYPosition(x, y)
-        elif axis == 1: # y-axis
-            xView = self._imageViews[0].crossHairCursor
-            zView = self._imageViews[2].crossHairCursor
-            
-            zView.showXPosition(x, y)
-            xView.setVisible(False)
-        else: # z-axis
-            xView = self._imageViews[0].crossHairCursor
-            yView = self._imageViews[1].crossHairCursor
-                
-            xView.showXPosition(y, x)
-            yView.showXPosition(x, y)
-    
     def updateInfoLabels(self, axis, x, y, valid):
         if not valid:
             return
-        
-        pos = (posX, posY, posZ) = self._imageViews[axis].coordinateUnderCursor()
-        colorValues = self.overlayWidget.getOverlayRef("Raw Data").getOverlaySlice(pos[axis], axis, time=0, channel=0)._data[x,y]
-        
-        self.posLabel.setText("<b>x:</b> %03i  <b>y:</b> %03i  <b>z:</b> %03i" % (posX, posY, posZ))
-        
-        #FIXME RGB is a special case only
-        if isinstance(colorValues, numpy.ndarray):
-            self.pixelValuesLabel.setText("<b>R:</b> %03i  <b>G:</b> %03i  <b>B:</b> %03i" % (colorValues[0], colorValues[1], colorValues[2]))
-        else:
-            self.pixelValuesLabel.setText("<b>Gray:</b> %03i" %int(colorValues))
+
+#FIXME: resurrect
+#        pos = (posX, posY, posZ) = self._imageViews[axis].coordinateUnderCursor()
+#        colorValues = self.overlayWidget.getOverlayRef("Raw Data").getOverlaySlice(pos[axis], axis, time=0, channel=0)._data[x,y]
+#        
+#        self.posLabel.setText("<b>x:</b> %03i  <b>y:</b> %03i  <b>z:</b> %03i" % (posX, posY, posZ))
+#        
+#        #FIXME RGB is a special case only
+#        if isinstance(colorValues, numpy.ndarray):
+#            self.pixelValuesLabel.setText("<b>R:</b> %03i  <b>G:</b> %03i  <b>B:</b> %03i" % (colorValues[0], colorValues[1], colorValues[2]))
+#        else:
+#            self.pixelValuesLabel.setText("<b>Gray:</b> %03i" %int(colorValues))
 
 #*******************************************************************************
 # i f   _ _ n a m e _ _   = =   " _ _ m a i n _ _ "                            *

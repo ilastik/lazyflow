@@ -50,7 +50,7 @@ from helper import InteractionLogger
 
 class Hud(QFrame):
     @property
-    def maximum():  return self._maximum
+    def maximum(): return self._maximum
     @property
     def minimum(): return self._minimum
     @maximum.setter
@@ -62,13 +62,21 @@ class Hud(QFrame):
     def minimum(self, m):
         self._minimum = m
         self.sliceSelector.setRange(self._minimum, self._maximum)
+    @property
+    def label(self):
+        return self._label
+    @label.setter
+    def label(self, l):
+        self._label = l
+        self.dimLabel.setText(l)
     
-    def __init__( self, minimum = 0, maximum = 100, coordinateLabel = "X:", parent = None ):
-        super(Hud, self).__init__( parent=parent )
+    def __init__(self, parent = None ):
+        super(Hud, self).__init__(parent)
 
         # init properties
         self._minimum = 0
         self._maximum = 1
+        self._label   = ''
 
         # configure self
         #
@@ -82,7 +90,7 @@ class Hud(QFrame):
         self.layout().setContentsMargins(3,1,3,1)
 
         # dimension label
-        self.dimLabel = QLabel(coordinateLabel)
+        self.dimLabel = QLabel(self)
         font = self.dimLabel.font()
         font.setBold(True)
         self.dimLabel.setFont(font)
@@ -98,21 +106,23 @@ class Hud(QFrame):
         # coordinate label
         self.coordLabel = QLabel()
         self.layout().addWidget(self.coordLabel)
-        
-        self.minimum = minimum
-        self.maximum = maximum
-
 
 #*******************************************************************************
 # I m a g e V i e w 2 D                                                        *
 #*******************************************************************************
 #TODO: ImageView2D should not care/know about what axis it is!
 class ImageView2D(QGraphicsView):
-    sliceChanged       = pyqtSignal(int,int)
+    #notifies about the relative change in the slicing position
+    #that is requested
+    changeSliceDelta   = pyqtSignal(int)
+    
     drawing            = pyqtSignal(int, QPointF)
     beginDraw          = pyqtSignal(int, QPointF)
     endDraw            = pyqtSignal(int, QPointF)
-    mouseMoved         = pyqtSignal(int, int, int, bool)
+    
+    #notifies that the mouse has moved to 2D coordinate x,y
+    mouseMoved         = pyqtSignal(int, int)
+    
     mouseDoubleClicked = pyqtSignal(int, int, int)
     
     axisColor = [QColor(255,0,0,255), QColor(0,255,0,255), QColor(0,0,255,255)]
@@ -162,7 +172,7 @@ class ImageView2D(QGraphicsView):
     @slices.setter
     def name(self, n):
         self._name = n
-        self.hud.name = n
+        self.hud.label = n
     
 #    @property
 #    def sliceNumber(self):
@@ -288,7 +298,7 @@ class ImageView2D(QGraphicsView):
         self.setLayout(QVBoxLayout())
         self.layout().setContentsMargins(0,0,0,0)
 
-        self.hud = Hud(0, 1, self.name)
+        self.hud = Hud(self)
 
         self.layout().addWidget(self.hud)
         self.layout().addStretch()
@@ -592,29 +602,29 @@ class ImageView2D(QGraphicsView):
             self._deltaPan = self.deaccelerate(self._deltaPan)
             self.panning()
     
-    def coordinateUnderCursor(self):
-        """returns the coordinate that is defined by hovering with the mouse
-           over one of the slice views. It is _not_ the coordinate as defined
-           by the three slice views"""
-        width, height = self.shape2D
-        validArea = self.x > 0 and self.x < width and self.y > 0 and self.y < height
-        if not validArea:
-            posX = posY = posZ = -1
-            return (posX, posY, posZ)
-            
-        if self._axis == 0:
-            posY = self.x
-            posZ = self.y
-            posX = self._viewManager.slicePosition[0]
-        elif self._axis == 1:
-            posY = self._viewManager.slicePosition[1]
-            posZ = self.y
-            posX = self.x
-        else:
-            posY = self.y
-            posZ = self._viewManager.slicePosition[2]
-            posX = self.x
-        return (posX, posY, posZ)
+#    def coordinateUnderCursor(self):
+#        """returns the coordinate that is defined by hovering with the mouse
+#           over one of the slice views. It is _not_ the coordinate as defined
+#           by the three slice views"""
+#        width, height = self.shape
+#        validArea = self.x > 0 and self.x < width and self.y > 0 and self.y < height
+#        if not validArea:
+#            posX = posY = posZ = -1
+#            return (posX, posY, posZ)
+#            
+#        if self._axis == 0:
+#            posY = self.x
+#            posZ = self.y
+#            posX = self._viewManager.slicePosition[0]
+#        elif self._axis == 1:
+#            posY = self._viewManager.slicePosition[1]
+#            posZ = self.y
+#            posX = self.x
+#        else:
+#            posY = self.y
+#            posZ = self._viewManager.slicePosition[2]
+#            posX = self.x
+#        return (posX, posY, posZ)
     
     #TODO oli
     def mouseMoveEvent(self,event):
@@ -630,15 +640,11 @@ class ImageView2D(QGraphicsView):
             #do nothing until it comes to a complete stop
             return
         
-        #the mouse was moved because the user is drawing
-        #or he wants to otherwise interact with the data!
         self.mousePos = mousePos = self.mapToScene(event.pos())
         x = self.x = mousePos.x()
         y = self.y = mousePos.y()
-
-        width, height = self._viewManager.imageShape(self._axis)
-        valid = x > 0 and x < width and y > 0 and y < height                
-        self.mouseMoved.emit(self._axis, x, y, valid)
+             
+        self.mouseMoved.emit(x, y)
                 
         if self._isDrawing:
             line = self._drawManager.moveTo(mousePos)
@@ -672,7 +678,8 @@ class ImageView2D(QGraphicsView):
             self._isDrawing = True
             self._drawManager.beginDrawing(self.mousePos, self.self.shape2D)
         
-        self._viewManager.changeSliceDelta(self._axis, delta)
+        self.changeSliceDelta.emit(delta)
+        
         InteractionLogger.log("%f: changeSliceDelta(axis, num) %d, %d" % (time.clock(), self._axis, delta))
         
     def zoomOut(self):
