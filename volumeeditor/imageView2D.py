@@ -680,7 +680,10 @@ if __name__ == '__main__':
             self.image = OverlaySlice(self.data[s], color = QColor("black"), alpha = 1, colorTable = None, min = None, max = None, autoAlphaChannel = True)
             self.overlays = [self.image]
             
-            self.ImageView2D.displayNewSlice(self.image, self.overlays, fastPreview = True, normalizeData = False)
+            #FIMXE
+            self.ImageView2D.porting_image = self.image
+            self.ImageView2D.porting_overlays = self.overlays
+            
             print "changeSlice num=%d, axis=%d" % (num, axis)
 
     app = ImageView2DTest([""])
