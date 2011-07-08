@@ -87,55 +87,45 @@ class ViewManager(QObject):
         self._activeView = view
 
     @property
-    def channel(self):
-        return self._channel
-
-    @property        
-    def slicePosition(self):
-        return self._position
-
-    def position(self):
-        return self._position
-
-    @property    
-    def time(self):
-        return self._time
-    
-    @property
-    def shape(self):
+    def shape( self ):
         return self._image.shape
 
-    def setChannel(self, channel):
-        self._channel = channel
+    @property    
+    def time( self ):
+        return self._time
+    @time.setter
+    def time( self, value ):
+        self._time = value
 
-    def setTime(self, time):
-        if self._time != time:
-            self._time = time
-            self.__updated()
-
+    @property
+    def channel( self ):
+        return self._channel
+    @channel.setter
+    def channel( self, value):
+        self._channel = value
+    
     @property
     def axisColors( self ):
         return self._axisColors
-
     @axisColors.setter
     def axisColors( self, colors ):
         self._axisColors = colors
-    
-    def __init__(self, imageView2Ds, image, time = 0, position = [0, 0, 0], channel = 0):
+
+
+
+    def __init__(self, imageView2Ds, image, time = 0, channel = 0):
         QObject.__init__(self)
         assert len(imageView2Ds) == 3
         self._views = imageView2Ds
         self._image = image
-        self._time = time
-        self._position = position
-        self._channel = channel
         self._beginStackIndex = 0
         self._endStackIndex   = 1
     
         self._cursorPos  = [0,0,0]
         self._slicingPos = [0,0,0]
         self._activeView = 0
-
+        self._time = time
+        self._channel = channel
         self._axisColors = [QColor(255,0,0,255), QColor(0,255,0,255), QColor(0,0,255,255)]
         
         axisLabels = ["X:", "Y:", "Z:"]
