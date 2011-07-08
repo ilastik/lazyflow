@@ -26,9 +26,8 @@ from slicingPlanesWidget import SlicingPlanesWidget
 
 # discover icon path
 from os import path
-import volumeeditor.resources.icons
-_icondir = path.dirname(volumeeditor.resources.icons.__file__)
 
+_icondir = path.dirname(__file__+'/../resources/icons')
 
 def convertVTPtoOBJ(vtpFilename, objFilename):
     f = open(vtpFilename, 'r')
