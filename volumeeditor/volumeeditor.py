@@ -390,8 +390,15 @@ class VolumeEditor(QWidget):
             del self.overlayWidget
         self.overlayWidget = widget
         self.overlayWidget.selectedOverlay.connect(self.onOverlaySelected)
-        self._toolBoxLayout.insertWidget( 1, self.overlayWidget)        
-        self.ilastik.project.dataMgr[self.ilastik._activeImageNumber].overlayMgr.ilastik = self.ilastik
+        self._toolBoxLayout.insertWidget( 1, self.overlayWidget)
+        
+        #FIXME: porting
+        if self.ilastik:        
+            self.ilastik.project.dataMgr[self.ilastik._activeImageNumber].overlayMgr.ilastik = self.ilastik
+
+        #FIXME: porting
+        for view in self._imageScenes:
+             view.porting_overlaywidget = self.overlayWidget
 
     def setRgbMode(self, mode): 
         """
@@ -460,26 +467,6 @@ class VolumeEditor(QWidget):
             self._imageScenes[0].doScale(scaleFactor)
             self._imageScenes[1].doScale(scaleFactor)
             self._imageScenes[2].doScale(scaleFactor)
-                       
-    def repaint(self, axis = None):
-        if axis == None:
-            axes = range(3)
-        else:
-            axes = [axis]
-
-        for i in axes:
-            tempImage = None
-            tempoverlays = []   
-            for item in reversed(self.overlayWidget.overlays):
-                if item.visible:
-                    tempoverlays.append(item.getOverlaySlice(self.viewManager.slicePosition[i], i, self.viewManager.time, item.channel))
-            if len(self.overlayWidget.overlays) > 0 and self.overlayWidget.getOverlayRef("Raw Data") is not None:
-                tempImage = self.overlayWidget.getOverlayRef("Raw Data")._data.getSlice(self.viewManager.slicePosition[i], i, self.viewManager.time, self.overlayWidget.getOverlayRef("Raw Data").channel)
-            else:
-                tempImage = None
-
-            if len(self._imageScenes) > i:
-                self._imageScenes[i].displayNewSlice(tempImage, tempoverlays, fastPreview = False, normalizeData = self.normalizeData)
 
     def setLabels(self, offsets, axis, num, labels, erase):
         """
@@ -609,12 +596,6 @@ class VolumeEditor(QWidget):
         
     def changeSlice(self, num, axis):
         self.viewManager.setSlice(num, axis)
-        
-        #FIXME: Shouldn't the view manager emit this signal?
-        #print "VolumeEditor.changeSlice: emitting 'changedSlice' signal num=%d, axis=%d" % (num,axis)
-        self.changedSlice.emit(num, axis) # FIXME this triggers the update for live prediction 
-        self.repaint(axis)
-        
         
     def getVisibleState(self):
         return self.viewManager.getVisibleState()
@@ -769,19 +750,25 @@ if __name__ == "__main__":
             
             self.dataOverlay = OverlayItem(DataAccessor(self.data), alpha=1.0, color=Qt.black, colorTable=OverlayItem.createDefaultColorTable('GRAY', 256), autoVisible=True, autoAlphaChannel=False)
             
-            class FakeOverlayWidget:
+            class FakeOverlayWidget(QWidget):
+                selectedOverlay = pyqtSignal(int)
                 def __init__(self):
+                    QWidget.__init__(self)
                     self.overlays = None
                 def getOverlayRef(self, key):
                     return self.overlays[0]
             
-            self.dialog.overlayWidget = FakeOverlayWidget()
-            self.dialog.overlayWidget.overlays = [self.dataOverlay.getRef()]
+            overlayWidget = FakeOverlayWidget()
+            overlayWidget.overlays = [self.dataOverlay.getRef()]
+            
+            self.dialog.setOverlayWidget(overlayWidget)
             
             self.dialog.show()
             self.dialog.setPosition(0,0,0)
             self.dialog.setPosition(1,0,0)
             self.dialog.setPosition(2,0,0)
+            
+            self.dialog.setOverlayWidget(overlayWidget)
 
     app = QApplication(sys.argv)
     

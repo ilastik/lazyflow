@@ -117,6 +117,14 @@ class ImageView2D(QGraphicsView):
     def initializeGL(self):
         self.scene().initializeGL()
    
+    def initConnects(self):
+        self._viewManager.sliceChanged.connect(self.onSliceChange)
+    
+    def onSliceChange(self, num, axis):
+        if axis != self._axis: return
+        print "slice changed", num, axis
+        self.refresh()
+   
     def __init__(self, axis, viewManager, drawManager, useGL=False):
         """
         imShape: 3D shape of the block that this slice view displays.
@@ -126,6 +134,11 @@ class ImageView2D(QGraphicsView):
         QGraphicsView.__init__(self)
         assert(axis in [0,1,2])
         self._useGL = useGL
+        
+        #FIXME: for porting
+        self.porting_image = None
+        self.porting_overlays = None
+        self.porting_overlaywidget = None
         
         #
         # Setup the Viewport for fast painting
@@ -252,12 +265,42 @@ class ImageView2D(QGraphicsView):
 
         self.tempErase = False
 
-        # after the renderer finished,
+        #initialize connections
+        self.initConnects()
+        
+    def refresh(self):
         # reset the background cache and redraw the scene
-        def refresh():
-            if not self._useGL:
-                self.resetCachedContent()
-            self.viewport().repaint()
+        if not self._useGL:
+            self.resetCachedContent()
+        
+        image = None
+        overlays = []
+        
+        #FIXME: this whole section needs porting
+        #
+        #Here, we need access to the overlay widget because it is not separated
+        #yet into a model - view part...
+        if not self.porting_overlaywidget:
+            return
+        
+        for item in reversed(self.porting_overlaywidget.overlays):
+            if item.visible:
+                overlays.append(item.getOverlaySlice(self._viewManager.slicePosition[self._axis], self._axis, self._viewManager.time, item.channel))
+        if len(self.porting_overlaywidget.overlays) == 0 \
+           or self.porting_overlaywidget.getOverlayRef("Raw Data") is None:
+            return
+        
+        rawData = self.porting_overlaywidget.getOverlayRef("Raw Data")._data
+        image = rawData.getSlice(self._viewManager.slicePosition[self._axis],\
+                                 self._axis, self._viewManager.time,\
+                                 self.porting_overlaywidget.getOverlayRef("Raw Data").channel)
+
+        self.porting_image = image
+        self.porting_overlays = overlays
+        
+        self.scene()._imageSceneRenderer.renderImage(self.viewportRect(), image, overlays)
+
+        self.viewport().repaint()
         
     def setBorderMarginIndicator(self, margin):
         """
@@ -315,20 +358,6 @@ class ImageView2D(QGraphicsView):
         del self.drawTimer
         del self.ticker
 
-    def displayNewSlice(self, image, overlays = (), fastPreview = True, normalizeData = False):
-        #if, in slicing direction, we are within the margin of the image border
-        #we set the border overlay indicator to visible
-        allBorder = (self.sliceNumber < self.margin or\
-                     self.sliceExtent - self.sliceNumber < self.margin) \
-                     and self.sliceExtent > 1
-        self.allBorder.setVisible(allBorder)
-        
-        self.__porting_image    = image
-        self.__porting_overlays = overlays
-        
-        #FIXME
-        self.scene()._imageSceneRenderer.renderImage(self.viewportRect(), image, overlays)
-
     def viewportRect(self):
         return self.mapToScene(self.viewport().geometry()).boundingRect()
 
@@ -349,11 +378,7 @@ class ImageView2D(QGraphicsView):
         result_image = result_image.mirrored()
         result_image = result_image.transformed(transform)
         result_image.save(QString(filename))
-
-    def display(self, image, overlays = ()):
-        self.thread.queue.clear()
-        self.updatePatches(range(self.patchAccessor.patchCount),image, overlays)
-    
+   
     def notifyDrawing(self):
         self.drawing.emit(self._axis, self.mousePos)
     
@@ -463,7 +488,7 @@ class ImageView2D(QGraphicsView):
             hBar.setValue(hBar.value() + self._deltaPan.x())
         else:
             hBar.setValue(hBar.value() - self._deltaPan.x())
-        self.scene()._imageSceneRenderer.renderImage(self.viewportRect(), self.__porting_image, self.__porting_overlays)
+        self.scene()._imageSceneRenderer.renderImage(self.viewportRect(), self.porting_image, self.porting_overlays)
         
         
     #TODO oli
@@ -614,7 +639,7 @@ class ImageView2D(QGraphicsView):
         InteractionLogger.log("%f: zoomFactor(factor) %f" % (time.clock(), self.factor))     
         self.scale(factor, factor)
         #FIXME
-        self.scene()._imageSceneRenderer.renderImage(self.viewportRect(), self.__porting_image, self.__porting_overlays)
+        self.scene()._imageSceneRenderer.renderImage(self.viewportRect(), self.porting_image, self.porting_overlays)
 
 #*******************************************************************************
 # i f   _ _ n a m e _ _   = =   " _ _ m a i n _ _ "                            *
