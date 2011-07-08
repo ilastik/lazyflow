@@ -125,9 +125,6 @@ class ImageView2D(QGraphicsView):
     
     mouseDoubleClicked = pyqtSignal(int, int, int)
     
-    axisColor = [QColor(255,0,0,255), QColor(0,255,0,255), QColor(0,0,255,255)]
-    blockSize = 128
-    
     @property
     def shape(self):
         return self._shape
@@ -147,12 +144,6 @@ class ImageView2D(QGraphicsView):
         if self._sliceIntersectionMarker:
             self.scene().removeItem(self._sliceIntersectionMarker)
         self._sliceIntersectionMarker = SliceIntersectionMarker(*self.shape)
-        if self._axis == 0:
-            self._sliceIntersectionMarker.setColor(self.axisColor[1], self.axisColor[2])
-        elif self._axis == 1:
-            self._sliceIntersectionMarker.setColor(self.axisColor[0], self.axisColor[2])
-        elif self._axis == 2:
-            self._sliceIntersectionMarker.setColor(self.axisColor[0], self.axisColor[1])    
         self.scene().addItem(self._sliceIntersectionMarker)
         #FIXME: Use a QAction here so that we do not have to synchronize
         #between this initial state and the toggle button's initial state
