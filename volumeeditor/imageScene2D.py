@@ -29,6 +29,7 @@
 
 from PyQt4.QtCore import QRect, QRectF, QTimer
 from PyQt4.QtGui import QGraphicsScene, QImage
+from PyQt4.QtOpenGL import QGLWidget
 from OpenGL.GL import *
 
 from patchAccessor import PatchAccessor
@@ -83,14 +84,10 @@ class ImageScene2D(QGraphicsScene):
     blockSize = 64
     glUpdateDelay = 10 #update delay when a new patch arrives in ms
     
-    @property
-    def useGL(self):
-        return self._glWidget is not None
-    
-    def __init__(self, shape2D, glWidget = None):
+    def __init__(self, shape2D, viewport):
         QGraphicsScene.__init__(self)
-        self._glWidget = glWidget
-        self._useGL = (glWidget != None)
+        self._glWidget = viewport
+        self._useGL = isinstance(viewport, QGLWidget)
         self._shape2D = shape2D
         self._updatableTiles = []
         
@@ -193,7 +190,7 @@ class ImageScene2D(QGraphicsScene):
         #print "ImageView2D.drawBackgroundGL: drew %d of %d tiles" % (drawnTiles, len(self.imagePatches))
 
     def drawBackground(self, painter, rect):
-        if self.useGL:
+        if self._useGL:
             self.drawBackgroundGL(painter, rect)
         else:
             self.drawBackgroundSoftware(painter, rect)

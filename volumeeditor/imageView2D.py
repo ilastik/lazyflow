@@ -228,7 +228,7 @@ class ImageView2D(QGraphicsView):
         
         self.scene()._imageSceneRenderer.renderImage(self.viewportRect(), image, overlays)   
    
-    def __init__(self, axis, viewManager, drawManager, useGL=False):
+    def __init__(self, axis, drawManager, useGL=False):
         """
         imShape: 3D shape of the block that this slice view displays.
                  first two entries denote the x,y extent of one slice,
@@ -274,7 +274,6 @@ class ImageView2D(QGraphicsView):
         self.drawingEnabled = False
         
         self._drawManager = drawManager
-        self._viewManager = viewManager
  
         #FIXME: this should be private, but is currently used from
         #       within the image scene renderer
@@ -692,18 +691,23 @@ if __name__ == '__main__':
 
             axis = 1
             
-            viewManager = ViewManager(self.data)
+            #viewManager = ViewManager(self.data)
             drawManager = DrawManager()
             
-            self.ImageView2D = ImageView2D(axis, viewManager, drawManager)
-            self.ImageView2D.drawingEnabled = True
-            self.ImageView2D.mouseMoved.connect(lambda axis, x, y, valid: self.ImageView2D._crossHairCursor.showXYPosition(x,y))
+            self.imageView2D = ImageView2D(axis, drawManager, useGL=False)
+            self.imageView2D.drawingEnabled = True
+            self.imageView2D.name = 'ImageView2D:'
+            self.imageView2D.shape = [self.data.shape[0], self.data.shape[2]]
+            self.imageView2D.slices = 1
+            
+            #Needs a 2D view Manager?
+            #self.ImageView2D.mouseMoved.connect(lambda axis, x, y, valid: self.ImageView2D._crossHairCursor.showXYPosition(x,y))
 
             self.testChangeSlice(3, axis)
         
-            self.ImageView2D.sliceChanged.connect(self.testChangeSlice)
+            #self.ImageView2D.sliceChanged.connect(self.testChangeSlice)
             
-            self.ImageView2D.show()
+            self.imageView2D.show()
             
 
         def testChangeSlice(self, num, axis):
@@ -714,8 +718,8 @@ if __name__ == '__main__':
             self.overlays = [self.image]
             
             #FIMXE
-            self.ImageView2D.porting_image = self.image
-            self.ImageView2D.porting_overlays = self.overlays
+            self.imageView2D.porting_image = self.image
+            self.imageView2D.porting_overlays = self.overlays
             
             print "changeSlice num=%d, axis=%d" % (num, axis)
 
