@@ -37,9 +37,11 @@ import threading
 import time, copy
 from functools import partial
 
-def projectCoordinate(self, coordinate, axis):
-    del coordinate[axis]
-    return coordinate
+def posView2D(self, pos3d, axis):
+    """convert from a 3D position to a 2D position on the slicing plane
+       perpendicular to axis"""
+    del pos3d[axis]
+    return pos3d
 
 #*******************************************************************************
 # V i e w M a n a g e r                                                        *
@@ -59,15 +61,15 @@ class ViewManager(QObject):
         self._beginStackIndex = 0
         self._endStackIndex   = 1
     
-        self._cursorCoordinates
-        self._slicingCoordinates
+        self._cursorPos
+        self._slicingPos
         self._activeView
         
         for i in range(3):
             self._views[i].mouseMoved.connect(partial(self._onCursorCoordinates, i))
     
     def _onCursorCoordinates(self, axis, x, y):
-        coor = copy.copy(self._cursorCoordinates)
+        coor = copy.copy(self._cursorPos)
         if axis == 0:
             self.coor[1] = x
             self.coor[2] = y
@@ -78,18 +80,25 @@ class ViewManager(QObject):
             self.coor[0] = x
             self.coor[1] = y
         #set the new coordinate
-        self.cursorCoordinates = coor
+        self.cursorPos = coor
     
     @property
-    def cursorCoordinates(self):
-        return self._cursorCoordinates
-    @cursorCoordinates.setter
-    def cursorCoordinates(self, coordinates):
-        self._cursorCoordinates = coordinates
+    def cursorPos(self):
+        return self._cursorPos
+    @cursorPos.setter
+    def cursorPos(self, coordinates):
+        self._cursorPos = coordinates
         self._updateCrossHairCursor()
     
+    @property
+    def slicingPos(self):
+        return self._slicingPos
+    @cursorPos.setter
+    def slicingPos(self, coordinates):
+        self._slicingPos = coordinates
+    
     def _updateCrossHairCursor(self):
-        x,y = projectCoordinate(self.cursorCoordinates)
+        x,y = posView2D(self.cursorPos, axis=self.activeView)
         self._views[self.activeView].crossHairCursor.showXYPosition(x,y)
         
         if self.activeView == 0: # x-axis
@@ -111,13 +120,6 @@ class ViewManager(QObject):
                 
             xView.showXPosition(y, x)
             yView.showXPosition(x, y)
-        
-    @property
-    def slicingCoordinates(self):
-        return self._slicingCoordinates
-    @cursorCoordinates.setter
-    def slicingCoordinates(self, coordinates):
-        self._slicingCoordinates = coordinates
         
     @property
     def activeView(self):
