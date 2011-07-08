@@ -107,9 +107,9 @@ class VolumeEditor(QWidget):
 
         self.pendingLabels = []
 
-        self._imageScenes = []
+        self._imageViews = []
         scene0 = ImageView2D(0, self.viewManager, self.drawManager, useGL=useGL)
-        self._imageScenes.append(scene0)
+        self._imageViews.append(scene0)
         
         self._overview = OverviewScene(self, self._shape[1:4])
         
@@ -119,21 +119,21 @@ class VolumeEditor(QWidget):
         if is3D(self._shape):
             # 3D image          
             scene1 = ImageView2D(1, self.viewManager, self.drawManager, useGL=useGL)
-            self._imageScenes.append(scene1)
+            self._imageViews.append(scene1)
             
             scene2 = ImageView2D(2, self.viewManager, self.drawManager, useGL=useGL)
-            self._imageScenes.append(scene2)
+            self._imageViews.append(scene2)
             
             self._grid = QuadView(self)
-            self._grid.addWidget(0, self._imageScenes[2])
-            self._grid.addWidget(1, self._imageScenes[0])
-            self._grid.addWidget(2, self._imageScenes[1])
+            self._grid.addWidget(0, self._imageViews[2])
+            self._grid.addWidget(1, self._imageViews[0])
+            self._grid.addWidget(2, self._imageViews[1])
             self._grid.addWidget(3, self._overview)
             for i in xrange(3):
-                self._imageScenes[i].drawing.connect(self.updateLabels)
-                self._imageScenes[i].customContextMenuRequested.connect(self.onCustomContextMenuRequested)
+                self._imageViews[i].drawing.connect(self.updateLabels)
+                self._imageViews[i].customContextMenuRequested.connect(self.onCustomContextMenuRequested)
         
-        for axis, scene in enumerate(self._imageScenes):
+        for axis, scene in enumerate(self._imageViews):
             scene.mouseDoubleClicked.connect(self.setPosition)
             scene.mouseMoved.connect(self.updateInfoLabels)
             scene.mouseMoved.connect(self.updateCrossHairCursor)
@@ -144,7 +144,7 @@ class VolumeEditor(QWidget):
             # connect hud slice selectors
             fn = [self.changeSliceX, self.changeSliceY, self.changeSliceZ]
             scene.hud.sliceSelector.valueChanged.connect(fn[axis])
-        self.viewManager.sliceChanged.connect(lambda num, axis: self._imageScenes[axis].hud.sliceSelector.setValue(num))            
+        self.viewManager.sliceChanged.connect(lambda num, axis: self._imageViews[axis].hud.sliceSelector.setValue(num))            
             
         #Controls the trade-off of speed and flickering when scrolling through this slice view
         self.setFastRepaint(True)   
@@ -157,7 +157,7 @@ class VolumeEditor(QWidget):
             viewingLayout.addWidget(self._grid)
             self._grid.setContentsMargins(0,0,10,0)
         else:
-            viewingLayout.addWidget(self._imageScenes[0])
+            viewingLayout.addWidget(self._imageViews[0])
         
         # Label below views
         labelLayout = QHBoxLayout()
@@ -188,7 +188,7 @@ class VolumeEditor(QWidget):
         currPosButton.setCheckable(True)
         currPosButton.setChecked(True)        
         self._toolBoxLayout.addWidget(currPosButton)
-        for scene in self._imageScenes:
+        for scene in self._imageViews:
             currPosButton.toggled.connect(scene.setSliceIntersection)
 
         #Channel Selector QComboBox in right side tool box
@@ -252,7 +252,7 @@ class VolumeEditor(QWidget):
     
     def setDrawingEnabled(self, enabled): 
         for i in range(3):
-            self._imageScenes[i].drawingEnabled = enabled
+            self._imageViews[i].drawingEnabled = enabled
     
     def onCustomContextMenuRequested(self, pos):
         print "Volumeeditor.onCustomContextMenuRequested"
@@ -283,7 +283,7 @@ class VolumeEditor(QWidget):
         self.shortcuts.append(self._shortcutHelper("q", "Navigation", "Switch to next channel", self, self.nextChannel))
         self.shortcuts.append(self._shortcutHelper("a", "Navigation", "Switch to previous channel", self, self.previousChannel))
         
-        for scene in self._imageScenes:
+        for scene in self._imageViews:
             self.shortcuts.append(self._shortcutHelper("n", "Labeling", "Increase brush size", scene, self.drawManager.brushSmaller, Qt.WidgetShortcut))
             self.shortcuts.append(self._shortcutHelper("m", "Labeling", "Decrease brush size", scene, self.drawManager.brushBigger, Qt.WidgetShortcut))
         
@@ -299,11 +299,11 @@ class VolumeEditor(QWidget):
     def onLabelSelected(self):
         item = self.labelWidget.currentItem()
         if item is not None:
-            for imageScene in self._imageScenes:
+            for imageScene in self._imageViews:
                 imageScene.drawingEnabled = True
                 imageScene.crossHairCursor.setColor(item.color)
         else:
-            for imageScene in self._imageScenes:
+            for imageScene in self._imageViews:
                 imageScene.drawingEnabled = False
                 imageScene.crossHairCursor.setColor(QColor("black"))
 
@@ -350,18 +350,18 @@ class VolumeEditor(QWidget):
             if self.focusAxis < 0:
                 self.focusAxis = 2
                 
-        if len(self._imageScenes) > 2:
-            self._imageScenes[self.focusAxis].setFocus()
+        if len(self._imageViews) > 2:
+            self._imageViews[self.focusAxis].setFocus()
         return True
     
     def cleanUp(self):
         QApplication.processEvents()
         print "VolumeEditor: cleaning up "
-        for scene in self._imageScenes:
+        for scene in self._imageViews:
             scene.cleanUp()
             scene.close()
             scene.deleteLater()
-        self._imageScenes = []
+        self._imageViews = []
         self._saveThread.stopped = True
         self._saveThread.imagePending.set()
         self._saveThread.wait()
@@ -397,7 +397,7 @@ class VolumeEditor(QWidget):
             self.ilastik.project.dataMgr[self.ilastik._activeImageNumber].overlayMgr.ilastik = self.ilastik
 
         #FIXME: porting
-        for view in self._imageScenes:
+        for view in self._imageViews:
              view.porting_overlaywidget = self.overlayWidget
 
     def setRgbMode(self, mode): 
@@ -419,7 +419,7 @@ class VolumeEditor(QWidget):
 
     def setFastRepaint(self, fastRepaint):
         self.fastRepaint = fastRepaint
-        for imageScene in self._imageScenes:
+        for imageScene in self._imageViews:
             imageScene.fastRepaint = self.fastRepaint
 
     def setBorderMargin(self, margin):
@@ -427,27 +427,27 @@ class VolumeEditor(QWidget):
             if self.borderMargin != margin:
                 print "new border margin:", margin
                 self.borderMargin = margin
-                for imgScene in self._imageScenes:
+                for imgScene in self._imageViews:
                     imgScene.setBorderMarginIndicator(margin)
                 self.repaint()
         else:
-            for imgScene in self._imageScenes:
+            for imgScene in self._imageViews:
                 #FIXME this looks wrong
                 imgScene.setBorderMarginIndicator(margin)
                 self.repaint()
 
     def updateTimeSliceForSaving(self, time, num, axis):
-        self._imageScenes[axis].thread.freeQueue.clear()
-        if self._imageScenes[axis].hud.sliceSelector.value() != num:
+        self._imageViews[axis].thread.freeQueue.clear()
+        if self._imageViews[axis].hud.sliceSelector.value() != num:
             #this will emit the signal and change the slice
-            self._imageScenes[axis].hud.sliceSelector.setValue(num)
+            self._imageViews[axis].hud.sliceSelector.setValue(num)
         elif self.viewManager.time!=time:
             #if only the time is changed, we don't want to update all 3 slices
             self.viewManager.time = time
             self.changeSlice(num, axis)
         else:
             #no need to update, just save the current image
-            self._imageScenes[axis].thread.freeQueue.set()
+            self._imageViews[axis].thread.freeQueue.set()
             
     def closeEvent(self, event):
         event.accept()
@@ -464,9 +464,9 @@ class VolumeEditor(QWidget):
                 scaleFactor = VolumeEditor.zoomInFactor
             else:
                 scaleFactor = VolumeEditor.zoomOutFactor
-            self._imageScenes[0].doScale(scaleFactor)
-            self._imageScenes[1].doScale(scaleFactor)
-            self._imageScenes[2].doScale(scaleFactor)
+            self._imageViews[0].doScale(scaleFactor)
+            self._imageViews[1].doScale(scaleFactor)
+            self._imageViews[2].doScale(scaleFactor)
 
     def setLabels(self, offsets, axis, num, labels, erase):
         """
@@ -493,7 +493,7 @@ class VolumeEditor(QWidget):
         vu.applyTo(self.labelWidget.overlayItem)
         self.pendingLabels.append(vu)
 
-        patches = self._imageScenes[axis].patchAccessor.getPatchesForRect(offsets[0], offsets[1],offsets[0]+labels.shape[0], offsets[1]+labels.shape[1])
+        patches = self._imageViews[axis].patchAccessor.getPatchesForRect(offsets[0], offsets[1],offsets[0]+labels.shape[0], offsets[1]+labels.shape[1])
 
         tempImage = None
         tempoverlays = []
@@ -505,7 +505,7 @@ class VolumeEditor(QWidget):
             tempImage = self.overlayWidget.getOverlayRef("Raw Data")._data.getSlice(num, axis, self.viewManager.time, self.viewManager.channel)       
 
         # FIXME there needs to be abstraction
-        self._imageScenes[axis].imageSceneRenderer.updatePatches(patches, tempImage, tempoverlays)
+        self._imageViews[axis].imageSceneRenderer.updatePatches(patches, tempImage, tempoverlays)
         self.newLabelsPending.emit() # e.g. retrain
 
     #===========================================================================
@@ -639,24 +639,24 @@ class VolumeEditor(QWidget):
         if not valid:
             return
         
-        self._imageScenes[axis].crossHairCursor.showXYPosition(x,y)
+        self._imageViews[axis].crossHairCursor.showXYPosition(x,y)
         
         if axis == 0: # x-axis
-            if len(self._imageScenes) > 2:
-                yView = self._imageScenes[1].crossHairCursor
-                zView = self._imageScenes[2].crossHairCursor
+            if len(self._imageViews) > 2:
+                yView = self._imageViews[1].crossHairCursor
+                zView = self._imageViews[2].crossHairCursor
                 
                 yView.setVisible(False)
                 zView.showYPosition(x, y)
         elif axis == 1: # y-axis
-            xView = self._imageScenes[0].crossHairCursor
-            zView = self._imageScenes[2].crossHairCursor
+            xView = self._imageViews[0].crossHairCursor
+            zView = self._imageViews[2].crossHairCursor
             
             zView.showXPosition(x, y)
             xView.setVisible(False)
         else: # z-axis
-            xView = self._imageScenes[0].crossHairCursor
-            yView = self._imageScenes[1].crossHairCursor
+            xView = self._imageViews[0].crossHairCursor
+            yView = self._imageViews[1].crossHairCursor
                 
             xView.showXPosition(y, x)
             yView.showXPosition(x, y)
@@ -665,7 +665,7 @@ class VolumeEditor(QWidget):
         if not valid:
             return
         
-        pos = (posX, posY, posZ) = self._imageScenes[axis].coordinateUnderCursor()
+        pos = (posX, posY, posZ) = self._imageViews[axis].coordinateUnderCursor()
         colorValues = self.overlayWidget.getOverlayRef("Raw Data").getOverlaySlice(pos[axis], axis, time=0, channel=0)._data[x,y]
         
         self.posLabel.setText("<b>x:</b> %03i  <b>y:</b> %03i  <b>z:</b> %03i" % (posX, posY, posZ))
