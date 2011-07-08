@@ -97,9 +97,6 @@ class VolumeEditor(QWidget):
         #set to 0 to wait for complete brushstrokes !
         #self.drawUpdateInterval = 300
 
-        #FIXME: Why is this needed?
-        QPixmapCache.setCacheLimit(100000)
-
         self._saveThread = ImageSaveThread(self)
         self._history = HistoryManager(self)
         self.drawManager = DrawManager()
