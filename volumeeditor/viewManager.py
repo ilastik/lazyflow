@@ -34,7 +34,12 @@ from PyQt4.QtGui  import QWidget, QPen, QGraphicsScene, QColor, QGraphicsLineIte
 
 import numpy
 import threading
-import time
+import time, copy
+from functools import partial
+
+def projectCoordinate(self, coordinate, axis):
+    del coordinate[axis]
+    return coordinate
 
 #*******************************************************************************
 # V i e w M a n a g e r                                                        *
@@ -43,14 +48,83 @@ import time
 class ViewManager(QObject):
     sliceChanged = pyqtSignal(int,int)
     
-    def __init__(self, image, time = 0, position = [0, 0, 0], channel = 0):
+    def __init__(self, imageView2Ds, image, time = 0, position = [0, 0, 0], channel = 0):
         QObject.__init__(self)
+        assert len(imageView2Ds) == 3
+        self._views = imageView2Ds
         self._image = image
         self._time = time
         self._position = position
         self._channel = channel
         self._beginStackIndex = 0
         self._endStackIndex   = 1
+    
+        self._cursorCoordinates
+        self._slicingCoordinates
+        self._activeView
+        
+        for i in range(3):
+            self._views[i].mouseMoved.connect(partial(self._onCursorCoordinates, i))
+    
+    def _onCursorCoordinates(self, axis, x, y):
+        coor = copy.copy(self._cursorCoordinates)
+        if axis == 0:
+            self.coor[1] = x
+            self.coor[2] = y
+        if axis == 1:
+            self.coor[0] = x
+            self.coor[2] = y
+        if axis == 2:
+            self.coor[0] = x
+            self.coor[1] = y
+        #set the new coordinate
+        self.cursorCoordinates = coor
+    
+    @property
+    def cursorCoordinates(self):
+        return self._cursorCoordinates
+    @cursorCoordinates.setter
+    def cursorCoordinates(self, coordinates):
+        self._cursorCoordinates = coordinates
+        self._updateCrossHairCursor()
+    
+    def _updateCrossHairCursor(self):
+        x,y = projectCoordinate(self.cursorCoordinates)
+        self._views[self.activeView].crossHairCursor.showXYPosition(x,y)
+        
+        if self.activeView == 0: # x-axis
+            if len(self._imageViews) > 2:
+                yView = self._views[1].crossHairCursor
+                zView = self._views[2].crossHairCursor
+                
+                yView.setVisible(False)
+                zView.showYPosition(x, y)
+        elif self.activeView == 1: # y-axis
+            xView = self._views[0].crossHairCursor
+            zView = self._views[2].crossHairCursor
+            
+            zView.showXPosition(x, y)
+            xView.setVisible(False)
+        else: # z-axis
+            xView = self._views[0].crossHairCursor
+            yView = self._views[1].crossHairCursor
+                
+            xView.showXPosition(y, x)
+            yView.showXPosition(x, y)
+        
+    @property
+    def slicingCoordinates(self):
+        return self._slicingCoordinates
+    @cursorCoordinates.setter
+    def slicingCoordinates(self, coordinates):
+        self._slicingCoordinates = coordinates
+        
+    @property
+    def activeView(self):
+        return self._activeView
+    @activeView.setter
+    def activeView(self, view):
+        self._activeView = view
     
     def imageShape(self, axis):
         """returns the 2D shape of slices perpendicular to axis"""
