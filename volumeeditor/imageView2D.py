@@ -49,12 +49,26 @@ from helper import InteractionLogger
 #*******************************************************************************
 
 class Hud(QFrame):
+    @property
+    def maximum():  return self._maximum
+    @property
+    def minimum(): return self._minimum
+    @maximum.setter
+    def maximum(self, m):
+        self._maximum = m
+        self.coordLabel.setText("of %d" % self._maximum)
+        self.sliceSelector.setRange(self._minimum, self._maximum)
+    @minimum.setter
+    def minimum(self, m):
+        self._minimum = m
+        self.sliceSelector.setRange(self._minimum, self._maximum)
+    
     def __init__( self, minimum = 0, maximum = 100, coordinateLabel = "X:", parent = None ):
         super(Hud, self).__init__( parent=parent )
 
         # init properties
-        self._minimum = minimum
-        self._maximum = maximum
+        self._minimum = 0
+        self._maximum = 1
 
         # configure self
         #
@@ -79,12 +93,14 @@ class Hud(QFrame):
         self.sliceSelector.setButtonSymbols(QAbstractSpinBox.NoButtons)
         self.sliceSelector.setAlignment(Qt.AlignRight)
         self.sliceSelector.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)            
-        self.sliceSelector.setRange(self._minimum, self._maximum)
         self.layout().addWidget(self.sliceSelector)
 
         # coordinate label
-        self.coordLabel = QLabel("of " + str(self._maximum))
+        self.coordLabel = QLabel()
         self.layout().addWidget(self.coordLabel)
+        
+        self.minimum = minimum
+        self.maximum = maximum
 
 
 #*******************************************************************************
@@ -103,22 +119,66 @@ class ImageView2D(QGraphicsView):
     blockSize = 128
     
     @property
-    def sliceNumber(self):
-        return self._viewManager.position[self._axis]
+    def shape(self):
+        return self._shape
+    @shape.setter
+    def shape(self, s):
+        self._shape = s
+        self.setScene(ImageScene2D(self._shape, self.viewport()))
+        if self._useGL:
+            self.initializeGL()
+    
+        if self._crossHairCursor:
+            self.scene().removeItem(self._crossHairCursor)
+        self._crossHairCursor = CrossHairCursor(*self._shape)
+        self._crossHairCursor.setZValue(100)
+        self.scene().addItem(self._crossHairCursor)
+
+        if self._sliceIntersectionMarker:
+            self.scene().removeItem(self._sliceIntersectionMarker)
+        self._sliceIntersectionMarker = SliceIntersectionMarker(*self.shape)
+        if self._axis == 0:
+            self._sliceIntersectionMarker.setColor(self.axisColor[1], self.axisColor[2])
+        elif self._axis == 1:
+            self._sliceIntersectionMarker.setColor(self.axisColor[0], self.axisColor[2])
+        elif self._axis == 2:
+            self._sliceIntersectionMarker.setColor(self.axisColor[0], self.axisColor[1])    
+        self.scene().addItem(self._sliceIntersectionMarker)
+        #FIXME: Use a QAction here so that we do not have to synchronize
+        #between this initial state and the toggle button's initial state
+        self._sliceIntersectionMarker.setVisibility(True)
     
     @property
-    def sliceExtent(self):
-        return self._viewManager.imageExtent(self._axis)
+    def slices(self):
+        return self._slices
+    @slices.setter
+    def slices(self, s):
+        self._slices = s
+        self.hud.maximum = self._slices
+    
+    @property
+    def name(self):
+        return self._name
+    @slices.setter
+    def name(self, n):
+        self._name = n
+        self.hud.name = n
+    
+#    @property
+#    def sliceNumber(self):
+#        return self._viewManager.position[self._axis]
     
     @property
     def shape2D(self):
         return self._viewManager.imageShape(self._axis)
-    
+        
     def initializeGL(self):
         self.scene().initializeGL()
    
     def initConnects(self):
-        self._viewManager.sliceChanged.connect(self.onSliceChange)
+        pass
+#FIXME: resurrect
+#        self._viewManager.sliceChanged.connect(self.onSliceChange)
     
     def onSliceChange(self, num, axis):
         if axis != self._axis: return
@@ -173,6 +233,13 @@ class ImageView2D(QGraphicsView):
         self.porting_overlays = None
         self.porting_overlaywidget = None
         
+        self._shape  = None #2D shape of this view's shown image
+        self._slices = None #number of slices that are stacked
+        self._name   = ''
+        
+        self._crossHairCursor         = None
+        self._sliceIntersectionMarker = None
+        
         #
         # Setup the Viewport for fast painting
         #
@@ -185,8 +252,6 @@ class ImageView2D(QGraphicsView):
             #an OpenGL widget as a viewport
             #http://doc.qt.nokia.com/qq/qq26-openglcanvas.html
             self.setViewportUpdateMode(QGraphicsView.FullViewportUpdate)
-            self.setScene(ImageScene2D(viewManager.imageShape(axis),  self.viewport()))
-            self.initializeGL()
         else:
             self.setViewportUpdateMode(QGraphicsView.MinimalViewportUpdate)
             #as rescaling images is slow if done in software,
@@ -194,7 +259,6 @@ class ImageView2D(QGraphicsView):
             #image need only be blitted on the screen when we only move
             #the cursor
             self.setCacheMode(QGraphicsView.CacheBackground)
-            self.setScene(ImageScene2D(viewManager.imageShape(axis)))
         self.setRenderHint(QPainter.Antialiasing, False)
         
         self.drawingEnabled = False
@@ -224,8 +288,7 @@ class ImageView2D(QGraphicsView):
         self.setLayout(QVBoxLayout())
         self.layout().setContentsMargins(0,0,0,0)
 
-        axisLabels = ["X:", "Y:", "Z:"]
-        self.hud = Hud(0, self.sliceExtent - 1, axisLabels[self._axis])
+        self.hud = Hud(0, 1, self.name)
 
         self.layout().addWidget(self.hud)
         self.layout().addStretch()
@@ -242,22 +305,23 @@ class ImageView2D(QGraphicsView):
 
         self.setMouseTracking(True)
 
-        #indicators for the biggest filter mask's size
-        #marks the area where labels should not be placed
-        # -> the margin top, left, right, bottom
-        self.setBorderMarginIndicator(0)
-        # -> the complete 2D slice is marked
-        brush = QBrush(QColor(0,0,255))
-        brush.setStyle( Qt.DiagCrossPattern )
-        allBorderPath = QPainterPath()
-        allBorderPath.setFillRule(Qt.WindingFill)
-        allBorderPath.addRect(0, 0, *self.shape2D)
-        self.allBorder = QGraphicsPathItem(allBorderPath)
-        self.allBorder.setBrush(brush)
-        self.allBorder.setPen(QPen(Qt.NoPen))
-        self.scene().addItem(self.allBorder)
-        self.allBorder.setVisible(False)
-        self.allBorder.setZValue(99)
+#FIXME: resurrect this code
+#        #indicators for the biggest filter mask's size
+#        #marks the area where labels should not be placed
+#        # -> the margin top, left, right, bottom
+#        self.setBorderMarginIndicator(0)
+#        # -> the complete 2D slice is marked
+#        brush = QBrush(QColor(0,0,255))
+#        brush.setStyle( Qt.DiagCrossPattern )
+#        allBorderPath = QPainterPath()
+#        allBorderPath.setFillRule(Qt.WindingFill)
+#        allBorderPath.addRect(0, 0, *self.shape2D)
+#        self.allBorder = QGraphicsPathItem(allBorderPath)
+#        self.allBorder.setBrush(brush)
+#        self.allBorder.setPen(QPen(Qt.NoPen))
+#        self.scene().addItem(self.allBorder)
+#        self.allBorder.setVisible(False)
+#        self.allBorder.setZValue(99)
 
         self.ticker = QTimer(self)
         self.ticker.timeout.connect(self.tickerEvent)
@@ -273,28 +337,13 @@ class ImageView2D(QGraphicsView):
         
         #self.connect(self, SIGNAL("destroyed()"), self.cleanUp)
 
-        self.crossHairCursor = CrossHairCursor(*self.shape2D)
-        self.crossHairCursor.setZValue(100)
-        self.scene().addItem(self.crossHairCursor)
-        
-        #FIXME: do we want to have these connects here or somewhere else?
-        self._drawManager.brushSizeChanged.connect(self.crossHairCursor.setBrushSize)
-        self._drawManager.brushColorChanged.connect(self.crossHairCursor.setColor)
-        
-        self.crossHairCursor.setBrushSize(self._drawManager.brushSize)
-        self.crossHairCursor.setColor(self._drawManager.drawColor)
-
-        self.sliceIntersectionMarker = SliceIntersectionMarker(*self.shape2D)
-        if self._axis == 0:
-            self.sliceIntersectionMarker.setColor(self.axisColor[1], self.axisColor[2])
-        elif self._axis == 1:
-            self.sliceIntersectionMarker.setColor(self.axisColor[0], self.axisColor[2])
-        elif self._axis == 2:
-            self.sliceIntersectionMarker.setColor(self.axisColor[0], self.axisColor[1])    
-        self.scene().addItem(self.sliceIntersectionMarker)
-        #FIXME: Use a QAction here so that we do not have to synchronize
-        #between this initial state and the toggle button's initial state
-        self.sliceIntersectionMarker.setVisibility(True)
+#FIXME: do we want to have these connects here or somewhere else?
+#FIXME: resurrect
+#        self._drawManager.brushSizeChanged.connect(self._crossHairCursor.setBrushSize)
+#        self._drawManager.brushColorChanged.connect(self._crossHairCursor.setColor)
+#        
+#        self._crossHairCursor.setBrushSize(self._drawManager.brushSize)
+#        self._crossHairCursor.setColor(self._drawManager.drawColor)
 
         self.tempErase = False
 
@@ -307,47 +356,48 @@ class ImageView2D(QGraphicsView):
         to reflect the new given margin
         """
         
-        self.margin = margin
-        if self.border:
-            self.scene().removeItem(self.border)
-        borderPath = QPainterPath()
-        borderPath.setFillRule(Qt.WindingFill)
-        borderPath.addRect(0,0, margin, self.shape2D[1])
-        borderPath.addRect(0,0, self.shape2D[0], margin)
-        borderPath.addRect(self.shape2D[0]-margin,0, margin, self.shape2D[1])
-        borderPath.addRect(0,self.shape2D[1]-margin, self.shape2D[0], margin)
-        self.border = QGraphicsPathItem(borderPath)
-        brush = QBrush(QColor(0,0,255))
-        brush.setStyle( Qt.Dense7Pattern )
-        self.border.setBrush(brush)
-        self.border.setPen(QPen(Qt.NoPen))
-        self.border.setZValue(200)
-        self.scene().addItem(self.border)
+        #FIXME: this code needs to be resurrected
+#        self.margin = margin
+#        if self.border:
+#            self.scene().removeItem(self.border)
+#        borderPath = QPainterPath()
+#        borderPath.setFillRule(Qt.WindingFill)
+#        borderPath.addRect(0,0, margin, self.shape2D[1])
+#        borderPath.addRect(0,0, self.shape2D[0], margin)
+#        borderPath.addRect(self.shape2D[0]-margin,0, margin, self.shape2D[1])
+#        borderPath.addRect(0,self.shape2D[1]-margin, self.shape2D[0], margin)
+#        self.border = QGraphicsPathItem(borderPath)
+#        brush = QBrush(QColor(0,0,255))
+#        brush.setStyle( Qt.Dense7Pattern )
+#        self.border.setBrush(brush)
+#        self.border.setPen(QPen(Qt.NoPen))
+#        self.border.setZValue(200)
+#        self.scene().addItem(self.border)
 
     def setSliceIntersection(self, state):
-        self.sliceIntersectionMarker.setVisibility(state)
+        self._sliceIntersectionMarker.setVisibility(state)
             
     def updateSliceIntersection(self, num, axis):
         #print "updateSliceIntersection(%d, %d)" % (num, axis)
         if self._axis == 0:
             if axis == 1:
-                self.sliceIntersectionMarker.setPositionX(num)
+                self._sliceIntersectionMarker.setPositionX(num)
             elif axis == 2:
-                self.sliceIntersectionMarker.setPositionY(num)
+                self._sliceIntersectionMarker.setPositionY(num)
             else:
                 return
         elif self._axis == 1:
             if axis == 0:
-                self.sliceIntersectionMarker.setPositionX(num)
+                self._sliceIntersectionMarker.setPositionX(num)
             elif axis == 2:
-                self.sliceIntersectionMarker.setPositionY(num)
+                self._sliceIntersectionMarker.setPositionY(num)
             else:
                 return
         elif self._axis == 2:
             if axis == 0:
-                self.sliceIntersectionMarker.setPositionX(num)
+                self._sliceIntersectionMarker.setPositionX(num)
             elif axis == 1:
-                self.sliceIntersectionMarker.setPositionY(num)
+                self._sliceIntersectionMarker.setPositionY(num)
             else:
                 return   
 
@@ -437,7 +487,7 @@ class ImageView2D(QGraphicsView):
         if event.button() == Qt.MidButton:
             self.setCursor(QCursor(Qt.SizeAllCursor))
             self._lastPanPoint = event.pos()
-            self.crossHairCursor.setVisible(False)
+            self._crossHairCursor.setVisible(False)
             self._dragMode = True
             if self.ticker.isActive():
                 self._deltaPan = QPointF(0, 0)
@@ -537,7 +587,7 @@ class ImageView2D(QGraphicsView):
             mousePos = self.mapToScene(self.mapFromGlobal(cursor.pos()))
             x = mousePos.x()
             y = mousePos.y()
-            self.crossHairCursor.showXYPosition(x, y)
+            self._crossHairCursor.showXYPosition(x, y)
         else:
             self._deltaPan = self.deaccelerate(self._deltaPan)
             self.panning()
@@ -664,7 +714,7 @@ if __name__ == '__main__':
             
             self.ImageView2D = ImageView2D(axis, viewManager, drawManager)
             self.ImageView2D.drawingEnabled = True
-            self.ImageView2D.mouseMoved.connect(lambda axis, x, y, valid: self.ImageView2D.crossHairCursor.showXYPosition(x,y))
+            self.ImageView2D.mouseMoved.connect(lambda axis, x, y, valid: self.ImageView2D._crossHairCursor.showXYPosition(x,y))
 
             self.testChangeSlice(3, axis)
         

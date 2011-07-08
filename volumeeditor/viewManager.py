@@ -61,12 +61,17 @@ class ViewManager(QObject):
         self._beginStackIndex = 0
         self._endStackIndex   = 1
     
-        self._cursorPos
-        self._slicingPos
-        self._activeView
+        self._cursorPos  = None
+        self._slicingPos = None
+        self._activeView = None
         
+        axisLabels = ["X:", "Y:", "Z:"]
         for i in range(3):
-            self._views[i].mouseMoved.connect(partial(self._onCursorCoordinates, i))
+            v = self._views[i]
+            v.mouseMoved.connect(partial(self._onCursorCoordinates, i))
+            v.shape = self.imageShape(axis=i)
+            v.slices = self.imageExtent(axis=i)
+            v.name = axisLabels[i]
     
     def _onCursorCoordinates(self, axis, x, y):
         coor = copy.copy(self._cursorPos)

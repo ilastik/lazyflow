@@ -137,7 +137,8 @@ class VolumeEditor(QWidget):
             # connect hud slice selectors
             fn = [self.changeSliceX, self.changeSliceY, self.changeSliceZ]
             scene.hud.sliceSelector.valueChanged.connect(fn[axis])
-        self._viewManager.sliceChanged.connect(lambda num, axis: self._imageViews[axis].hud.sliceSelector.setValue(num))            
+##FIXME: resurrect
+#        self._viewManager.sliceChanged.connect(lambda num, axis: self._imageViews[axis].hud.sliceSelector.setValue(num))            
             
         #Controls the trade-off of speed and flickering when scrolling through this slice view
         self.setFastRepaint(True)   
@@ -588,7 +589,9 @@ class VolumeEditor(QWidget):
         self.changeSlice(num, 2)
         
     def changeSlice(self, num, axis):
-        self._viewManager.setSlice(num, axis)
+        pass
+#FIXME: resurrect
+#        self._viewManager.setSlice(num, axis)
         
     def getVisibleState(self):
         return self._viewManager.getVisibleState()
@@ -737,8 +740,8 @@ if __name__ == "__main__":
             else:
                 raise RuntimeError("Invalid testing mode")
             
-            vm = ViewManager(self.data)
-            self.dialog = VolumeEditor((1,)+self.data.shape+(1,), None, useGL=useGL, viewManager=vm)
+            self.dialog = VolumeEditor((1,)+self.data.shape+(1,), None, useGL=useGL)
+            vm = ViewManager(self.dialog._imageViews, self.data)
             self.dialog.setDrawingEnabled(True)
             
             self.dataOverlay = OverlayItem(DataAccessor(self.data), alpha=1.0, color=Qt.black, colorTable=OverlayItem.createDefaultColorTable('GRAY', 256), autoVisible=True, autoAlphaChannel=False)
