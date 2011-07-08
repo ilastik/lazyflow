@@ -33,7 +33,7 @@ from PyQt4.QtOpenGL import QGLWidget
 from OpenGL.GL import *
 
 from patchAccessor import PatchAccessor
-from imageSceneRenderer import ImageSceneRenderer
+from imageSceneRenderer import ImageSceneRenderer, ImageSceneRenderThread
 
 class ImagePatch(object):    
     def __init__(self, rectF):
@@ -100,9 +100,30 @@ class ImageScene2D(QGraphicsScene):
             self.imagePatches.append(patch)
         
         self.setSceneRect(0,0, *self._shape2D)
-    
+
+        # tile rendering
+        self._renderThread = ImageSceneRenderThread(self.imagePatches)
+        self._renderThread.start()
+        #self._renderThread.patchAvailable.connect(self.updatePatch)
+
         self._imageSceneRenderer = ImageSceneRenderer(self.imagePatches, self._glWidget)
         self._imageSceneRenderer._thread.patchAvailable.connect(self.updatePatch)
+
+    def set(self, rect, image, overlays = ()):
+        #Abandon previous workloads
+        self._renderThread.queue.clear()
+        self._renderThread.newerDataPending.set()
+        #Find all patches that intersect the given 'rect'.
+        patches = []
+        for i,patch in enumerate(self._imagePatches):
+            if patch.dirty and rect.intersects(patch.rectF):
+                patches.append(i)
+        if len(patches) == 0: return
+        toc = time()
+        #Update these patches using the thread below
+        workPackage = [patches, image, overlays, self._min, self._max]
+        self._renderThread.queue.append(workPackage)
+        self._renderThread.dataPending.set()
 
     def updatePatch(self, patchNr):
         p = self.imagePatches[patchNr]
