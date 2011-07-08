@@ -75,6 +75,9 @@ class ViewManager(QObject):
             v.shape = self.imageShape(axis=i)
             v.slices = self.imageExtent(axis=i)
             v.name = axisLabels[i]
+            
+            x,y = posView2D([0,1,2], axis=i)
+            v._sliceIntersectionMarker.setColor(self.axisColor[x], self.axisColor[y])
     
     def _onCursorCoordinates(self, x, y, axis):
         #we get the 2D coordinates x,y from the view that
