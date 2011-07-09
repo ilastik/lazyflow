@@ -134,6 +134,8 @@ class NavigationControler(QObject):
             v.shape = self.sliceShape(axis=i)
             v.slices = self.volumeExtent(axis=i)
             v.name = axisLabels[i]
+            v.hud.sliceSelector.valueChanged.connect(partial(self.onAbsoluteSliceChange, axis=i))
+            
 
         # init property fields
         self._cursorPos  = [0,0,0]
@@ -204,10 +206,12 @@ class NavigationControler(QObject):
         axis -- along which axis [0,1,2]
  
         '''
-        raise NotImplementedError
-
-
-                
+        if value < 0 or value > self.volumeExtent(axis):
+            return
+        newPos = copy.copy(self.slicingPos)
+        newPos[axis] = value
+        self.slicingPos = newPos
+           
     def sliceShape(self, axis):
         """returns the 2D shape of slices perpendicular to axis"""
         shape = self._volume.shape
@@ -257,4 +261,5 @@ class NavigationControler(QObject):
         if num < 0 or num >= self._volume.shape[axis]:
             raise Exception("NavigationControler._setSlice(): invalid slice number")
         self._views[axis].onSliceChange(num, axis)
+        self._views[axis].hud.sliceSelector.setValue(num)
 

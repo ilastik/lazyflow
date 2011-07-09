@@ -50,6 +50,7 @@ from imageView2D import ImageView2D
 from imageSaveThread import ImageSaveThread
 from navigationControler import NavigationControler
 from drawManager import DrawManager
+from sliceSelectorHud import SliceSelectorHud
 
 from overlaySlice import OverlaySlice
 
@@ -131,6 +132,8 @@ class VolumeEditor(QWidget):
             scene.mouseMoved.connect(self.updateInfoLabels)
             scene.beginDraw.connect(self.beginDraw)
             scene.endDraw.connect(self.endDraw)
+
+            scene.hud = SliceSelectorHud()
 
             # connect hud slice selectors
             fn = [self.changeSliceX, self.changeSliceY, self.changeSliceZ]

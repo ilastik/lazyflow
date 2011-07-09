@@ -45,69 +45,6 @@ from imageScene2D import ImageScene2D
 from helper import InteractionLogger
 
 #*******************************************************************************
-# H u d                                                                        *
-#*******************************************************************************
-
-class Hud(QFrame):
-    @property
-    def maximum(): return self._maximum
-    @property
-    def minimum(): return self._minimum
-    @maximum.setter
-    def maximum(self, m):
-        self._maximum = m
-        self.coordLabel.setText("of %d" % self._maximum)
-        self.sliceSelector.setRange(self._minimum, self._maximum)
-    @minimum.setter
-    def minimum(self, m):
-        self._minimum = m
-        self.sliceSelector.setRange(self._minimum, self._maximum)
-    @property
-    def label(self):
-        return self._label
-    @label.setter
-    def label(self, l):
-        self._label = l
-        self.dimLabel.setText(l)
-    
-    def __init__(self, parent = None ):
-        super(Hud, self).__init__(parent)
-
-        # init properties
-        self._minimum = 0
-        self._maximum = 1
-        self._label   = ''
-
-        # configure self
-        #
-        # a border-radius of >0px to make the Hud appear rounded
-        # does not work together with an QGLWidget, the corners just appear black
-        # instead of transparent
-        self.setStyleSheet("QFrame {background-color: white; color: black; border-radius: 0px;}")
-        self.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
-
-        self.setLayout(QHBoxLayout())
-        self.layout().setContentsMargins(3,1,3,1)
-
-        # dimension label
-        self.dimLabel = QLabel(self)
-        font = self.dimLabel.font()
-        font.setBold(True)
-        self.dimLabel.setFont(font)
-        self.layout().addWidget(self.dimLabel)
-
-        # coordinate selection
-        self.sliceSelector = QSpinBox()
-        self.sliceSelector.setButtonSymbols(QAbstractSpinBox.NoButtons)
-        self.sliceSelector.setAlignment(Qt.AlignRight)
-        self.sliceSelector.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)            
-        self.layout().addWidget(self.sliceSelector)
-
-        # coordinate label
-        self.coordLabel = QLabel()
-        self.layout().addWidget(self.coordLabel)
-
-#*******************************************************************************
 # I m a g e V i e w 2 D                                                        *
 #*******************************************************************************
 #TODO: ImageView2D should not care/know about what axis it is!
@@ -218,7 +155,18 @@ class ImageView2D(QGraphicsView):
         self.porting_overlays = overlays
         
         self.scene()._imageSceneRenderer.renderImage(self.viewportRect(), image, overlays)   
-   
+    
+    @property
+    def hud(self):
+        return self._hud
+    @hud.setter
+    def hud(self, hud):
+        self._hud = hud
+        self.setLayout(QVBoxLayout())
+        self.layout().setContentsMargins(0,0,0,0)
+        self.layout().addWidget(self._hud)
+        self.layout().addStretch()
+    
     def __init__(self, axis, drawManager, useGL=False):
         """
         imShape: 3D shape of the block that this slice view displays.
@@ -237,6 +185,7 @@ class ImageView2D(QGraphicsView):
         self._shape  = None #2D shape of this view's shown image
         self._slices = None #number of slices that are stacked
         self._name   = ''
+        self._hud    = None
         
         self._crossHairCursor         = None
         self._sliceIntersectionMarker = None
@@ -283,15 +232,6 @@ class ImageView2D(QGraphicsView):
         
         self.fastRepaint = True
         self.drawUpdateInterval = 300
-
-        #Heads up display 
-        self.setLayout(QVBoxLayout())
-        self.layout().setContentsMargins(0,0,0,0)
-
-        self.hud = Hud(self)
-
-        self.layout().addWidget(self.hud)
-        self.layout().addStretch()
         
         #Unfortunately, setting the style like this make the scroll bars look
         #really crappy...
