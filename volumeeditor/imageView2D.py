@@ -40,7 +40,6 @@ from navigationControler import NavigationControler
 from drawManager import DrawManager
 from crossHairCursor import CrossHairCursor
 from sliceIntersectionMarker import SliceIntersectionMarker
-from imageSceneRenderer import ImageSceneRenderer
 from imageScene2D import ImageScene2D
 from helper import InteractionLogger
 
