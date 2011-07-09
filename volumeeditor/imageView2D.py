@@ -59,7 +59,7 @@ class ImageView2D(QGraphicsView):
     #notifies that the mouse has moved to 2D coordinate x,y
     mouseMoved         = pyqtSignal(int, int)
     
-    mouseDoubleClicked = pyqtSignal(int, int, int)
+    mouseDoubleClicked = pyqtSignal(int, int)
     
     @property
     def shape(self):
@@ -86,29 +86,12 @@ class ImageView2D(QGraphicsView):
         self._sliceIntersectionMarker.setVisibility(True)
     
     @property
-    def slices(self):
-        return self._slices
-    @slices.setter
-    def slices(self, s):
-        self._slices = s
-        self.hud.maximum = self._slices
-    
-    @property
     def name(self):
         return self._name
-    @slices.setter
+    @name.setter
     def name(self, n):
         self._name = n
-        self.hud.label = n
-    
-#    @property
-#    def sliceNumber(self):
-#        return self._viewManager.position[self._axis]
-    
-    @property
-    def shape2D(self):
-        return self._viewManager.imageShape(self._axis)
-        
+
     def initializeGL(self):
         self.scene().initializeGL()
    
@@ -118,10 +101,6 @@ class ImageView2D(QGraphicsView):
 #        self._viewManager.sliceChanged.connect(self.onSliceChange)
     
     def onSliceChange(self, num, axis):
-        if axis != self._axis: return
-        
-        print "ImageView2D.onSliceChange", num, axis
-        
         if not self._useGL:
             #reset the background cache
             self.resetCachedContent()
@@ -140,14 +119,14 @@ class ImageView2D(QGraphicsView):
         
         for item in reversed(self.porting_overlaywidget.overlays):
             if item.visible:
-                overlays.append(item.getOverlaySlice(num, self._axis, 0, item.channel))
+                overlays.append(item.getOverlaySlice(num, axis, 0, item.channel))
         if len(self.porting_overlaywidget.overlays) == 0 \
            or self.porting_overlaywidget.getOverlayRef("Raw Data") is None:
             return
         
         rawData = self.porting_overlaywidget.getOverlayRef("Raw Data")._data
         image = rawData.getSlice(num,\
-                                 self._axis, 0,\
+                                 axis, 0,\
                                  self.porting_overlaywidget.getOverlayRef("Raw Data").channel)
 
         self.porting_image = image
@@ -166,14 +145,13 @@ class ImageView2D(QGraphicsView):
         self.layout().addWidget(self._hud)
         self.layout().addStretch()
 
-    def __init__(self, axis, drawManager, useGL=False):
+    def __init__(self, drawManager, useGL=False):
         """
         imShape: 3D shape of the block that this slice view displays.
                  first two entries denote the x,y extent of one slice,
                  the last entry is the extent in slice direction
         """
         QGraphicsView.__init__(self)
-        assert(axis in [0,1,2])
         self._useGL = useGL
         
         #FIXME: for porting
@@ -218,7 +196,6 @@ class ImageView2D(QGraphicsView):
         #       within the image scene renderer
         self.tempImageItems = []
         
-        self._axis = axis
         self._isDrawing = False
         self.border = None
         self.allBorder = None
@@ -238,9 +215,6 @@ class ImageView2D(QGraphicsView):
         #                    QWidget:focus { border: 2px solid white; border-radius: 4px; }")
 
         #FIXME: Is there are more elegant way to handle this?
-        if self._axis is 0:
-            self.rotate(90.0)
-            self.scale(1.0,-1.0)
 
         self.setMouseTracking(True)
 
@@ -288,7 +262,11 @@ class ImageView2D(QGraphicsView):
 
         #initialize connections
         self.initConnects()
-           
+    
+    def swapAxes(self):          
+        self.rotate(90.0)
+        self.scale(1.0,-1.0)
+    
     def setBorderMarginIndicator(self, margin):
         """
         update the border margin indicator (left, right, top, bottom)
@@ -326,7 +304,7 @@ class ImageView2D(QGraphicsView):
         return self.mapToScene(self.viewport().geometry()).boundingRect()
 
     def saveSlice(self, filename):
-        print "Saving in ", filename, "slice #", self.sliceNumber, "axis", self._axis
+        #print "Saving in ", filename, "slice #", self.sliceNumber, "axis", self._axis
         result_image = QImage(self.scene().image.size(), self.scene().image.format())
         p = QPainter(result_image)
         for patchNr in range(self.patchAccessor.patchCount):
@@ -344,7 +322,9 @@ class ImageView2D(QGraphicsView):
         result_image.save(QString(filename))
    
     def notifyDrawing(self):
-        self.drawing.emit(self._axis, self.mousePos)
+        pass
+        #FIXME: resurrect
+        #self.drawing.emit(self._axis, self.mousePos)
     
     def beginDrawing(self, pos):
         InteractionLogger.log("%f: beginDrawing`()" % (time.clock()))   
@@ -356,15 +336,16 @@ class ImageView2D(QGraphicsView):
         self.scene().addItem(line)
         if self.drawUpdateInterval > 0:
             self.drawTimer.start(self.drawUpdateInterval) #update labels every some ms
-            
-        self.beginDraw.emit(self._axis, pos)
+        #FIXME resurrect    
+        #self.beginDraw.emit(self._axis, pos)
         
     def endDrawing(self, pos):
         InteractionLogger.log("%f: endDrawing()" % (time.clock()))     
         self.drawTimer.stop()
         self._isDrawing = False
-        
-        self.endDraw.emit(self._axis, pos)
+       
+        #FIXME resurrect 
+        #self.endDraw.emit(self._axis, pos)
 
     def wheelEvent(self, event):
         keys = QApplication.keyboardModifiers()
@@ -559,7 +540,7 @@ class ImageView2D(QGraphicsView):
 
     def mouseDoubleClickEvent(self, event):
         mousePos = self.mapToScene(event.pos())
-        self.mouseDoubleClicked.emit(self._axis, mousePos.x(), mousePos.y())
+        self.mouseDoubleClicked.emit(mousePos.x(), mousePos.y())
 
     #===========================================================================
     # Navigate in Volume
@@ -585,7 +566,8 @@ class ImageView2D(QGraphicsView):
         
         self.changeSliceDelta.emit(delta)
         
-        InteractionLogger.log("%f: changeSliceDelta(axis, num) %d, %d" % (time.clock(), self._axis, delta))
+        #FIXME resurrect
+        #InteractionLogger.log("%f: changeSliceDelta(axis, num) %d, %d" % (time.clock(), self._axis, delta))
         
     def zoomOut(self):
         self.doScale(0.9)
@@ -624,7 +606,7 @@ if __name__ == '__main__':
             #viewManager = ViewManager(self.data)
             drawManager = DrawManager()
             
-            self.imageView2D = ImageView2D(axis, drawManager, useGL=False)
+            self.imageView2D = ImageView2D(drawManager, useGL=False)
             self.imageView2D.drawingEnabled = True
             self.imageView2D.name = 'ImageView2D:'
             self.imageView2D.shape = [self.data.shape[0], self.data.shape[2]]

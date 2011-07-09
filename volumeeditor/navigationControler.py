@@ -113,8 +113,6 @@ class NavigationControler(QObject):
     def axisColors( self, colors ):
         self._axisColors = colors
 
-
-
     def __init__(self, imageView2Ds, volume, time = 0, channel = 0):
         QObject.__init__(self)
         assert len(imageView2Ds) == 3
@@ -130,12 +128,13 @@ class NavigationControler(QObject):
         for i in range(3):
             v = self._views[i]
             v.mouseMoved.connect(partial(self.onCursorPosition, axis=i))
+            v.mouseDoubleClicked.connect(partial(self.onSlicePosition, axis=i))
             v.changeSliceDelta.connect(partial(self.onRelativeSliceChange, axis=i))
             v.shape = self.sliceShape(axis=i)
             v.slices = self.volumeExtent(axis=i)
             v.name = axisLabels[i]
             v.hud.sliceSelector.valueChanged.connect(partial(self.onAbsoluteSliceChange, axis=i))
-            
+        self._views[0].swapAxes()
 
         # init property fields
         self._cursorPos  = [0,0,0]
@@ -183,6 +182,13 @@ class NavigationControler(QObject):
             coor[1] = y
         #set the new coordinate
         self.cursorPos = coor
+
+    def onSlicePosition(self, x, y, axis):
+        newPos = copy.copy(self.slicingPos)
+        i,j = posView2D([0,1,2], axis)
+        newPos[i] = x
+        newPos[j] = y
+        self.slicingPos = newPos
 
     def onRelativeSliceChange(self, delta, axis):
         '''Change slice along a certain axis relative to current slice.

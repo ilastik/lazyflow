@@ -102,7 +102,7 @@ class VolumeEditor(QWidget):
         self._pendingLabels = []
 
         self._imageViews = []
-        scene0 = ImageView2D(0, self._drawManager, useGL=useGL)
+        scene0 = ImageView2D(self._drawManager, useGL=useGL)
         self._imageViews.append(scene0)
         
         self._overview = OverviewScene(self, self._shape[1:4])
@@ -112,10 +112,10 @@ class VolumeEditor(QWidget):
 
         if is3D(self._shape):
             # 3D image          
-            scene1 = ImageView2D(1, self._drawManager, useGL=useGL)
+            scene1 = ImageView2D(self._drawManager, useGL=useGL)
             self._imageViews.append(scene1)
             
-            scene2 = ImageView2D(2, self._drawManager, useGL=useGL)
+            scene2 = ImageView2D(self._drawManager, useGL=useGL)
             self._imageViews.append(scene2)
             
             self._grid = QuadView(self)
