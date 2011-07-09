@@ -112,7 +112,12 @@ class NavigationControler(QObject):
     @axisColors.setter
     def axisColors( self, colors ):
         self._axisColors = colors
-
+        self._views[0]._sliceIntersectionMarker.setColor(self.axisColors[1], self.axisColors[2])
+        self._views[1]._sliceIntersectionMarker.setColor(self.axisColors[0], self.axisColors[2])
+        self._views[2]._sliceIntersectionMarker.setColor(self.axisColors[0], self.axisColors[1])
+        for axis, v in enumerate(self._views):
+            v.hud.bgColor = self.axisColors[axis]
+        
     def __init__(self, imageView2Ds, volume, time = 0, channel = 0):
         QObject.__init__(self)
         assert len(imageView2Ds) == 3
@@ -132,7 +137,10 @@ class NavigationControler(QObject):
             v.changeSliceDelta.connect(partial(self.onRelativeSliceChange, axis=i))
             v.shape = self.sliceShape(axis=i)
             v.slices = self.volumeExtent(axis=i)
-            v.name = axisLabels[i]
+            
+            v.hud.label = axisLabels[i]
+            v.hud.minimum = 0
+            v.hud.maximum = self.volumeExtent(i)
             v.hud.sliceSelector.valueChanged.connect(partial(self.onAbsoluteSliceChange, axis=i))
         self._views[0].swapAxes()
 

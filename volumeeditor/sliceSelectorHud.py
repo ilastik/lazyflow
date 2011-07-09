@@ -29,7 +29,7 @@
 
 from PyQt4.QtCore import Qt
 from PyQt4.QtGui import QFrame, QHBoxLayout, QSpinBox, QSizePolicy, QLabel, \
-                        QAbstractSpinBox
+                        QAbstractSpinBox, QColor, QPalette
 
 #*******************************************************************************
 # S l i c e S e l e c t o r H u d                                              *
@@ -57,6 +57,17 @@ class SliceSelectorHud(QFrame):
         self._label = l
         self.dimLabel.setText(l)
     
+    @property
+    def bgColor(self):
+        return self._bgColor
+    @bgColor.setter
+    def bgColor(self, color):
+        self._bgColor = color
+        palette = self.palette();
+        palette.setColor(self.backgroundRole(), color);
+        self.setAutoFillBackground(True);
+        self.setPalette(palette)
+    
     def __init__(self, parent = None):
         super(SliceSelectorHud, self).__init__(parent)
 
@@ -64,13 +75,17 @@ class SliceSelectorHud(QFrame):
         self._minimum = 0
         self._maximum = 1
         self._label   = ''
+        self._bgColor = QColor(255,255,255)
 
         # configure self
         #
         # a border-radius of >0px to make the Hud appear rounded
         # does not work together with an QGLWidget, the corners just appear black
         # instead of transparent
-        self.setStyleSheet("QFrame {background-color: white; color: black; border-radius: 0px;}")
+        #self.setStyleSheet("QFrame {background-color: white; color: black; border-radius: 0px;}")
+        
+        
+        
         self.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
 
         self.setLayout(QHBoxLayout())
