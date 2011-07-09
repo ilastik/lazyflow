@@ -154,8 +154,8 @@ class ImageView2D(QGraphicsView):
         self.porting_image = image
         self.porting_overlays = overlays
         
-        self.scene()._imageSceneRenderer.renderImage(self.viewportRect(), image, overlays)   
-    
+        self.scene().setContent(self.viewportRect(), image, overlays) 
+
     @property
     def hud(self):
         return self._hud
@@ -166,7 +166,7 @@ class ImageView2D(QGraphicsView):
         self.layout().setContentsMargins(0,0,0,0)
         self.layout().addWidget(self._hud)
         self.layout().addStretch()
-    
+
     def __init__(self, axis, drawManager, useGL=False):
         """
         imShape: 3D shape of the block that this slice view displays.
@@ -453,7 +453,7 @@ class ImageView2D(QGraphicsView):
             hBar.setValue(hBar.value() + self._deltaPan.x())
         else:
             hBar.setValue(hBar.value() - self._deltaPan.x())
-        self.scene()._imageSceneRenderer.renderImage(self.viewportRect(), self.porting_image, self.porting_overlays)
+        self.scene().setContent(self.viewportRect(), self.porting_image, self.porting_overlays)
         
         
     #TODO oli
@@ -599,7 +599,7 @@ class ImageView2D(QGraphicsView):
         InteractionLogger.log("%f: zoomFactor(factor) %f" % (time.clock(), self.factor))     
         self.scale(factor, factor)
         #FIXME
-        self.scene()._imageSceneRenderer.renderImage(self.viewportRect(), self.porting_image, self.porting_overlays)
+        self.scene().setContent(self.viewportRect(), self.porting_image, self.porting_overlays)
 
 #*******************************************************************************
 # i f   _ _ n a m e _ _   = =   " _ _ m a i n _ _ "                            *
