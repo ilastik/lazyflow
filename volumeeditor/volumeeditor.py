@@ -135,12 +135,6 @@ class VolumeEditor(QWidget):
 
             scene.hud = SliceSelectorHud()
 
-            # connect hud slice selectors
-            fn = [self.changeSliceX, self.changeSliceY, self.changeSliceZ]
-            scene.hud.sliceSelector.valueChanged.connect(fn[axis])
-##FIXME: resurrect
-#        self._viewManager.sliceChanged.connect(lambda num, axis: self._imageViews[axis].hud.sliceSelector.setValue(num))            
-            
         #Controls the trade-off of speed and flickering when scrolling through this slice view
         self.setFastRepaint(True)   
 
@@ -178,13 +172,11 @@ class VolumeEditor(QWidget):
         self._toolBoxLayout.addStretch()
             
         # Check box for slice intersection marks
-        currPosButton = QToolButton()
-        currPosButton.setText("Indicate Current Position")
-        currPosButton.setCheckable(True)
-        currPosButton.setChecked(True)        
-        self._toolBoxLayout.addWidget(currPosButton)
-        for scene in self._imageViews:
-            currPosButton.toggled.connect(scene.setSliceIntersection)
+        self.indicateSliceIntersectionButton = QToolButton()
+        self.indicateSliceIntersectionButton.setText("Indicate Current Position")
+        self.indicateSliceIntersectionButton.setCheckable(True)
+        self.indicateSliceIntersectionButton.setChecked(True)        
+        self._toolBoxLayout.addWidget(self.indicateSliceIntersectionButton)
 
         #Channel Selector QComboBox in right side tool box
         self._channelSpin = QSpinBox()
@@ -719,6 +711,9 @@ if __name__ == "__main__":
             self.dialog = VolumeEditor((1,)+self.data.shape+(1,), None, useGL=useGL)
             nc = NavigationControler(self.dialog._imageViews, self.data)
             self.dialog.setDrawingEnabled(True)
+            
+            #FIXME: port to ilastik
+            self.dialog.indicateSliceIntersectionButton.toggled.connect(nc.onIndicateSliceIntersectionToggle)
             
             self.dataOverlay = OverlayItem(DataAccessor(self.data), alpha=1.0, color=Qt.black, colorTable=OverlayItem.createDefaultColorTable('GRAY', 256), autoVisible=True, autoAlphaChannel=False)
             

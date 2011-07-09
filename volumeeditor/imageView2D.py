@@ -46,7 +46,7 @@ from helper import InteractionLogger
 #*******************************************************************************
 # I m a g e V i e w 2 D                                                        *
 #*******************************************************************************
-#TODO: ImageView2D should not care/know about what axis it is!
+
 class ImageView2D(QGraphicsView):
     #notifies about the relative change in the slicing position
     #that is requested
@@ -58,7 +58,7 @@ class ImageView2D(QGraphicsView):
     
     #notifies that the mouse has moved to 2D coordinate x,y
     mouseMoved         = pyqtSignal(int, int)
-    
+    #notifies that the user has double clicked on the 2D coordinate x,y    
     mouseDoubleClicked = pyqtSignal(int, int)
     
     @property
@@ -69,7 +69,7 @@ class ImageView2D(QGraphicsView):
         self._shape = s
         self.setScene(ImageScene2D(self._shape, self.viewport()))
         if self._useGL:
-            self.initializeGL()
+            self._initializeGL()
     
         if self._crossHairCursor:
             self.scene().removeItem(self._crossHairCursor)
@@ -92,15 +92,13 @@ class ImageView2D(QGraphicsView):
     def name(self, n):
         self._name = n
 
-    def initializeGL(self):
+    def _initializeGL(self):
         self.scene().initializeGL()
    
-    def initConnects(self):
-        pass
-#FIXME: resurrect
-#        self._viewManager.sliceChanged.connect(self.onSliceChange)
     
     def onSliceChange(self, num, axis):
+        #FIXME refactor 
+        #the data should be set by the renderer
         if not self._useGL:
             #reset the background cache
             self.resetCachedContent()
@@ -139,18 +137,26 @@ class ImageView2D(QGraphicsView):
         return self._hud
     @hud.setter
     def hud(self, hud):
+        '''Sets up a heads up display at the upper left corner of the view
+        
+        hud -- a QWidget
+        '''
+        
         self._hud = hud
         self.setLayout(QVBoxLayout())
         self.layout().setContentsMargins(0,0,0,0)
         self.layout().addWidget(self._hud)
         self.layout().addStretch()
 
+
+    @property
+    def drawingEnabled(self):
+        return self._drawingEnabled
+    @drawingEnabled.setter
+    def drawingEnabled(self, enable):
+        self._drawingEnabled = enable 
+
     def __init__(self, drawManager, useGL=False):
-        """
-        imShape: 3D shape of the block that this slice view displays.
-                 first two entries denote the x,y extent of one slice,
-                 the last entry is the extent in slice direction
-        """
         QGraphicsView.__init__(self)
         self._useGL = useGL
         
@@ -159,10 +165,12 @@ class ImageView2D(QGraphicsView):
         self.porting_overlays = None
         self.porting_overlaywidget = None
         
+        #these attributes are exposed as public properties above
         self._shape  = None #2D shape of this view's shown image
         self._slices = None #number of slices that are stacked
         self._name   = ''
         self._hud    = None
+        self._drawingEnabled = False
         
         self._crossHairCursor         = None
         self._sliceIntersectionMarker = None
@@ -188,8 +196,7 @@ class ImageView2D(QGraphicsView):
             self.setCacheMode(QGraphicsView.CacheBackground)
         self.setRenderHint(QPainter.Antialiasing, False)
         
-        self.drawingEnabled = False
-        
+        #FIXME: MVC refactor 
         self._drawManager = drawManager
  
         #FIXME: this should be private, but is currently used from
@@ -236,19 +243,17 @@ class ImageView2D(QGraphicsView):
 #        self.allBorder.setVisible(False)
 #        self.allBorder.setZValue(99)
 
-        self.ticker = QTimer(self)
-        self.ticker.timeout.connect(self.tickerEvent)
+        self._ticker = QTimer(self)
+        self._ticker.timeout.connect(self._tickerEvent)
         #label updates while drawing, needed for interactive segmentation
-        self.drawTimer = QTimer(self)
-        self.drawTimer.timeout.connect(self.notifyDrawing)
+        self._drawTimer = QTimer(self)
+        self._drawTimer.timeout.connect(self.notifyDrawing)
         
         # invisible cursor to enable custom cursor
-        self.hiddenCursor = QCursor(Qt.BlankCursor)
-        
+        self._hiddenCursor = QCursor(Qt.BlankCursor)
         # For screen recording BlankCursor doesn't work
         #self.hiddenCursor = QCursor(Qt.ArrowCursor)
         
-        #self.connect(self, SIGNAL("destroyed()"), self.cleanUp)
 
 #FIXME: do we want to have these connects here or somewhere else?
 #FIXME: resurrect
@@ -258,12 +263,13 @@ class ImageView2D(QGraphicsView):
 #        self._crossHairCursor.setBrushSize(self._drawManager.brushSize)
 #        self._crossHairCursor.setColor(self._drawManager.drawColor)
 
-        self.tempErase = False
+        self._tempErase = False
 
-        #initialize connections
-        self.initConnects()
-    
     def swapAxes(self):          
+        '''Displays this image as if the x and y axes were swapped.
+        '''
+        #FIXME: This is needed for the current arrangements of the three
+        #       3D slice views. Can this be made more elegant
         self.rotate(90.0)
         self.scale(1.0,-1.0)
     
@@ -291,14 +297,11 @@ class ImageView2D(QGraphicsView):
 #        self.border.setZValue(200)
 #        self.scene().addItem(self.border)
 
-    def setSliceIntersection(self, state):
-        self._sliceIntersectionMarker.setVisibility(state)
-
-    def cleanUp(self):        
-        self.ticker.stop()
+    def _cleanUp(self):        
+        self._ticker.stop()
         self.drawTimer.stop()
         del self.drawTimer
-        del self.ticker
+        del self._ticker
 
     def viewportRect(self):
         return self.mapToScene(self.viewport().geometry()).boundingRect()
@@ -385,7 +388,7 @@ class ImageView2D(QGraphicsView):
             self._lastPanPoint = event.pos()
             self._crossHairCursor.setVisible(False)
             self._dragMode = True
-            if self.ticker.isActive():
+            if self._ticker.isActive():
                 self._deltaPan = QPointF(0, 0)
 
         if event.buttons() == Qt.RightButton:
@@ -401,11 +404,11 @@ class ImageView2D(QGraphicsView):
         
         if event.buttons() == Qt.LeftButton:
             #don't draw if flicker the view
-            if self.ticker.isActive():
+            if self._ticker.isActive():
                 return
             if QApplication.keyboardModifiers() == Qt.ShiftModifier:
                 self._drawManager.setErasing()
-                self.tempErase = True
+                self._tempErase = True
             mousePos = self.mapToScene(event.pos())
             self.beginDrawing(mousePos)
             
@@ -416,16 +419,16 @@ class ImageView2D(QGraphicsView):
             releasePoint = event.pos()
             self._lastPanPoint = releasePoint
             self._dragMode = False
-            self.ticker.start(20)
+            self._ticker.start(20)
         if self._isDrawing:
             mousePos = self.mapToScene(event.pos())
             self.endDrawing(mousePos)
-        if self.tempErase:
+        if self._tempErase:
             self._drawManager.disableErasing()
-            self.tempErase = False
+            self._tempErase = False
 
     #TODO oli
-    def panning(self):
+    def _panning(self):
         hBar = self.horizontalScrollBar()
         vBar = self.verticalScrollBar()
         vBar.setValue(vBar.value() - self._deltaPan.y())
@@ -437,10 +440,10 @@ class ImageView2D(QGraphicsView):
         
         
     #TODO oli
-    def deaccelerate(self, speed, a=1, maxVal=64):
-        x = self.qBound(-maxVal, speed.x(), maxVal)
-        y = self.qBound(-maxVal, speed.y(), maxVal)
-        ax ,ay = self.setdeaccelerateAxAy(speed.x(), speed.y(), a)
+    def _deaccelerate(self, speed, a=1, maxVal=64):
+        x = self._qBound(-maxVal, speed.x(), maxVal)
+        y = self._qBound(-maxVal, speed.y(), maxVal)
+        ax ,ay = self._setdeaccelerateAxAy(speed.x(), speed.y(), a)
         if x > 0:
             x = max(0.0, x - a*ax)
         elif x < 0:
@@ -451,12 +454,12 @@ class ImageView2D(QGraphicsView):
             y = min(0.0, y + a*ay)
         return QPointF(x, y)
 
-    def qBound(self, minVal, current, maxVal):
+    def _qBound(self, minVal, current, maxVal):
         """PyQt4 does not wrap the qBound function from Qt's global namespace
            This is equivalent."""
         return max(min(current, maxVal), minVal)
     
-    def setdeaccelerateAxAy(self, x, y, a):
+    def _setdeaccelerateAxAy(self, x, y, a):
         x = abs(x)
         y = abs(y)
         if x > y:
@@ -476,41 +479,17 @@ class ImageView2D(QGraphicsView):
         return 1, 1
 
     #TODO oli
-    def tickerEvent(self):
+    def _tickerEvent(self):
         if self._deltaPan.x() == 0.0 and self._deltaPan.y() == 0.0 or self._dragMode == True:
-            self.ticker.stop()
+            self._ticker.stop()
             cursor = QCursor()
             mousePos = self.mapToScene(self.mapFromGlobal(cursor.pos()))
             x = mousePos.x()
             y = mousePos.y()
             self._crossHairCursor.showXYPosition(x, y)
         else:
-            self._deltaPan = self.deaccelerate(self._deltaPan)
-            self.panning()
-    
-#    def coordinateUnderCursor(self):
-#        """returns the coordinate that is defined by hovering with the mouse
-#           over one of the slice views. It is _not_ the coordinate as defined
-#           by the three slice views"""
-#        width, height = self.shape
-#        validArea = self.x > 0 and self.x < width and self.y > 0 and self.y < height
-#        if not validArea:
-#            posX = posY = posZ = -1
-#            return (posX, posY, posZ)
-#            
-#        if self._axis == 0:
-#            posY = self.x
-#            posZ = self.y
-#            posX = self._viewManager.slicePosition[0]
-#        elif self._axis == 1:
-#            posY = self._viewManager.slicePosition[1]
-#            posZ = self.y
-#            posX = self.x
-#        else:
-#            posY = self.y
-#            posZ = self._viewManager.slicePosition[2]
-#            posX = self.x
-#        return (posX, posY, posZ)
+            self._deltaPan = self._deaccelerate(self._deltaPan)
+            self._panning()
     
     #TODO oli
     def mouseMoveEvent(self,event):
@@ -518,10 +497,10 @@ class ImageView2D(QGraphicsView):
             #the mouse was moved because the user wants to change
             #the viewport
             self._deltaPan = QPointF(event.pos() - self._lastPanPoint)
-            self.panning()
+            self._panning()
             self._lastPanPoint = event.pos()
             return
-        if self.ticker.isActive():
+        if self._ticker.isActive():
             #the view is still scrolling
             #do nothing until it comes to a complete stop
             return

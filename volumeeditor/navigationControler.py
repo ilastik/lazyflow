@@ -28,7 +28,7 @@
 #    or implied, of their employers.
 
 from PyQt4.QtCore import pyqtSignal, QObject, QThread, Qt, QSize, QPointF, QRectF, \
-                         QRect, QPoint
+                         QRect, QPoint, pyqtSignature
 from PyQt4.QtGui  import QWidget, QPen, QGraphicsScene, QColor, QGraphicsLineItem, \
                          QImage, QPainter, QGraphicsLineItem
 
@@ -118,6 +118,15 @@ class NavigationControler(QObject):
         for axis, v in enumerate(self._views):
             v.hud.bgColor = self.axisColors[axis]
         
+    @property
+    def indicateSliceIntersection(self):
+        return self._indicateSliceIntersection
+    @indicateSliceIntersection.setter
+    def indicateSliceIntersection(self, show):
+        self._indicateSliceIntersection = show
+        for v in self._views:
+            v._sliceIntersectionMarker.setVisibility(show)
+        
     def __init__(self, imageView2Ds, volume, time = 0, channel = 0):
         QObject.__init__(self)
         assert len(imageView2Ds) == 3
@@ -165,6 +174,9 @@ class NavigationControler(QObject):
     ##
     ## incoming signal handling
     ##
+    def onIndicateSliceIntersectionToggle(self, show):
+        self.indicateSliceIntersection = show
+    
     def onCursorPosition(self, x, y, axis):
         '''Change position of the crosshair cursor.
 
