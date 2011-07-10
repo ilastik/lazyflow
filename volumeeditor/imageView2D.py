@@ -109,7 +109,6 @@ class ImageView2D(QGraphicsView):
         #
         #Here, we need access to the overlay widget because it is not separated
         #yet into a model - view part...
-        image = None
         overlays = []
         
         if not self.porting_overlaywidget:

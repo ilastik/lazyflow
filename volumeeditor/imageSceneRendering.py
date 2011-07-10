@@ -63,7 +63,7 @@ class ImageSceneRenderThread(QThread):
         workPackage = self.queue.pop()
         if workPackage is None:
             return
-        patchNumbers, origimage, overlays, min, max = workPackage
+        patchNumbers, overlays, min, max = workPackage
         for patchNr in patchNumbers:
             if self.newerDataPending.isSet():
                 self.newerDataPending.clear()

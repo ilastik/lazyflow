@@ -30,7 +30,13 @@
 from PyQt4.QtCore import QRect, QRectF, QTimer
 from PyQt4.QtGui import QGraphicsScene, QImage
 from PyQt4.QtOpenGL import QGLWidget
-from OpenGL.GL import *
+from OpenGL.GL import GL_CLAMP_TO_EDGE, GL_COLOR_BUFFER_BIT, GL_DEPTH_TEST, \
+                      GL_NEAREST, GL_QUADS, GL_TEXTURE_2D, \
+                      GL_TEXTURE_MAG_FILTER, GL_TEXTURE_MIN_FILTER, \
+                      GL_TEXTURE_WRAP_S, GL_TEXTURE_WRAP_T, \
+                      glBegin, glEnd, glBindTexture, glClearColor, glDisable, \
+                      glEnable, glRectd, glClear, glTexCoord2f, \
+                      glTexParameteri, glVertex2f
 
 from patchAccessor import PatchAccessor
 from imageSceneRendering import ImageSceneRenderThread
@@ -119,7 +125,7 @@ class ImageScene2D(QGraphicsScene):
         if len(patches) == 0: return
 
         #Update these patches using the thread below
-        workPackage = [patches, image, overlays, 0, 255]
+        workPackage = [patches, overlays, 0, 255]
         self._renderThread.queue.append(workPackage)
         self._renderThread.dataPending.set()
 
@@ -135,7 +141,7 @@ class ImageScene2D(QGraphicsScene):
 
     def drawBackgroundSoftware(self, painter, rect):
         drawnTiles = 0
-        for i,patch in enumerate(self.imagePatches):
+        for patch in self.imagePatches:
             if patch.dirty or not patch.rectF.intersect(rect): continue
             painter.drawImage(patch.rectF.topLeft(), patch.image)
             drawnTiles +=1
@@ -172,7 +178,7 @@ class ImageScene2D(QGraphicsScene):
         glClear(GL_COLOR_BUFFER_BIT);
         
         drawnTiles = 0
-        for i, patch in enumerate(self.imagePatches):
+        for patch in self.imagePatches:
             if patch.dirty or not patch.rectF.intersect(rect): continue
             
             patch.drawTexture()
