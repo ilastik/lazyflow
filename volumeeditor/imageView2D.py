@@ -33,7 +33,6 @@ from PyQt4.QtGui import QColor, QCursor, QGraphicsView, QPainter, QImage, \
                         QVBoxLayout, QApplication, QTransform
 from PyQt4.QtOpenGL import QGLWidget
 
-
 import numpy
 import time
 
@@ -95,7 +94,6 @@ class ImageView2D(QGraphicsView):
     def _initializeGL(self):
         self.scene().initializeGL()
    
-    
     def onSliceChange(self, num, axis):
         #FIXME refactor 
         #the data should be set by the renderer

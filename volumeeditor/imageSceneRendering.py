@@ -15,7 +15,7 @@ class ImageSceneRenderThread(QThread):
     
     def __init__(self, imagePatches):
         QThread.__init__(self, None)
-        self._imagePatches  = imagePatches
+        self._imagePatches = imagePatches
 
         self.queue = deque(maxlen=1)
         self.outQueue = deque()

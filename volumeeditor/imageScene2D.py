@@ -35,8 +35,8 @@ from OpenGL.GL import GL_CLAMP_TO_EDGE, GL_COLOR_BUFFER_BIT, GL_DEPTH_TEST, \
                       GL_TEXTURE_MAG_FILTER, GL_TEXTURE_MIN_FILTER, \
                       GL_TEXTURE_WRAP_S, GL_TEXTURE_WRAP_T, \
                       glBegin, glEnd, glBindTexture, glClearColor, glDisable, \
-                      glEnable, glRectd, glClear, glTexCoord2f, \
-                      glTexParameteri, glVertex2f
+                      glEnable, glRectf, glClear, glTexCoord2f, \
+                      glTexParameteri, glVertex2f, glColor4f
 
 from patchAccessor import PatchAccessor
 from imageSceneRendering import ImageSceneRenderThread
@@ -142,7 +142,7 @@ class ImageScene2D(QGraphicsScene):
     def drawBackgroundSoftware(self, painter, rect):
         drawnTiles = 0
         for patch in self.imagePatches:
-            if patch.dirty or not patch.rectF.intersect(rect): continue
+            if not patch.rectF.intersect(rect): continue
             painter.drawImage(patch.rectF.topLeft(), patch.image)
             drawnTiles +=1
         #print "ImageView2D.drawBackgroundSoftware: drew %d of %d tiles" % (drawnTiles, len(self.imagePatches))
@@ -158,6 +158,12 @@ class ImageScene2D(QGraphicsScene):
         glClear(GL_COLOR_BUFFER_BIT)
 
     def drawBackgroundGL(self, painter, rect):
+        painter.beginNativePainting()
+        
+        #This will clear the screen, but also introduce flickering
+        glClearColor(0.0, 1.0, 0.0, 1.0);
+        glClear(GL_COLOR_BUFFER_BIT);
+        
         #update the textures of those patches that were updated
         for t in self._updatableTiles:
             patch = self.imagePatches[t]
@@ -172,21 +178,12 @@ class ImageScene2D(QGraphicsScene):
             glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE)
         self._updatableTiles = []
         
-        painter.beginNativePainting()
-        #This will clear the screen, but also introduce flickering
-        glClearColor(0.0, 1.0, 0.0, 1.0);
-        glClear(GL_COLOR_BUFFER_BIT);
-        
         drawnTiles = 0
         for patch in self.imagePatches:
-            if patch.dirty or not patch.rectF.intersect(rect): continue
-            
+            if not patch.rectF.intersect(rect): continue
             patch.drawTexture()
             drawnTiles +=1
-            
-        def drawRect(x1, y1, w, h):
-            x2 = float(x1+w);  y2 = float(y1+h)
-            glRectd(x1, y1, x2, y2)
+        
         #  ************************************************
         #  * rectangle s                                  *
         #  *                                              *
@@ -195,23 +192,19 @@ class ImageScene2D(QGraphicsScene):
         #  *             ***************************      *                   
         #  *                                              *                 
         #  ************************************************
-         
         #r = QRectF(0,0,*self._shape2D)
         #s = rect
-        #print rect            
-        ##to clear the viewport, we would need sth. like this, crashes atm.
-        #glColor3f(0.0, 0.0, 1.0)
-        #if s.left() < r.left():
-        #    drawRect(s.x(), s.y(), r.left()-s.left(), s.height())
-        #if s.top() < r.top():
-        #    drawRect(r.x(), s.y(), r.width(), r.top()-s.top())
-        #if s.bottom()>r.bottom():
-        #    drawRect(r.left(), r.bottom(), r.width(), r.height())
-        #if s.right()<r.right():
-        #    drawRect(s.x(), s.y(), s.width()-r.width(), s.height())
+        #glColor4f(1.0,0.0,0.0, 1.0)
+        #glRectf(s.x(), s.y(), r.x(), s.y()+s.height())
+        #glColor4f(0.0,1.0,0.0, 1.0)
+        #glRectf(r.x(), s.y(), r.x()+r.width(), s.y()+(r.y()-s.y()))
+        #glColor4f(0.0,0.0,1.0, 1.0)
+        #glRectf(r.x()+r.width(), s.y(), s.x()+s.width(), s.y()+s.height())
+        #glColor4f(1.0,1.0,0.0, 1.0)
+        #glRectf(r.x(), r.y()+r.height(), r.x()+r.width(), s.y()+s.height())
 
-        painter.endNativePainting()
         #print "ImageView2D.drawBackgroundGL: drew %d of %d tiles" % (drawnTiles, len(self.imagePatches))
+        painter.endNativePainting()
 
     def drawBackground(self, painter, rect):
         if self._useGL:
