@@ -27,16 +27,16 @@
 #    authors and should not be interpreted as representing official policies, either expressed
 #    or implied, of their employers.
 
-from PyQt4.QtCore import QPoint, QPointF, QRectF, QTimer, pyqtSignal, Qt, \
-                         QSize, QRect
-from PyQt4.QtOpenGL import QGLWidget, QGLFramebufferObject
-from PyQt4.QtGui import *
+from PyQt4.QtCore import QPoint, QPointF, QTimer, pyqtSignal, Qt, \
+                         QString
+from PyQt4.QtGui import QColor, QCursor, QGraphicsView, QPainter, QImage, \
+                        QVBoxLayout, QApplication, QTransform
+from PyQt4.QtOpenGL import QGLWidget
+
 
 import numpy
-import os.path, time
+import time
 
-from patchAccessor import PatchAccessor
-from navigationControler import NavigationControler
 from drawManager import DrawManager
 from crossHairCursor import CrossHairCursor
 from sliceIntersectionMarker import SliceIntersectionMarker
@@ -566,17 +566,13 @@ class ImageView2D(QGraphicsView):
 #*******************************************************************************
 
 if __name__ == '__main__':
-    from PyQt4.QtGui import QApplication
     from overlaySlice import OverlaySlice 
     #make the program quit on Ctrl+C
     import signal
     signal.signal(signal.SIGINT, signal.SIG_DFL)
-    from testing import testVolume, AnnotatedImageData
         
     class ImageView2DTest(QApplication):    
         def __init__(self, args):
-            app = QApplication.__init__(self, args)
-
             N = 1024
             self.data = (numpy.random.rand(2*N ,5, N)*255).astype(numpy.uint8)
 

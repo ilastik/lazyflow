@@ -34,12 +34,11 @@
 #    1f810747c21380eda916c2c5b7b5d1893f92663e
 #    e65f5bad2cd9fdaefbe7ceaafa0cce0e071b56e4
 
-from PyQt4.QtCore import Qt, pyqtSignal, QTimer
-from PyQt4.QtGui import QApplication, QWidget, QPixmapCache, QLabel, QSpinBox, \
-                        QCheckBox, QShortcut, QKeySequence, QSplitter, \
+from PyQt4.QtCore import Qt, pyqtSignal, QDir
+from PyQt4.QtGui import QApplication, QWidget, QLabel, QSpinBox, \
+                        QShortcut, QKeySequence, QSplitter, \
                         QVBoxLayout, QHBoxLayout, QPushButton, QToolButton, QImageWriter
 
-import time
 import numpy, qimage2ndarray
 
 from quadsplitter import QuadView
@@ -52,11 +51,7 @@ from navigationControler import NavigationControler
 from drawManager import DrawManager
 from sliceSelectorHud import SliceSelectorHud
 
-from overlaySlice import OverlaySlice
-
-from helper import HistoryManager, \
-InteractionLogger, LabelState, VolumeUpdate, \
-is3D, is2D
+from helper import HistoryManager, LabelState, VolumeUpdate, is3D
 
 #*******************************************************************************
 # V o l u m e E d i t o r                                                      *
@@ -106,8 +101,9 @@ class VolumeEditor(QWidget):
         self._imageViews.append(scene0)
         
         self._overview = OverviewScene(self, self._shape[1:4])
-        
-        self._overview.changedSlice.connect(self.changeSlice)
+
+        #FIXME: resurrect        
+        #self._overview.changedSlice.connect(self.changeSlice)
         self.changedSlice.connect(self._overview.ChangeSlice)
 
         if is3D(self._shape):
@@ -127,13 +123,10 @@ class VolumeEditor(QWidget):
                 self._imageViews[i].drawing.connect(self.updateLabels)
                 self._imageViews[i].customContextMenuRequested.connect(self.onCustomContextMenuRequested)
         
-        for axis, scene in enumerate(self._imageViews):
-            scene.mouseDoubleClicked.connect(self.setPosition)
-            scene.mouseMoved.connect(self.updateInfoLabels)
-            scene.beginDraw.connect(self.beginDraw)
-            scene.endDraw.connect(self.endDraw)
-
-            scene.hud = SliceSelectorHud()
+        for v in self._imageViews:
+            v.beginDraw.connect(self.beginDraw)
+            v.endDraw.connect(self.endDraw)
+            v.hud = SliceSelectorHud()
 
         #Controls the trade-off of speed and flickering when scrolling through this slice view
         self.setFastRepaint(True)   
@@ -181,7 +174,6 @@ class VolumeEditor(QWidget):
         #Channel Selector QComboBox in right side tool box
         self._channelSpin = QSpinBox()
         self._channelSpin.setEnabled(True)
-        self._channelSpin.valueChanged.connect(self.setChannel)
         
         self.channelEditBtn = QPushButton('Edit channels')
         self.channelEditBtn.clicked.connect(self.on_editChannels)
@@ -230,13 +222,6 @@ class VolumeEditor(QWidget):
         if self._grid:
             self._grid.update()
         
-        #start viewing in the center of the volume
-        def initialPosition():
-            self.changeSliceX(numpy.floor((self._shape[1] - 1) / 2))
-            self.changeSliceY(numpy.floor((self._shape[2] - 1) / 2))
-            self.changeSliceZ(numpy.floor((self._shape[3] - 1) / 2))
-        QTimer.singleShot(0, initialPosition)
-    
     def setDrawingEnabled(self, enabled): 
         for i in range(3):
             self._imageViews[i].drawingEnabled = enabled
@@ -385,7 +370,7 @@ class VolumeEditor(QWidget):
 
         #FIXME: porting
         for view in self._imageViews:
-             view.porting_overlaywidget = self.overlayWidget
+            view.porting_overlaywidget = self.overlayWidget
 
     def setRgbMode(self, mode): 
         """
@@ -540,58 +525,9 @@ class VolumeEditor(QWidget):
     def historyRedo(self):
         self._history.redo()
 
-    #===========================================================================
-    # Navigation in Volume
-    #===========================================================================        
-    def setChannel(self, channel):
-        if len(self.overlayWidget.overlays) > 0:
-            ov = self.overlayWidget.getOverlayRef("Raw Data")
-            if ov.shape[-1] == self._shape[-1]:
-                self.overlayWidget.getOverlayRef("Raw Data").channel = channel
-            
-        self._viewManager.setChannel(time)
-        #FIXME remove
-        for i in range(3):
-            self.changeSlice(self._viewManager.slicePosition[i], i)
-
-    def setTime(self, time):
-        self._viewManager.setTime(time)
-        #FIXME remove
-        for i in range(3):
-            self.changeSlice(self._viewManager.slicePosition[i], i)
-            
-    def setPosition(self, axis, x, y):
-        print "setPosition(%d, %d, %d)" % (axis, x, y)
-        if axis == 0:
-            self.changeSlice(x, 1)
-            self.changeSlice(y, 2)
-        elif axis == 1:
-            self.changeSlice(x, 0)
-            self.changeSlice(y, 2)
-        elif axis ==2:
-            self.changeSlice(x, 0)
-            self.changeSlice(y, 1)
-            
-    def changeSliceX(self, num):
-        self.changeSlice(num, 0)
-
-    def changeSliceY(self, num):
-        self.changeSlice(num, 1)
-
-    def changeSliceZ(self, num):
-        self.changeSlice(num, 2)
-        
-    def changeSlice(self, num, axis):
-        pass
-#FIXME: resurrect
-#        self._viewManager.setSlice(num, axis)
-        
     def getVisibleState(self):
         return self._viewManager.getVisibleState()
 
-
-    # from imagescene
-    
     def beginDraw(self, axis, pos):
         print "VolumeEditor.beginDraw FIXME self.labelWidget.ensureLabelOverlayVisible()"
         
@@ -646,13 +582,11 @@ class VolumeEditor(QWidget):
 
 if __name__ == "__main__":
     import sys
-    from PyQt4.QtCore import QObject, QTimer
-    from PyQt4.QtGui import QApplication, QColor, QSplitter
-    from PyQt4.QtOpenGL import QGLWidget
+    from PyQt4.QtCore import QObject
+    from PyQt4.QtGui import QColor
     #make the program quit on Ctrl+C
     import signal
     signal.signal(signal.SIGINT, signal.SIG_DFL)
-    from overlaySlice import OverlaySlice
     from overlayItem  import OverlayItem
     from _testing.volume import DataAccessor
     
@@ -714,6 +648,7 @@ if __name__ == "__main__":
             
             #FIXME: port to ilastik
             self.dialog.indicateSliceIntersectionButton.toggled.connect(nc.onIndicateSliceIntersectionToggle)
+            self.dialog._channelSpin.valueChanged.connect(nc.onChannelChange)
             
             self.dataOverlay = OverlayItem(DataAccessor(self.data), alpha=1.0, color=Qt.black, colorTable=OverlayItem.createDefaultColorTable('GRAY', 256), autoVisible=True, autoAlphaChannel=False)
             
@@ -731,9 +666,9 @@ if __name__ == "__main__":
             self.dialog.setOverlayWidget(overlayWidget)
             
             self.dialog.show()
-            self.dialog.setPosition(0,0,0)
-            self.dialog.setPosition(1,0,0)
-            self.dialog.setPosition(2,0,0)
+            
+            #show some initial position
+            nc.slicingPos = [5,10,20]
             
             self.dialog.setOverlayWidget(overlayWidget)
 

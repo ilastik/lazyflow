@@ -27,13 +27,10 @@
 #    authors and should not be interpreted as representing official policies, either expressed
 #    or implied, of their employers.
 
-from PyQt4.QtCore import pyqtSignal, QObject, QThread, Qt, QSize, QPointF, QRectF, \
-                         QRect, QPoint, pyqtSignature
-from PyQt4.QtGui  import QWidget, QPen, QGraphicsScene, QColor, QGraphicsLineItem, \
-                         QImage, QPainter, QGraphicsLineItem
+from PyQt4.QtCore import QObject
+from PyQt4.QtGui  import QColor
 
 import numpy
-import threading
 import time, copy
 from functools import partial
 
@@ -177,6 +174,14 @@ class NavigationControler(QObject):
     def onIndicateSliceIntersectionToggle(self, show):
         self.indicateSliceIntersection = show
     
+    def onChannelChange(self, channel, axis):
+        print "channel change not implemented"
+        #if len(self.overlayWidget.overlays) > 0:
+        #    ov = self.overlayWidget.getOverlayRef("Raw Data")
+        #     if ov.shape[-1] == self._shape[-1]:
+        #         self.overlayWidget.getOverlayRef("Raw Data").channel = channel
+
+    
     def onCursorPosition(self, x, y, axis):
         '''Change position of the crosshair cursor.
 
@@ -188,7 +193,6 @@ class NavigationControler(QObject):
         #shows the projection perpendicular to axis
         #set this view as active
         self.activeView = axis
-        print "ACTIVE VIEW:", axis, x, y
         
         coor = copy.copy(self._cursorPos)
         if axis == 0:
@@ -217,7 +221,6 @@ class NavigationControler(QObject):
         axis -- along which axis [0,1,2]
  
         '''
-        print "CHANGE SLICE DELTA"
         newSlice = self.slicingPos[axis] + delta
         if newSlice < 0 or newSlice > self.volumeExtent(axis):
             return
@@ -280,7 +283,6 @@ class NavigationControler(QObject):
     def _updateSliceIntersection(self):
         for axis, v in enumerate(self._views):
             x,y = posView2D(self.slicingPos, axis)
-            print "move marker to position", x ,y
             v._sliceIntersectionMarker.setPosition(x,y)
 
     def _updateSlice(self, num, axis):

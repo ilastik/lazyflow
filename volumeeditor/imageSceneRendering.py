@@ -1,4 +1,4 @@
-from PyQt4.QtCore import QObject, QThread, pyqtSignal
+from PyQt4.QtCore import QThread, pyqtSignal, QPoint, QSize
 from PyQt4.QtGui import QPainter, QColor, QImage
 
 import numpy, qimage2ndarray

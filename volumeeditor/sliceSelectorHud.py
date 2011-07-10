@@ -29,7 +29,7 @@
 
 from PyQt4.QtCore import Qt
 from PyQt4.QtGui import QFrame, QHBoxLayout, QSpinBox, QSizePolicy, QLabel, \
-                        QAbstractSpinBox, QColor, QPalette
+                        QAbstractSpinBox, QColor
 
 #*******************************************************************************
 # S l i c e S e l e c t o r H u d                                              *
@@ -37,9 +37,9 @@ from PyQt4.QtGui import QFrame, QHBoxLayout, QSpinBox, QSizePolicy, QLabel, \
 
 class SliceSelectorHud(QFrame):
     @property
-    def maximum(): return self._maximum
+    def maximum(self): return self._maximum
     @property
-    def minimum(): return self._minimum
+    def minimum(self): return self._minimum
     @maximum.setter
     def maximum(self, m):
         self._maximum = m

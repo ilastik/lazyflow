@@ -179,7 +179,6 @@ class ImageScene2D(QGraphicsScene):
             drawnTiles +=1
             
         def drawRect(x1, y1, w, h):
-            x1 = float(s.x()); y1 = float(s.y())
             x2 = float(x1+w);  y2 = float(y1+h)
             glRectd(x1, y1, x2, y2)
         #  ************************************************
