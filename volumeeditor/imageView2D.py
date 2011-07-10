@@ -187,6 +187,16 @@ class ImageView2D(QGraphicsView):
             #http://doc.qt.nokia.com/qq/qq26-openglcanvas.html
             self.setViewportUpdateMode(QGraphicsView.FullViewportUpdate)
         else:
+            #Unfortunately, setting these flags has no effect when
+            #Cache background is turned on.
+            #With these flags turned on we could handle the drawing of the
+            #white background ourselves thus removing the flicker
+            #when scrolling fast through the slices
+            #self.viewport().setAttribute(Qt.WA_OpaquePaintEvent)
+            #self.viewport().setAttribute(Qt.WA_NoSystemBackground)
+            #self.viewport().setAttribute(Qt.WA_PaintOnScreen)
+            #self.viewport().setAutoFillBackground(False)
+            
             self.setViewportUpdateMode(QGraphicsView.MinimalViewportUpdate)
             #as rescaling images is slow if done in software,
             #we use Qt's built-in background caching mode so that the cached
