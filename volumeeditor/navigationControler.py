@@ -46,14 +46,7 @@ def posView2D(pos3d, axis):
 #*******************************************************************************
 
 class NavigationControler(QObject):
-    '''Controler for navigating through the volume.
-
-    Handles the following signals:
-    cursorPosition -- position of the crosshair cursor
-    relativeSliceChange -- switch to a slice relative to the current
-    absoluteSliceChange -- switch to a slice based on an absolute value
-
-    '''
+    '''Controler for navigating through the volume.'''
     ##
     ## properties
     ##
@@ -124,13 +117,18 @@ class NavigationControler(QObject):
         for v in self._views:
             v._sliceIntersectionMarker.setVisibility(show)
         
-    def __init__(self, imageView2Ds, volume, time = 0, channel = 0):
+    def __init__(self, imageView2Ds, volume, overlaywidget, time = 0, channel = 0):
+        '''
+        volume - scalar, 3d numpy array containing the raw volume
+
+        '''
         QObject.__init__(self)
         assert len(imageView2Ds) == 3
 
         # init fields
         self._views = imageView2Ds
         self._volume = volume
+        self._overlaywidget = overlaywidget
         self._beginStackIndex = 0
         self._endStackIndex   = 1
 
