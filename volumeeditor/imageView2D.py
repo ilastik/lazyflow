@@ -306,8 +306,8 @@ class ImageView2D(QGraphicsView):
 
     def _cleanUp(self):        
         self._ticker.stop()
-        self.drawTimer.stop()
-        del self.drawTimer
+        self._drawTimer.stop()
+        del self._drawTimer
         del self._ticker
 
     def viewportRect(self):
@@ -340,18 +340,18 @@ class ImageView2D(QGraphicsView):
         InteractionLogger.log("%f: beginDrawing`()" % (time.clock()))   
         self.mousePos = pos
         self._isDrawing  = True
-        line = self._drawManager.beginDrawing(pos, self.shape2D)
+        line = self._drawManager.beginDrawing(pos, self.shape)
         line.setZValue(99)
         self.tempImageItems.append(line)
         self.scene().addItem(line)
         if self.drawUpdateInterval > 0:
-            self.drawTimer.start(self.drawUpdateInterval) #update labels every some ms
+            self._drawTimer.start(self.drawUpdateInterval) #update labels every some ms
         #FIXME resurrect    
         #self.beginDraw.emit(self._axis, pos)
         
     def endDrawing(self, pos):
         InteractionLogger.log("%f: endDrawing()" % (time.clock()))     
-        self.drawTimer.stop()
+        self._drawTimer.stop()
         self._isDrawing = False
        
         #FIXME resurrect 
@@ -574,12 +574,16 @@ class ImageView2D(QGraphicsView):
 
 if __name__ == '__main__':
     from overlaySlice import OverlaySlice 
+    import sys
     #make the program quit on Ctrl+C
     import signal
     signal.signal(signal.SIGINT, signal.SIG_DFL)
-        
-    class ImageView2DTest(QApplication):    
-        def __init__(self, args):
+    from PyQt4.QtGui import QMainWindow    
+    
+    class ImageView2DTest(QMainWindow):    
+        def __init__(self, useGL):
+            QMainWindow.__init__(self)
+            
             N = 1024
             self.data = (numpy.random.rand(2*N ,5, N)*255).astype(numpy.uint8)
 
@@ -587,22 +591,17 @@ if __name__ == '__main__':
             
             #viewManager = ViewManager(self.data)
             drawManager = DrawManager()
-            
-            self.imageView2D = ImageView2D(drawManager, useGL=False)
+            self.imageView2D = ImageView2D(drawManager, useGL=useGL)
             self.imageView2D.drawingEnabled = True
             self.imageView2D.name = 'ImageView2D:'
             self.imageView2D.shape = [self.data.shape[0], self.data.shape[2]]
             self.imageView2D.slices = 1
-            
+             
             #Needs a 2D view Manager?
             #self.ImageView2D.mouseMoved.connect(lambda axis, x, y, valid: self.ImageView2D._crossHairCursor.showXYPosition(x,y))
+            self.setCentralWidget(self.imageView2D)
 
             self.testChangeSlice(3, axis)
-        
-            #self.ImageView2D.sliceChanged.connect(self.testChangeSlice)
-            
-            self.imageView2D.show()
-            
 
         def testChangeSlice(self, num, axis):
             s = 3*[slice(None,None,None)]
@@ -617,5 +616,13 @@ if __name__ == '__main__':
             
             print "changeSlice num=%d, axis=%d" % (num, axis)
 
-    app = ImageView2DTest([""])
+    if not 'gl' in sys.argv and not 's' in sys.argv:
+        print "Usage: python imageView2D.py mode"
+        print "  mode = 's' software rendering"
+        print "  mode = 'gl OpenGL rendering'"
+        sys.exit(0)
+         
+    app = QApplication(sys.argv)
+    i = ImageView2DTest('gl' in sys.argv)
+    i.show()
     app.exec_()

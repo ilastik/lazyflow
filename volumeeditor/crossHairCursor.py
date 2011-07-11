@@ -83,13 +83,14 @@ class CrossHairCursor(QGraphicsItem) :
            including a circle indicating the current brush size"""
         self.setVisible(True)
         self.mode = self.modeXYPosition
-        self.setPos(x,y)
+        #add 0.5 on each value to make crosshair snap to center of a pixel
+        self.setPos(x+0.5,y+0.5)
     
     def paint(self, painter, option, widget=None):
         painter.setPen(self.penDotted)
         
         if self.mode == self.modeXPosition:
-            painter.drawLine(QPointF(self.x+0.5, 0), QPointF(self.x+0.5, self.height))
+            painter.drawLine(QPointF(self.x +0.5, 0), QPointF(self.x +0.5, self.height))
         elif self.mode == self.modeYPosition:
             painter.drawLine(QPointF(0, self.y), QPointF(self.width, self.y))
         else:

@@ -667,7 +667,7 @@ if __name__ == "__main__":
             self.dialog.show()
             
             #show some initial position
-            nc.slicingPos = [5,10,20]
+            nc.slicingPos = [5,10,2]
 
     app = QApplication(sys.argv)
     
