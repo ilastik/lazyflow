@@ -288,7 +288,6 @@ class NavigationControler(QObject):
             raise Exception("NavigationControler._setSlice(): invalid slice number")
 
         # update view
-        self._views[axis].onSliceChange(num, axis)
         self._views[axis].hud.sliceSelector.setValue(num)
 
         # update model
@@ -305,6 +304,8 @@ class NavigationControler(QObject):
                                  axis, 0,\
                                  self._overlaywidget.getOverlayRef("Raw Data").channel)
 
+        #make sure all tiles are regenerated
+        self._views[axis].scene().markTilesDirty()
         self._views[axis].scene().setContent(self._views[axis].viewportRect(), image, overlays) 
 
 

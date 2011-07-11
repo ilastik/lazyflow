@@ -69,6 +69,10 @@ class ImageView2D(QGraphicsView):
     def shape(self, s):
         self._shape = s
         self.setScene(ImageScene2D(self._shape, self.viewport()))
+
+        # observe the scene, waiting for changes of the content
+        self.scene().contentChanged.connect(self.onContentChange)
+
         if self._useGL:
             self._initializeGL()
     
@@ -95,16 +99,7 @@ class ImageView2D(QGraphicsView):
 
     def _initializeGL(self):
         self.scene().initializeGL()
-   
-    def onSliceChange(self, num, axis):
-        #FIXME refactor 
-        #the data should be set by the renderer
-        if not self._useGL:
-            #reset the background cache
-            self.resetCachedContent()
-        #make sure all tiles are regenerated
-        self.scene().markTilesDirty()
-        
+           
     @property
     def hud(self):
         return self._hud
@@ -221,6 +216,17 @@ class ImageView2D(QGraphicsView):
 #        self._crossHairCursor.setColor(self._drawManager.drawColor)
 
         self._tempErase = False
+        
+    def onContentChange(self):
+        '''Observe the graphics scene, waiting for content changes.
+
+        After a scene's content changed, it starts to render new tiles. This
+        method prepares for these new tiles arriving little by little.
+        '''
+        if not self._useGL:
+            #reset the background cache
+            self.resetCachedContent()
+
 
     def swapAxes(self):          
         '''Displays this image as if the x and y axes were swapped.

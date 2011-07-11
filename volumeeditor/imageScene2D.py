@@ -27,7 +27,7 @@
 #    authors and should not be interpreted as representing official policies, either expressed
 #    or implied, of their employers.
 
-from PyQt4.QtCore import QRect, QRectF, QTimer
+from PyQt4.QtCore import QRect, QRectF, QTimer, pyqtSignal
 from PyQt4.QtGui import QGraphicsScene, QImage
 from PyQt4.QtOpenGL import QGLWidget
 from OpenGL.GL import GL_CLAMP_TO_EDGE, GL_COLOR_BUFFER_BIT, GL_DEPTH_TEST, \
@@ -87,6 +87,9 @@ class ImagePatch(object):
         self.dirty = False
 
 class ImageScene2D(QGraphicsScene):
+    # the data to be displayed was changed
+    contentChanged = pyqtSignal()
+
     blockSize = 64
     glUpdateDelay = 10 #update delay when a new patch arrives in ms
     
@@ -128,6 +131,8 @@ class ImageScene2D(QGraphicsScene):
         workPackage = [patches, overlays, 0, 255]
         self._renderThread.queue.append(workPackage)
         self._renderThread.dataPending.set()
+
+        self.contentChanged.emit()
 
     def updatePatch(self, patchNr):
         p = self.imagePatches[patchNr]
