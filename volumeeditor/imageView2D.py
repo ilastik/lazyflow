@@ -105,32 +105,6 @@ class ImageView2D(QGraphicsView):
         #make sure all tiles are regenerated
         self.scene().markTilesDirty()
         
-        #FIXME: this whole section needs porting
-        #
-        #Here, we need access to the overlay widget because it is not separated
-        #yet into a model - view part...
-        overlays = []
-        
-        if not self.porting_overlaywidget:
-            return
-        
-        for item in reversed(self.porting_overlaywidget.overlays):
-            if item.visible:
-                overlays.append(item.getOverlaySlice(num, axis, 0, item.channel))
-        if len(self.porting_overlaywidget.overlays) == 0 \
-           or self.porting_overlaywidget.getOverlayRef("Raw Data") is None:
-            return
-        
-        rawData = self.porting_overlaywidget.getOverlayRef("Raw Data")._data
-        image = rawData.getSlice(num,\
-                                 axis, 0,\
-                                 self.porting_overlaywidget.getOverlayRef("Raw Data").channel)
-
-        self.porting_image = image
-        self.porting_overlays = overlays
-        
-        self.scene().setContent(self.viewportRect(), image, overlays) 
-
     @property
     def hud(self):
         return self._hud
@@ -158,11 +132,6 @@ class ImageView2D(QGraphicsView):
     def __init__(self, drawManager, useGL=False):
         QGraphicsView.__init__(self)
         self._useGL = useGL
-        
-        #FIXME: for porting
-        self.porting_image = None
-        self.porting_overlays = None
-        self.porting_overlaywidget = None
         
         #these attributes are exposed as public properties above
         self._shape  = None #2D shape of this view's shown image
@@ -397,6 +366,7 @@ class ImageView2D(QGraphicsView):
 
     #TODO oli
     def _panning(self):
+        raise Exception(NotImplementedError)
         hBar = self.horizontalScrollBar()
         vBar = self.verticalScrollBar()
         vBar.setValue(vBar.value() - self._deltaPan.y())
@@ -523,6 +493,7 @@ class ImageView2D(QGraphicsView):
         self.doScale(1.1)
 
     def doScale(self, factor):
+        raise Exception(NotImplementedError)
         self._zoomFactor = self._zoomFactor * factor
         InteractionLogger.log("%f: zoomFactor(factor) %f" % (time.clock(), self._zoomFactor))     
         self.scale(factor, factor)
