@@ -420,10 +420,7 @@ class ImageView2D(QGraphicsView):
     def _tickerEvent(self):
         if self._deltaPan.x() == 0.0 and self._deltaPan.y() == 0.0 or self._dragMode == True:
             self._ticker.stop()
-            cursor = QCursor()
-            mousePos = self.mapToScene(self.mapFromGlobal(cursor.pos()))
-            x = mousePos.x()
-            y = mousePos.y()
+
 
         else:
             self._deltaPan = self._deaccelerate(self._deltaPan)
