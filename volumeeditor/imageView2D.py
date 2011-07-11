@@ -213,9 +213,7 @@ class ImageView2D(QGraphicsView):
         self.tempImageItems = []
         
         self._isDrawing = False
-        self.border = None
-        self.allBorder = None
-        self.factor = 1.0
+        self._zoomFactor = 1.0
         
         #for panning
         self._lastPanPoint = QPoint()
@@ -525,8 +523,8 @@ class ImageView2D(QGraphicsView):
         self.doScale(1.1)
 
     def doScale(self, factor):
-        self.factor = self.factor * factor
-        InteractionLogger.log("%f: zoomFactor(factor) %f" % (time.clock(), self.factor))     
+        self._zoomFactor = self._zoomFactor * factor
+        InteractionLogger.log("%f: zoomFactor(factor) %f" % (time.clock(), self._zoomFactor))     
         self.scale(factor, factor)
         #FIXME
         self.scene().setContent(self.viewportRect(), self.porting_image, self.porting_overlays)
