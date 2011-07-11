@@ -306,8 +306,8 @@ class ImageView2D(QGraphicsView):
 
     def _cleanUp(self):        
         self._ticker.stop()
-        self.drawTimer.stop()
-        del self.drawTimer
+        self._drawTimer.stop()
+        del self._drawTimer
         del self._ticker
 
     def viewportRect(self):
@@ -340,18 +340,18 @@ class ImageView2D(QGraphicsView):
         InteractionLogger.log("%f: beginDrawing`()" % (time.clock()))   
         self.mousePos = pos
         self._isDrawing  = True
-        line = self._drawManager.beginDrawing(pos, self.shape2D)
+        line = self._drawManager.beginDrawing(pos, self.shape)
         line.setZValue(99)
         self.tempImageItems.append(line)
         self.scene().addItem(line)
         if self.drawUpdateInterval > 0:
-            self.drawTimer.start(self.drawUpdateInterval) #update labels every some ms
+            self._drawTimer.start(self.drawUpdateInterval) #update labels every some ms
         #FIXME resurrect    
         #self.beginDraw.emit(self._axis, pos)
         
     def endDrawing(self, pos):
         InteractionLogger.log("%f: endDrawing()" % (time.clock()))     
-        self.drawTimer.stop()
+        self._drawTimer.stop()
         self._isDrawing = False
        
         #FIXME resurrect 
