@@ -116,6 +116,7 @@ class ImageScene2D(QGraphicsScene):
         self._renderThread.patchAvailable.connect(self.updatePatch)
 
     def setContent(self, rect, image, overlays = ()):
+        '''ImageScene immediately starts to render tiles, that display the new content.'''
         #Abandon previous workloads
         self._renderThread.queue.clear()
         self._renderThread.newerDataPending.set()

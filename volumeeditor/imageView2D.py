@@ -324,7 +324,6 @@ class ImageView2D(QGraphicsView):
             self.centerOn(newGrviewCenter)
             self.mouseMoveEvent(event)
 
-    #TODO oli
     def mousePressEvent(self, event):
         if event.button() == Qt.MidButton:
             self.setCursor(QCursor(Qt.SizeAllCursor))
@@ -354,8 +353,7 @@ class ImageView2D(QGraphicsView):
                 self._tempErase = True
             mousePos = self.mapToScene(event.pos())
             self.beginDrawing(mousePos)
-            
-    #TODO oli
+
     def mouseReleaseEvent(self, event):
         if event.button() == Qt.MidButton:
             self.setCursor(QCursor())
@@ -370,9 +368,7 @@ class ImageView2D(QGraphicsView):
             self._drawManager.disableErasing()
             self._tempErase = False
 
-    #TODO oli
     def _panning(self):
-        raise Exception(NotImplementedError)
         hBar = self.horizontalScrollBar()
         vBar = self.verticalScrollBar()
         vBar.setValue(vBar.value() - self._deltaPan.y())
@@ -382,8 +378,6 @@ class ImageView2D(QGraphicsView):
             hBar.setValue(hBar.value() - self._deltaPan.x())
         self.scene().setContent(self.viewportRect(), self.porting_image, self.porting_overlays)
         
-        
-    #TODO oli
     def _deaccelerate(self, speed, a=1, maxVal=64):
         x = self._qBound(-maxVal, speed.x(), maxVal)
         y = self._qBound(-maxVal, speed.y(), maxVal)
@@ -422,7 +416,6 @@ class ImageView2D(QGraphicsView):
                 return 1, y/a
         return 1, 1
 
-    #TODO oli
     def _tickerEvent(self):
         if self._deltaPan.x() == 0.0 and self._deltaPan.y() == 0.0 or self._dragMode == True:
             self._ticker.stop()
@@ -430,12 +423,11 @@ class ImageView2D(QGraphicsView):
             mousePos = self.mapToScene(self.mapFromGlobal(cursor.pos()))
             x = mousePos.x()
             y = mousePos.y()
-            self._crossHairCursor.showXYPosition(x, y)
+
         else:
             self._deltaPan = self._deaccelerate(self._deltaPan)
             self._panning()
     
-    #TODO oli
     def mouseMoveEvent(self,event):
         if self._dragMode == True:
             #the mouse was moved because the user wants to change
