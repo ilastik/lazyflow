@@ -52,7 +52,7 @@ from drawManager import DrawManager
 from sliceSelectorHud import SliceSelectorHud
 
 from helper import HistoryManager, LabelState, VolumeUpdate, is3D
-from PyQt4 import QtCore
+
 
 #*******************************************************************************
 # V o l u m e E d i t o r                                                      *

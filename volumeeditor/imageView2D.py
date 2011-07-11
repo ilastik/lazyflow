@@ -28,7 +28,7 @@
 #    or implied, of their employers.
 
 from PyQt4.QtCore import QPoint, QPointF, QTimer, pyqtSignal, Qt, \
-                         QString, QRectF
+                         QString
 from PyQt4.QtGui import QColor, QCursor, QGraphicsView, QPainter, QImage, \
                         QVBoxLayout, QApplication, QTransform
 from PyQt4.QtOpenGL import QGLWidget
@@ -41,7 +41,7 @@ from crossHairCursor import CrossHairCursor
 from sliceIntersectionMarker import SliceIntersectionMarker
 from imageScene2D import ImageScene2D
 from helper import InteractionLogger
-import PyQt4
+
 
 #*******************************************************************************
 # I m a g e V i e w 2 D                                                        *
