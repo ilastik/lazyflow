@@ -1,4 +1,4 @@
-from PyQt4.QtCore import QThread, pyqtSignal, QPoint, QSize
+from PyQt4.QtCore import QThread, pyqtSignal, QPoint, QSize, Qt
 from PyQt4.QtGui import QPainter, QColor, QImage
 
 import numpy, qimage2ndarray
@@ -74,8 +74,9 @@ class ImageSceneRenderThread(QThread):
 
             #add overlays
             for index, origitem in enumerate(overlays):
-                if index == 0 and origitem.alpha < 1.0:
-                    p.eraseRect(QPoint(0,0),QSize(r.width(), r.height()))
+                # before the first layer is painted, initialize it white to enable sound alpha blending
+                if index == 0:
+                    p.fillRect(0,0,r.width(), r.height(), Qt.white)
                 
                 p.setOpacity(origitem.alpha)
                 itemcolorTable = origitem.colorTable
