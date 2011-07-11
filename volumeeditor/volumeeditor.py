@@ -76,12 +76,7 @@ class VolumeEditor(QWidget):
         self._grid = None #in 3D mode hold the quad view widget, otherwise remains none
         
         # enable interaction logger
-        #InteractionLogger()   
-
-        #Bordermargin settings - they control the blue markers that signal the region from which the
-        #labels are not used for trainig
-        self._useBorderMargin = False
-        self._borderMargin = 0
+        #InteractionLogger()
 
         #this setting controls the rescaling of the displayed _data to the full 0-255 range
         self.normalizeData = False
@@ -128,9 +123,6 @@ class VolumeEditor(QWidget):
             v.beginDraw.connect(self.beginDraw)
             v.endDraw.connect(self.endDraw)
             v.hud = SliceSelectorHud()
-
-        #Controls the trade-off of speed and flickering when scrolling through this slice view
-        self.setFastRepaint(True)   
 
         # 2D/3D Views
         viewingLayout = QVBoxLayout()
@@ -331,7 +323,6 @@ class VolumeEditor(QWidget):
         QApplication.processEvents()
         print "VolumeEditor: cleaning up "
         for scene in self._imageViews:
-            scene.cleanUp()
             scene.close()
             scene.deleteLater()
         self._imageViews = []
@@ -385,29 +376,6 @@ class VolumeEditor(QWidget):
             #self.image.rgb = mode
             self._channelSpin.setVisible(not mode)
             self._channelSpinLabel.setVisible(not mode)
-
-    def setUseBorderMargin(self, use):
-        self._useBorderMargin = use
-        self.setBorderMargin(self._borderMargin)
-
-    def setFastRepaint(self, fastRepaint):
-        self.fastRepaint = fastRepaint
-        for imageScene in self._imageViews:
-            imageScene.fastRepaint = self.fastRepaint
-
-    def setBorderMargin(self, margin):
-        if self._useBorderMargin:
-            if self._borderMargin != margin:
-                print "new border margin:", margin
-                self._borderMargin = margin
-                for imgScene in self._imageViews:
-                    imgScene.setBorderMarginIndicator(margin)
-                self.repaint()
-        else:
-            for imgScene in self._imageViews:
-                #FIXME this looks wrong
-                imgScene.setBorderMarginIndicator(margin)
-                self.repaint()
 
     def updateTimeSliceForSaving(self, time, num, axis):
         self._imageViews[axis].thread.freeQueue.clear()
@@ -642,13 +610,8 @@ if __name__ == "__main__":
                 raise RuntimeError("Invalid testing mode")
             
             self.dialog = VolumeEditor((1,)+self.data.shape+(1,), None, useGL=useGL)
-            nc = NavigationControler(self.dialog._imageViews, self.data)
             self.dialog.setDrawingEnabled(True)
-            
-            #FIXME: port to ilastik
-            self.dialog.indicateSliceIntersectionButton.toggled.connect(nc.onIndicateSliceIntersectionToggle)
-            self.dialog._channelSpin.valueChanged.connect(nc.onChannelChange)
-            
+                        
             self.dataOverlay = OverlayItem(DataAccessor(self.data), alpha=1.0, color=Qt.black, colorTable=OverlayItem.createDefaultColorTable('GRAY', 256), autoVisible=True, autoAlphaChannel=False)
             
             class FakeOverlayWidget(QWidget):
@@ -657,19 +620,22 @@ if __name__ == "__main__":
                     QWidget.__init__(self)
                     self.overlays = None
                 def getOverlayRef(self, key):
-                    return self.overlays[0]
-            
+                    return self.overlays[0]            
             overlayWidget = FakeOverlayWidget()
             overlayWidget.overlays = [self.dataOverlay.getRef()]
             
+            nc = NavigationControler( self.dialog._imageViews, self.data, overlayWidget )
+            #FIXME: port to ilastik
+            self.dialog.indicateSliceIntersectionButton.toggled.connect(nc.onIndicateSliceIntersectionToggle)
+            self.dialog._channelSpin.valueChanged.connect(nc.onChannelChange)
+
+
             self.dialog.setOverlayWidget(overlayWidget)
             
             self.dialog.show()
             
             #show some initial position
             nc.slicingPos = [5,10,2]
-            
-            self.dialog.setOverlayWidget(overlayWidget)
 
     app = QApplication(sys.argv)
     

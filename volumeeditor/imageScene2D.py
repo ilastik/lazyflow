@@ -27,7 +27,7 @@
 #    authors and should not be interpreted as representing official policies, either expressed
 #    or implied, of their employers.
 
-from PyQt4.QtCore import QRect, QRectF, QTimer
+from PyQt4.QtCore import QRect, QRectF, QTimer, pyqtSignal
 from PyQt4.QtGui import QGraphicsScene, QImage
 from PyQt4.QtOpenGL import QGLWidget
 from OpenGL.GL import GL_CLAMP_TO_EDGE, GL_COLOR_BUFFER_BIT, GL_DEPTH_TEST, \
@@ -87,6 +87,9 @@ class ImagePatch(object):
         self.dirty = False
 
 class ImageScene2D(QGraphicsScene):
+    # the data to be displayed was changed
+    contentChanged = pyqtSignal()
+
     blockSize = 64
     glUpdateDelay = 10 #update delay when a new patch arrives in ms
     
@@ -108,11 +111,18 @@ class ImageScene2D(QGraphicsScene):
         self.setSceneRect(0,0, *self._shape2D)
 
         # tile rendering
+        self._image = None
+        self._overlays = None
         self._renderThread = ImageSceneRenderThread(self.imagePatches)
         self._renderThread.start()
         self._renderThread.patchAvailable.connect(self.updatePatch)
 
     def setContent(self, rect, image, overlays = ()):
+        '''ImageScene immediately starts to render tiles, that display the new content.'''
+        # store data for later rerendering when the rect changes, but not the data
+        self._image = image
+        self._overlays = overlays
+
         #Abandon previous workloads
         self._renderThread.queue.clear()
         self._renderThread.newerDataPending.set()
@@ -128,6 +138,12 @@ class ImageScene2D(QGraphicsScene):
         workPackage = [patches, overlays, 0, 255]
         self._renderThread.queue.append(workPackage)
         self._renderThread.dataPending.set()
+
+        self.contentChanged.emit()
+
+    def changeVisibleContent( self, rect ):
+        '''Don't change the data to be rendered, but just the visible area.'''
+        self.setContent(rect, self._image, self._overlays)
 
     def updatePatch(self, patchNr):
         p = self.imagePatches[patchNr]

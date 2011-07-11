@@ -61,6 +61,8 @@ class ImageView2D(QGraphicsView):
     #notifies that the user has double clicked on the 2D coordinate x,y    
     mouseDoubleClicked = pyqtSignal(int, int)
     
+    drawUpdateInterval = 300 #ms
+    
     @property
     def shape(self):
         return self._shape
@@ -68,6 +70,10 @@ class ImageView2D(QGraphicsView):
     def shape(self, s):
         self._shape = s
         self.setScene(ImageScene2D(self._shape, self.viewport()))
+
+        # observe the scene, waiting for changes of the content
+        self.scene().contentChanged.connect(self.onContentChange)
+
         if self._useGL:
             self._initializeGL()
     
@@ -94,42 +100,7 @@ class ImageView2D(QGraphicsView):
 
     def _initializeGL(self):
         self.scene().initializeGL()
-   
-    def onSliceChange(self, num, axis):
-        #FIXME refactor 
-        #the data should be set by the renderer
-        if not self._useGL:
-            #reset the background cache
-            self.resetCachedContent()
-        #make sure all tiles are regenerated
-        self.scene().markTilesDirty()
-        
-        #FIXME: this whole section needs porting
-        #
-        #Here, we need access to the overlay widget because it is not separated
-        #yet into a model - view part...
-        overlays = []
-        
-        if not self.porting_overlaywidget:
-            return
-        
-        for item in reversed(self.porting_overlaywidget.overlays):
-            if item.visible:
-                overlays.append(item.getOverlaySlice(num, axis, 0, item.channel))
-        if len(self.porting_overlaywidget.overlays) == 0 \
-           or self.porting_overlaywidget.getOverlayRef("Raw Data") is None:
-            return
-        
-        rawData = self.porting_overlaywidget.getOverlayRef("Raw Data")._data
-        image = rawData.getSlice(num,\
-                                 axis, 0,\
-                                 self.porting_overlaywidget.getOverlayRef("Raw Data").channel)
-
-        self.porting_image = image
-        self.porting_overlays = overlays
-        
-        self.scene().setContent(self.viewportRect(), image, overlays) 
-
+           
     @property
     def hud(self):
         return self._hud
@@ -157,11 +128,6 @@ class ImageView2D(QGraphicsView):
     def __init__(self, drawManager, useGL=False):
         QGraphicsView.__init__(self)
         self._useGL = useGL
-        
-        #FIXME: for porting
-        self.porting_image = None
-        self.porting_overlays = None
-        self.porting_overlaywidget = None
         
         #these attributes are exposed as public properties above
         self._shape  = None #2D shape of this view's shown image
@@ -212,17 +178,12 @@ class ImageView2D(QGraphicsView):
         self.tempImageItems = []
         
         self._isDrawing = False
-        self.border = None
-        self.allBorder = None
-        self.factor = 1.0
+        self._zoomFactor = 1.0
         
         #for panning
         self._lastPanPoint = QPoint()
         self._dragMode = False
         self._deltaPan = QPointF(0,0)
-        
-        self.fastRepaint = True
-        self.drawUpdateInterval = 300
         
         #Unfortunately, setting the style like this make the scroll bars look
         #really crappy...
@@ -232,24 +193,6 @@ class ImageView2D(QGraphicsView):
         #FIXME: Is there are more elegant way to handle this?
 
         self.setMouseTracking(True)
-
-#FIXME: resurrect this code
-#        #indicators for the biggest filter mask's size
-#        #marks the area where labels should not be placed
-#        # -> the margin top, left, right, bottom
-#        self.setBorderMarginIndicator(0)
-#        # -> the complete 2D slice is marked
-#        brush = QBrush(QColor(0,0,255))
-#        brush.setStyle( Qt.DiagCrossPattern )
-#        allBorderPath = QPainterPath()
-#        allBorderPath.setFillRule(Qt.WindingFill)
-#        allBorderPath.addRect(0, 0, *self.shape2D)
-#        self.allBorder = QGraphicsPathItem(allBorderPath)
-#        self.allBorder.setBrush(brush)
-#        self.allBorder.setPen(QPen(Qt.NoPen))
-#        self.scene().addItem(self.allBorder)
-#        self.allBorder.setVisible(False)
-#        self.allBorder.setZValue(99)
 
         self._ticker = QTimer(self)
         self._ticker.timeout.connect(self._tickerEvent)
@@ -272,6 +215,17 @@ class ImageView2D(QGraphicsView):
 #        self._crossHairCursor.setColor(self._drawManager.drawColor)
 
         self._tempErase = False
+        
+    def onContentChange(self):
+        '''Observe the graphics scene, waiting for content changes.
+
+        After a scene's content changed, it starts to render new tiles. This
+        method prepares for these new tiles arriving little by little.
+        '''
+        if not self._useGL:
+            #reset the background cache
+            self.resetCachedContent()
+
 
     def swapAxes(self):          
         '''Displays this image as if the x and y axes were swapped.
@@ -287,28 +241,10 @@ class ImageView2D(QGraphicsView):
         to reflect the new given margin
         """
         
-        #FIXME: this code needs to be resurrected
-#        self.margin = margin
-#        if self.border:
-#            self.scene().removeItem(self.border)
-#        borderPath = QPainterPath()
-#        borderPath.setFillRule(Qt.WindingFill)
-#        borderPath.addRect(0,0, margin, self.shape2D[1])
-#        borderPath.addRect(0,0, self.shape2D[0], margin)
-#        borderPath.addRect(self.shape2D[0]-margin,0, margin, self.shape2D[1])
-#        borderPath.addRect(0,self.shape2D[1]-margin, self.shape2D[0], margin)
-#        self.border = QGraphicsPathItem(borderPath)
-#        brush = QBrush(QColor(0,0,255))
-#        brush.setStyle( Qt.Dense7Pattern )
-#        self.border.setBrush(brush)
-#        self.border.setPen(QPen(Qt.NoPen))
-#        self.border.setZValue(200)
-#        self.scene().addItem(self.border)
-
     def _cleanUp(self):        
         self._ticker.stop()
-        self.drawTimer.stop()
-        del self.drawTimer
+        self._drawTimer.stop()
+        del self._drawTimer
         del self._ticker
 
     def viewportRect(self):
@@ -341,18 +277,18 @@ class ImageView2D(QGraphicsView):
         InteractionLogger.log("%f: beginDrawing`()" % (time.clock()))   
         self.mousePos = pos
         self._isDrawing  = True
-        line = self._drawManager.beginDrawing(pos, self.shape2D)
+        line = self._drawManager.beginDrawing(pos, self.shape)
         line.setZValue(99)
         self.tempImageItems.append(line)
         self.scene().addItem(line)
         if self.drawUpdateInterval > 0:
-            self.drawTimer.start(self.drawUpdateInterval) #update labels every some ms
+            self._drawTimer.start(self.drawUpdateInterval) #update labels every some ms
         #FIXME resurrect    
         #self.beginDraw.emit(self._axis, pos)
         
     def endDrawing(self, pos):
         InteractionLogger.log("%f: endDrawing()" % (time.clock()))     
-        self.drawTimer.stop()
+        self._drawTimer.stop()
         self._isDrawing = False
        
         #FIXME resurrect 
@@ -389,7 +325,6 @@ class ImageView2D(QGraphicsView):
             self.centerOn(newGrviewCenter)
             self.mouseMoveEvent(event)
 
-    #TODO oli
     def mousePressEvent(self, event):
         if event.button() == Qt.MidButton:
             self.setCursor(QCursor(Qt.SizeAllCursor))
@@ -419,8 +354,7 @@ class ImageView2D(QGraphicsView):
                 self._tempErase = True
             mousePos = self.mapToScene(event.pos())
             self.beginDrawing(mousePos)
-            
-    #TODO oli
+
     def mouseReleaseEvent(self, event):
         if event.button() == Qt.MidButton:
             self.setCursor(QCursor())
@@ -435,7 +369,6 @@ class ImageView2D(QGraphicsView):
             self._drawManager.disableErasing()
             self._tempErase = False
 
-    #TODO oli
     def _panning(self):
         hBar = self.horizontalScrollBar()
         vBar = self.verticalScrollBar()
@@ -444,10 +377,8 @@ class ImageView2D(QGraphicsView):
             hBar.setValue(hBar.value() + self._deltaPan.x())
         else:
             hBar.setValue(hBar.value() - self._deltaPan.x())
-        self.scene().setContent(self.viewportRect(), self.porting_image, self.porting_overlays)
+        self.scene().changeVisibleContent(self.viewportRect())
         
-        
-    #TODO oli
     def _deaccelerate(self, speed, a=1, maxVal=64):
         x = self._qBound(-maxVal, speed.x(), maxVal)
         y = self._qBound(-maxVal, speed.y(), maxVal)
@@ -486,7 +417,6 @@ class ImageView2D(QGraphicsView):
                 return 1, y/a
         return 1, 1
 
-    #TODO oli
     def _tickerEvent(self):
         if self._deltaPan.x() == 0.0 and self._deltaPan.y() == 0.0 or self._dragMode == True:
             self._ticker.stop()
@@ -494,12 +424,11 @@ class ImageView2D(QGraphicsView):
             mousePos = self.mapToScene(self.mapFromGlobal(cursor.pos()))
             x = mousePos.x()
             y = mousePos.y()
-            self._crossHairCursor.showXYPosition(x, y)
+
         else:
             self._deltaPan = self._deaccelerate(self._deltaPan)
             self._panning()
     
-    #TODO oli
     def mouseMoveEvent(self,event):
         if self._dragMode == True:
             #the mouse was moved because the user wants to change
@@ -566,11 +495,10 @@ class ImageView2D(QGraphicsView):
         self.fitInView(qRectf,mode = Qt.KeepAspectRatio)
 
     def doScale(self, factor):
-        self.factor = self.factor * factor
-        InteractionLogger.log("%f: zoomFactor(factor) %f" % (time.clock(), self.factor))     
+        self._zoomFactor = self._zoomFactor * factor
+        InteractionLogger.log("%f: zoomFactor(factor) %f" % (time.clock(), self._zoomFactor))     
         self.scale(factor, factor)
-        #FIXME
-        self.scene().setContent(self.viewportRect(), self.porting_image, self.porting_overlays)
+        self.scene().changeVisibleContent(self.viewportRect())
 
 #*******************************************************************************
 # i f   _ _ n a m e _ _   = =   " _ _ m a i n _ _ "                            *
@@ -578,12 +506,16 @@ class ImageView2D(QGraphicsView):
 
 if __name__ == '__main__':
     from overlaySlice import OverlaySlice 
+    import sys
     #make the program quit on Ctrl+C
     import signal
     signal.signal(signal.SIGINT, signal.SIG_DFL)
-        
-    class ImageView2DTest(QApplication):    
-        def __init__(self, args):
+    from PyQt4.QtGui import QMainWindow    
+    
+    class ImageView2DTest(QMainWindow):    
+        def __init__(self, useGL):
+            QMainWindow.__init__(self)
+            
             N = 1024
             self.data = (numpy.random.rand(2*N ,5, N)*255).astype(numpy.uint8)
 
@@ -591,22 +523,17 @@ if __name__ == '__main__':
             
             #viewManager = ViewManager(self.data)
             drawManager = DrawManager()
-            
-            self.imageView2D = ImageView2D(drawManager, useGL=False)
+            self.imageView2D = ImageView2D(drawManager, useGL=useGL)
             self.imageView2D.drawingEnabled = True
             self.imageView2D.name = 'ImageView2D:'
             self.imageView2D.shape = [self.data.shape[0], self.data.shape[2]]
             self.imageView2D.slices = 1
-            
+             
             #Needs a 2D view Manager?
             #self.ImageView2D.mouseMoved.connect(lambda axis, x, y, valid: self.ImageView2D._crossHairCursor.showXYPosition(x,y))
+            self.setCentralWidget(self.imageView2D)
 
             self.testChangeSlice(3, axis)
-        
-            #self.ImageView2D.sliceChanged.connect(self.testChangeSlice)
-            
-            self.imageView2D.show()
-            
 
         def testChangeSlice(self, num, axis):
             s = 3*[slice(None,None,None)]
@@ -621,5 +548,13 @@ if __name__ == '__main__':
             
             print "changeSlice num=%d, axis=%d" % (num, axis)
 
-    app = ImageView2DTest([""])
+    if not 'gl' in sys.argv and not 's' in sys.argv:
+        print "Usage: python imageView2D.py mode"
+        print "  mode = 's' software rendering"
+        print "  mode = 'gl OpenGL rendering'"
+        sys.exit(0)
+         
+    app = QApplication(sys.argv)
+    i = ImageView2DTest('gl' in sys.argv)
+    i.show()
     app.exec_()

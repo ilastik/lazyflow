@@ -46,14 +46,7 @@ def posView2D(pos3d, axis):
 #*******************************************************************************
 
 class NavigationControler(QObject):
-    '''Controler for navigating through the volume.
-
-    Handles the following signals:
-    cursorPosition -- position of the crosshair cursor
-    relativeSliceChange -- switch to a slice relative to the current
-    absoluteSliceChange -- switch to a slice based on an absolute value
-
-    '''
+    '''Controler for navigating through the volume.'''
     ##
     ## properties
     ##
@@ -124,13 +117,18 @@ class NavigationControler(QObject):
         for v in self._views:
             v._sliceIntersectionMarker.setVisibility(show)
         
-    def __init__(self, imageView2Ds, volume, time = 0, channel = 0):
+    def __init__(self, imageView2Ds, volume, overlaywidget, time = 0, channel = 0):
+        '''
+        volume - scalar, 3d numpy array containing the raw volume
+
+        '''
         QObject.__init__(self)
         assert len(imageView2Ds) == 3
 
         # init fields
         self._views = imageView2Ds
         self._volume = volume
+        self._overlaywidget = overlaywidget
         self._beginStackIndex = 0
         self._endStackIndex   = 1
 
@@ -288,6 +286,26 @@ class NavigationControler(QObject):
     def _updateSlice(self, num, axis):
         if num < 0 or num >= self._volume.shape[axis]:
             raise Exception("NavigationControler._setSlice(): invalid slice number")
-        self._views[axis].onSliceChange(num, axis)
+
+        # update view
         self._views[axis].hud.sliceSelector.setValue(num)
+
+        # update model
+        overlays = []
+        for item in reversed(self._overlaywidget.overlays):
+            if item.visible:
+                overlays.append(item.getOverlaySlice(num, axis, 0, item.channel))
+        if len(self._overlaywidget.overlays) == 0 \
+           or self._overlaywidget.getOverlayRef("Raw Data") is None:
+            return
+        
+        rawData = self._overlaywidget.getOverlayRef("Raw Data")._data
+        image = rawData.getSlice(num,\
+                                 axis, 0,\
+                                 self._overlaywidget.getOverlayRef("Raw Data").channel)
+
+        #make sure all tiles are regenerated
+        self._views[axis].scene().markTilesDirty()
+        self._views[axis].scene().setContent(self._views[axis].viewportRect(), image, overlays) 
+
 
