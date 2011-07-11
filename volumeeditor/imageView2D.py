@@ -28,7 +28,7 @@
 #    or implied, of their employers.
 
 from PyQt4.QtCore import QPoint, QPointF, QTimer, pyqtSignal, Qt, \
-                         QString
+                         QString, QRectF
 from PyQt4.QtGui import QColor, QCursor, QGraphicsView, QPainter, QImage, \
                         QVBoxLayout, QApplication, QTransform
 from PyQt4.QtOpenGL import QGLWidget
@@ -41,6 +41,7 @@ from crossHairCursor import CrossHairCursor
 from sliceIntersectionMarker import SliceIntersectionMarker
 from imageScene2D import ImageScene2D
 from helper import InteractionLogger
+import PyQt4
 
 #*******************************************************************************
 # I m a g e V i e w 2 D                                                        *
@@ -560,6 +561,9 @@ class ImageView2D(QGraphicsView):
 
     def zoomIn(self):
         self.doScale(1.1)
+        
+    def changeViewPort(self,qRectf):
+        self.fitInView(qRectf,mode = Qt.KeepAspectRatio)
 
     def doScale(self, factor):
         self.factor = self.factor * factor

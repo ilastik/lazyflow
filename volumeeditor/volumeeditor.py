@@ -52,6 +52,7 @@ from drawManager import DrawManager
 from sliceSelectorHud import SliceSelectorHud
 
 from helper import HistoryManager, LabelState, VolumeUpdate, is3D
+from PyQt4 import QtCore
 
 #*******************************************************************************
 # V o l u m e E d i t o r                                                      *
@@ -562,8 +563,7 @@ class VolumeEditor(QWidget):
     
     def updateInfoLabels(self, axis, x, y, valid):
         if not valid:
-            return
-
+            return       
 #FIXME: resurrect
 #        pos = (posX, posY, posZ) = self._imageViews[axis].coordinateUnderCursor()
 #        colorValues = self.overlayWidget.getOverlayRef("Raw Data").getOverlaySlice(pos[axis], axis, time=0, channel=0)._data[x,y]
@@ -582,7 +582,7 @@ class VolumeEditor(QWidget):
 
 if __name__ == "__main__":
     import sys
-    from PyQt4.QtCore import QObject
+    from PyQt4.QtCore import QObject, QRectF
     from PyQt4.QtGui import QColor
     #make the program quit on Ctrl+C
     import signal
@@ -683,7 +683,18 @@ if __name__ == "__main__":
     s.addWidget(t1.dialog)
     s.addWidget(t2.dialog)
     
-    s.show()
+    button=QPushButton("fitToView");
+    
+    s.addWidget(button)
+    
+    def fit():
+        for i in range(3):
+            t1.dialog._imageViews[i].changeViewPort(QRectF(80,20,30,60))
+            t2.dialog._imageViews[i].changeViewPort(QRectF(0,0,30,30))
+            
+    button.clicked.connect(fit)       
+    
+    s.showMaximized()
 
     app.exec_()
 
