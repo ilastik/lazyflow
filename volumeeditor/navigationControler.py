@@ -286,6 +286,25 @@ class NavigationControler(QObject):
     def _updateSlice(self, num, axis):
         if num < 0 or num >= self._volume.shape[axis]:
             raise Exception("NavigationControler._setSlice(): invalid slice number")
+
+        # update view
         self._views[axis].onSliceChange(num, axis)
         self._views[axis].hud.sliceSelector.setValue(num)
+
+        # update model
+        overlays = []
+        for item in reversed(self._overlaywidget.overlays):
+            if item.visible:
+                overlays.append(item.getOverlaySlice(num, axis, 0, item.channel))
+        if len(self._overlaywidget.overlays) == 0 \
+           or self._overlaywidget.getOverlayRef("Raw Data") is None:
+            return
+        
+        rawData = self._overlaywidget.getOverlayRef("Raw Data")._data
+        image = rawData.getSlice(num,\
+                                 axis, 0,\
+                                 self._overlaywidget.getOverlayRef("Raw Data").channel)
+
+        self._views[axis].scene().setContent(self._views[axis].viewportRect(), image, overlays) 
+
 
