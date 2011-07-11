@@ -499,50 +499,32 @@ class ImageView2D(QGraphicsView):
 #*******************************************************************************
 # i f   _ _ n a m e _ _   = =   " _ _ m a i n _ _ "                            *
 #*******************************************************************************
-
 if __name__ == '__main__':
     from overlaySlice import OverlaySlice 
     import sys
     #make the program quit on Ctrl+C
     import signal
     signal.signal(signal.SIGINT, signal.SIG_DFL)
-    from PyQt4.QtGui import QMainWindow    
+    from PyQt4.QtGui import QMainWindow
+    from scipy.misc import lena
     
     class ImageView2DTest(QMainWindow):    
         def __init__(self, useGL):
             QMainWindow.__init__(self)
             
-            N = 1024
-            self.data = (numpy.random.rand(2*N ,5, N)*255).astype(numpy.uint8)
+            self.data = lena()
+            self.data = self.data.swapaxes(0,1)
 
-            axis = 1
-            
-            #viewManager = ViewManager(self.data)
             drawManager = DrawManager()
             self.imageView2D = ImageView2D(drawManager, useGL=useGL)
             self.imageView2D.drawingEnabled = True
             self.imageView2D.name = 'ImageView2D:'
-            self.imageView2D.shape = [self.data.shape[0], self.data.shape[2]]
+            self.imageView2D.shape = [self.data.shape[0], self.data.shape[1]]
             self.imageView2D.slices = 1
-             
-            #Needs a 2D view Manager?
-            #self.ImageView2D.mouseMoved.connect(lambda axis, x, y, valid: self.ImageView2D._crossHairCursor.showXYPosition(x,y))
             self.setCentralWidget(self.imageView2D)
 
-            self.testChangeSlice(3, axis)
-
-        def testChangeSlice(self, num, axis):
-            s = 3*[slice(None,None,None)]
-            s[axis] = num
-            
-            self.image = OverlaySlice(self.data[s], color = QColor("black"), alpha = 1, colorTable = None, min = None, max = None, autoAlphaChannel = True)
-            self.overlays = [self.image]
-            
-            #FIMXE
-            self.imageView2D.porting_image = self.image
-            self.imageView2D.porting_overlays = self.overlays
-            
-            print "changeSlice num=%d, axis=%d" % (num, axis)
+            image = OverlaySlice(self.data, color = QColor("red"), alpha = 1.0, colorTable = None, min = None, max = None, autoAlphaChannel = False)
+            self.imageView2D.scene().setContent(self.imageView2D.viewportRect(), None, (image,))
 
     if not 'gl' in sys.argv and not 's' in sys.argv:
         print "Usage: python imageView2D.py mode"
