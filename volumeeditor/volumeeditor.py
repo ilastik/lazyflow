@@ -75,12 +75,7 @@ class VolumeEditor(QWidget):
         self._grid = None #in 3D mode hold the quad view widget, otherwise remains none
         
         # enable interaction logger
-        #InteractionLogger()   
-
-        #Bordermargin settings - they control the blue markers that signal the region from which the
-        #labels are not used for trainig
-        self._useBorderMargin = False
-        self._borderMargin = 0
+        #InteractionLogger()
 
         #this setting controls the rescaling of the displayed _data to the full 0-255 range
         self.normalizeData = False
@@ -127,9 +122,6 @@ class VolumeEditor(QWidget):
             v.beginDraw.connect(self.beginDraw)
             v.endDraw.connect(self.endDraw)
             v.hud = SliceSelectorHud()
-
-        #Controls the trade-off of speed and flickering when scrolling through this slice view
-        self.setFastRepaint(True)   
 
         # 2D/3D Views
         viewingLayout = QVBoxLayout()
@@ -330,7 +322,6 @@ class VolumeEditor(QWidget):
         QApplication.processEvents()
         print "VolumeEditor: cleaning up "
         for scene in self._imageViews:
-            scene.cleanUp()
             scene.close()
             scene.deleteLater()
         self._imageViews = []
@@ -384,29 +375,6 @@ class VolumeEditor(QWidget):
             #self.image.rgb = mode
             self._channelSpin.setVisible(not mode)
             self._channelSpinLabel.setVisible(not mode)
-
-    def setUseBorderMargin(self, use):
-        self._useBorderMargin = use
-        self.setBorderMargin(self._borderMargin)
-
-    def setFastRepaint(self, fastRepaint):
-        self.fastRepaint = fastRepaint
-        for imageScene in self._imageViews:
-            imageScene.fastRepaint = self.fastRepaint
-
-    def setBorderMargin(self, margin):
-        if self._useBorderMargin:
-            if self._borderMargin != margin:
-                print "new border margin:", margin
-                self._borderMargin = margin
-                for imgScene in self._imageViews:
-                    imgScene.setBorderMarginIndicator(margin)
-                self.repaint()
-        else:
-            for imgScene in self._imageViews:
-                #FIXME this looks wrong
-                imgScene.setBorderMarginIndicator(margin)
-                self.repaint()
 
     def updateTimeSliceForSaving(self, time, num, axis):
         self._imageViews[axis].thread.freeQueue.clear()

@@ -60,6 +60,8 @@ class ImageView2D(QGraphicsView):
     #notifies that the user has double clicked on the 2D coordinate x,y    
     mouseDoubleClicked = pyqtSignal(int, int)
     
+    drawUpdateInterval = 300 #ms
+    
     @property
     def shape(self):
         return self._shape
@@ -220,9 +222,6 @@ class ImageView2D(QGraphicsView):
         self._dragMode = False
         self._deltaPan = QPointF(0,0)
         
-        self.fastRepaint = True
-        self.drawUpdateInterval = 300
-        
         #Unfortunately, setting the style like this make the scroll bars look
         #really crappy...
         #self.setStyleSheet("QWidget:!focus { border: 2px solid " + self._axisColor[self._axis].name() +"; border-radius: 4px; }\
@@ -231,24 +230,6 @@ class ImageView2D(QGraphicsView):
         #FIXME: Is there are more elegant way to handle this?
 
         self.setMouseTracking(True)
-
-#FIXME: resurrect this code
-#        #indicators for the biggest filter mask's size
-#        #marks the area where labels should not be placed
-#        # -> the margin top, left, right, bottom
-#        self.setBorderMarginIndicator(0)
-#        # -> the complete 2D slice is marked
-#        brush = QBrush(QColor(0,0,255))
-#        brush.setStyle( Qt.DiagCrossPattern )
-#        allBorderPath = QPainterPath()
-#        allBorderPath.setFillRule(Qt.WindingFill)
-#        allBorderPath.addRect(0, 0, *self.shape2D)
-#        self.allBorder = QGraphicsPathItem(allBorderPath)
-#        self.allBorder.setBrush(brush)
-#        self.allBorder.setPen(QPen(Qt.NoPen))
-#        self.scene().addItem(self.allBorder)
-#        self.allBorder.setVisible(False)
-#        self.allBorder.setZValue(99)
 
         self._ticker = QTimer(self)
         self._ticker.timeout.connect(self._tickerEvent)
@@ -286,24 +267,6 @@ class ImageView2D(QGraphicsView):
         to reflect the new given margin
         """
         
-        #FIXME: this code needs to be resurrected
-#        self.margin = margin
-#        if self.border:
-#            self.scene().removeItem(self.border)
-#        borderPath = QPainterPath()
-#        borderPath.setFillRule(Qt.WindingFill)
-#        borderPath.addRect(0,0, margin, self.shape2D[1])
-#        borderPath.addRect(0,0, self.shape2D[0], margin)
-#        borderPath.addRect(self.shape2D[0]-margin,0, margin, self.shape2D[1])
-#        borderPath.addRect(0,self.shape2D[1]-margin, self.shape2D[0], margin)
-#        self.border = QGraphicsPathItem(borderPath)
-#        brush = QBrush(QColor(0,0,255))
-#        brush.setStyle( Qt.Dense7Pattern )
-#        self.border.setBrush(brush)
-#        self.border.setPen(QPen(Qt.NoPen))
-#        self.border.setZValue(200)
-#        self.scene().addItem(self.border)
-
     def _cleanUp(self):        
         self._ticker.stop()
         self._drawTimer.stop()
