@@ -668,8 +668,6 @@ if __name__ == "__main__":
             
             #show some initial position
             nc.slicingPos = [5,10,20]
-            
-            self.dialog.setOverlayWidget(overlayWidget)
 
     app = QApplication(sys.argv)
     
