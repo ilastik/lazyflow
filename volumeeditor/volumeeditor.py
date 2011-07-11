@@ -642,13 +642,8 @@ if __name__ == "__main__":
                 raise RuntimeError("Invalid testing mode")
             
             self.dialog = VolumeEditor((1,)+self.data.shape+(1,), None, useGL=useGL)
-            nc = NavigationControler(self.dialog._imageViews, self.data)
             self.dialog.setDrawingEnabled(True)
-            
-            #FIXME: port to ilastik
-            self.dialog.indicateSliceIntersectionButton.toggled.connect(nc.onIndicateSliceIntersectionToggle)
-            self.dialog._channelSpin.valueChanged.connect(nc.onChannelChange)
-            
+                        
             self.dataOverlay = OverlayItem(DataAccessor(self.data), alpha=1.0, color=Qt.black, colorTable=OverlayItem.createDefaultColorTable('GRAY', 256), autoVisible=True, autoAlphaChannel=False)
             
             class FakeOverlayWidget(QWidget):
@@ -657,11 +652,16 @@ if __name__ == "__main__":
                     QWidget.__init__(self)
                     self.overlays = None
                 def getOverlayRef(self, key):
-                    return self.overlays[0]
-            
+                    return self.overlays[0]            
             overlayWidget = FakeOverlayWidget()
             overlayWidget.overlays = [self.dataOverlay.getRef()]
             
+            nc = NavigationControler( self.dialog._imageViews, self.data, overlayWidget )
+            #FIXME: port to ilastik
+            self.dialog.indicateSliceIntersectionButton.toggled.connect(nc.onIndicateSliceIntersectionToggle)
+            self.dialog._channelSpin.valueChanged.connect(nc.onChannelChange)
+
+
             self.dialog.setOverlayWidget(overlayWidget)
             
             self.dialog.show()
