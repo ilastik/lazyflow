@@ -83,6 +83,7 @@ class CrossHairCursor(QGraphicsItem) :
            including a circle indicating the current brush size"""
         self.setVisible(True)
         self.mode = self.modeXYPosition
+        #add 0.5 on each value to make crosshair snap to center of a pixel
         self.setPos(x+0.5,y+0.5)
     
     def paint(self, painter, option, widget=None):

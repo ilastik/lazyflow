@@ -265,14 +265,14 @@ class NavigationControler(QObject):
             yView = self._views[1]._crossHairCursor
             zView = self._views[2]._crossHairCursor
             
-            yView.setVisible(False)
+            yView.showXPosition(y, x)
             zView.showYPosition(x, y)
         elif self.activeView == 1: # y-axis
             xView = self._views[0]._crossHairCursor
             zView = self._views[2]._crossHairCursor
             
+            xView.showXPosition(y, x)
             zView.showXPosition(x, y)
-            xView.setVisible(False)
         else: # z-axis
             xView = self._views[0]._crossHairCursor
             yView = self._views[1]._crossHairCursor
