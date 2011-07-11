@@ -574,12 +574,16 @@ class ImageView2D(QGraphicsView):
 
 if __name__ == '__main__':
     from overlaySlice import OverlaySlice 
+    import sys
     #make the program quit on Ctrl+C
     import signal
     signal.signal(signal.SIGINT, signal.SIG_DFL)
-        
-    class ImageView2DTest(QApplication):    
-        def __init__(self, args):
+    from PyQt4.QtGui import QMainWindow    
+    
+    class ImageView2DTest(QMainWindow):    
+        def __init__(self):
+            QMainWindow.__init__(self)
+            
             N = 1024
             self.data = (numpy.random.rand(2*N ,5, N)*255).astype(numpy.uint8)
 
@@ -587,22 +591,17 @@ if __name__ == '__main__':
             
             #viewManager = ViewManager(self.data)
             drawManager = DrawManager()
-            
             self.imageView2D = ImageView2D(drawManager, useGL=False)
             self.imageView2D.drawingEnabled = True
             self.imageView2D.name = 'ImageView2D:'
             self.imageView2D.shape = [self.data.shape[0], self.data.shape[2]]
             self.imageView2D.slices = 1
-            
+             
             #Needs a 2D view Manager?
             #self.ImageView2D.mouseMoved.connect(lambda axis, x, y, valid: self.ImageView2D._crossHairCursor.showXYPosition(x,y))
+            self.setCentralWidget(self.imageView2D)
 
             self.testChangeSlice(3, axis)
-        
-            #self.ImageView2D.sliceChanged.connect(self.testChangeSlice)
-            
-            self.imageView2D.show()
-            
 
         def testChangeSlice(self, num, axis):
             s = 3*[slice(None,None,None)]
@@ -617,5 +616,7 @@ if __name__ == '__main__':
             
             print "changeSlice num=%d, axis=%d" % (num, axis)
 
-    app = ImageView2DTest([""])
+    app = QApplication(sys.argv)
+    i = ImageView2DTest()
+    i.show()
     app.exec_()
