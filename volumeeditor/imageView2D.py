@@ -376,7 +376,7 @@ class ImageView2D(QGraphicsView):
             hBar.setValue(hBar.value() + self._deltaPan.x())
         else:
             hBar.setValue(hBar.value() - self._deltaPan.x())
-        self.scene().setContent(self.viewportRect(), self.porting_image, self.porting_overlays)
+        self.scene().changeVisibleContent(self.viewportRect())
         
     def _deaccelerate(self, speed, a=1, maxVal=64):
         x = self._qBound(-maxVal, speed.x(), maxVal)
@@ -491,12 +491,10 @@ class ImageView2D(QGraphicsView):
         self.doScale(1.1)
 
     def doScale(self, factor):
-        raise Exception(NotImplementedError)
         self._zoomFactor = self._zoomFactor * factor
         InteractionLogger.log("%f: zoomFactor(factor) %f" % (time.clock(), self._zoomFactor))     
         self.scale(factor, factor)
-        #FIXME
-        self.scene().setContent(self.viewportRect(), self.porting_image, self.porting_overlays)
+        self.scene().changeVisibleContent(self.viewportRect())
 
 #*******************************************************************************
 # i f   _ _ n a m e _ _   = =   " _ _ m a i n _ _ "                            *

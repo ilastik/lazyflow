@@ -111,12 +111,18 @@ class ImageScene2D(QGraphicsScene):
         self.setSceneRect(0,0, *self._shape2D)
 
         # tile rendering
+        self._image = None
+        self._overlays = None
         self._renderThread = ImageSceneRenderThread(self.imagePatches)
         self._renderThread.start()
         self._renderThread.patchAvailable.connect(self.updatePatch)
 
     def setContent(self, rect, image, overlays = ()):
         '''ImageScene immediately starts to render tiles, that display the new content.'''
+        # store data for later rerendering when the rect changes, but not the data
+        self._image = image
+        self._overlays = overlays
+
         #Abandon previous workloads
         self._renderThread.queue.clear()
         self._renderThread.newerDataPending.set()
@@ -134,6 +140,10 @@ class ImageScene2D(QGraphicsScene):
         self._renderThread.dataPending.set()
 
         self.contentChanged.emit()
+
+    def changeVisibleContent( self, rect ):
+        '''Don't change the data to be rendered, but just the visible area.'''
+        self.setContent(rect, self._image, self._overlays)
 
     def updatePatch(self, patchNr):
         p = self.imagePatches[patchNr]
