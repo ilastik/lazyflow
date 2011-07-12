@@ -85,8 +85,8 @@ class PatchAccessor():
 
         return [startx,endx,starty,endy]
 
-    def patchRectF(self, blockNum):
-        startx,endx,starty,endy = self.getPatchBounds(blockNum)
+    def patchRectF(self, blockNum, overlap = 0):
+        startx,endx,starty,endy = self.getPatchBounds(blockNum, overlap)
         return QRectF(QPointF(startx, starty), QPointF(endx,endy))
 
     def getPatchesForRect(self,startx,starty,endx,endy):

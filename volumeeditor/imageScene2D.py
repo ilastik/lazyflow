@@ -90,8 +90,15 @@ class ImageScene2D(QGraphicsScene):
     # the data to be displayed was changed
     contentChanged = pyqtSignal()
 
+    # base patch size: blockSize x blockSize
     blockSize = 64
-    glUpdateDelay = 10 #update delay when a new patch arrives in ms
+    # overlap between patches 
+    # positive number prevents rendering artifacts between patches for certain zoom levels
+    # increases the base blockSize 
+    overlap = 1 
+    
+    # update delay when a new patch arrives in ms
+    glUpdateDelay = 10
     
     def __init__(self, shape2D, viewport):
         QGraphicsScene.__init__(self)
@@ -104,7 +111,7 @@ class ImageScene2D(QGraphicsScene):
         patchAccessor = PatchAccessor(*self._shape2D, blockSize=self.blockSize)
 
         for i in range(patchAccessor.patchCount):
-            r = patchAccessor.patchRectF(i)
+            r = patchAccessor.patchRectF(i, self.overlap)
             patch = ImagePatch(r)
             self.imagePatches.append(patch)
         
