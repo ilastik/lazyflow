@@ -91,7 +91,7 @@ class ImageScene2D(QGraphicsScene):
     contentChanged = pyqtSignal()
 
     # base patch size: blockSize x blockSize
-    blockSize = 64
+    blockSize = 128
     # overlap between patches 
     # positive number prevents rendering artifacts between patches for certain zoom levels
     # increases the base blockSize 
