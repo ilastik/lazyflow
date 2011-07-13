@@ -27,9 +27,25 @@
 #    authors and should not be interpreted as representing official policies, either expressed
 #    or implied, of their employers.
 
-def is2D(shape5D):
-    assert(len(shape5D) == 5)
-    return shape5D[1] == 1 
-def is3D(shape5D):
-    assert(len(shape5D) == 5)
-    return shape5D[1] > 1
+#*******************************************************************************
+# I n t e r a c t i o n L o g g e r                                            *
+#*******************************************************************************
+
+class InteractionLogger():
+    #singleton pattern
+    _instance = None
+    _interactionLog = None
+    
+    def __new__(cls, *args, **kwargs):
+        if not cls._instance:
+            cls._instance = super(InteractionLogger, cls).__new__(cls, *args, **kwargs)
+        return cls._instance
+    
+    def __init__(self):
+        InteractionLogger._interactionLog = []
+    
+    @staticmethod
+    def log(logEntry):
+        if InteractionLogger._interactionLog != None:
+            InteractionLogger._interactionLog.append(logEntry)
+

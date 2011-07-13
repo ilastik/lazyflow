@@ -27,9 +27,36 @@
 #    authors and should not be interpreted as representing official policies, either expressed
 #    or implied, of their employers.
 
-def is2D(shape5D):
-    assert(len(shape5D) == 5)
-    return shape5D[1] == 1 
-def is3D(shape5D):
-    assert(len(shape5D) == 5)
-    return shape5D[1] > 1
+import numpy
+
+#*******************************************************************************
+# V o l u m e U p d a t e                                                      *
+#*******************************************************************************
+
+class VolumeUpdate():
+    def __init__(self, data, offsets, sizes, erasing):
+        self.offsets = offsets
+        self._data = data
+        self.sizes = sizes
+        self.erasing = erasing
+    
+    def applyTo(self, dataAcc):
+        offsets = self.offsets
+        sizes = self.sizes
+        #TODO: move part of function into DataAccessor class !! e.g. setSubVolume or something
+        tempData = dataAcc[offsets[0]:offsets[0]+sizes[0],\
+                           offsets[1]:offsets[1]+sizes[1],\
+                           offsets[2]:offsets[2]+sizes[2],\
+                           offsets[3]:offsets[3]+sizes[3],\
+                           offsets[4]:offsets[4]+sizes[4]].copy()
+
+        if self.erasing == True:
+            tempData = numpy.where(self._data > 0, 0, tempData)
+        else:
+            tempData = numpy.where(self._data > 0, self._data, tempData)
+        
+        dataAcc[offsets[0]:offsets[0]+sizes[0],\
+                offsets[1]:offsets[1]+sizes[1],\
+                offsets[2]:offsets[2]+sizes[2],\
+                offsets[3]:offsets[3]+sizes[3],\
+                offsets[4]:offsets[4]+sizes[4]] = tempData

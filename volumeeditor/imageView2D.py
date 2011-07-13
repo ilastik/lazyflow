@@ -40,7 +40,7 @@ from drawManager import DrawManager
 from crossHairCursor import CrossHairCursor
 from sliceIntersectionMarker import SliceIntersectionMarker
 from imageScene2D import ImageScene2D
-from helper import InteractionLogger
+from interactionLogger import InteractionLogger
 import PyQt4
 
 #*******************************************************************************
@@ -52,9 +52,9 @@ class ImageView2D(QGraphicsView):
     #that is requested
     changeSliceDelta   = pyqtSignal(int)
     
-    drawing            = pyqtSignal(int, QPointF)
-    beginDraw          = pyqtSignal(int, QPointF)
-    endDraw            = pyqtSignal(int, QPointF)
+    drawing            = pyqtSignal(QPointF)
+    beginDraw          = pyqtSignal(QPointF)
+    endDraw            = pyqtSignal(QPointF)
     
     #notifies that the mouse has moved to 2D coordinate x,y
     mouseMoved         = pyqtSignal(int, int)
@@ -269,9 +269,9 @@ class ImageView2D(QGraphicsView):
         result_image.save(QString(filename))
    
     def notifyDrawing(self):
-        pass
+        print "ImageView2D.notifyDrawing"
         #FIXME: resurrect
-        #self.drawing.emit(self._axis, self.mousePos)
+        self.drawing.emit(self.mousePos)
     
     def beginDrawing(self, pos):
         InteractionLogger.log("%f: beginDrawing`()" % (time.clock()))   
@@ -282,17 +282,14 @@ class ImageView2D(QGraphicsView):
         self.tempImageItems.append(line)
         self.scene().addItem(line)
         if self.drawUpdateInterval > 0:
-            self._drawTimer.start(self.drawUpdateInterval) #update labels every some ms
-        #FIXME resurrect    
-        #self.beginDraw.emit(self._axis, pos)
+            self._drawTimer.start(self.drawUpdateInterval) #update labels every some ms 
+        self.beginDraw.emit(pos)
         
     def endDrawing(self, pos):
         InteractionLogger.log("%f: endDrawing()" % (time.clock()))     
         self._drawTimer.stop()
         self._isDrawing = False
-       
-        #FIXME resurrect 
-        #self.endDraw.emit(self._axis, pos)
+        self.endDraw.emit(pos)
 
     def wheelEvent(self, event):
         keys = QApplication.keyboardModifiers()
