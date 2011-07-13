@@ -40,6 +40,7 @@ from PyQt4.QtGui import QApplication, QWidget, QLabel, QSpinBox, \
                         QVBoxLayout, QHBoxLayout, QPushButton, QToolButton, QImageWriter
 
 import numpy, qimage2ndarray
+from functools import partial
 
 from quadsplitter import QuadView
 from view3d.view3d import OverviewScene
@@ -51,9 +52,8 @@ from navigationControler import NavigationControler
 from drawManager import DrawManager
 from sliceSelectorHud import SliceSelectorHud
 
-from helper import HistoryManager, LabelState, VolumeUpdate, is3D
-
-
+from helper import is3D
+from historyManager import HistoryManager
 
 #*******************************************************************************
 # V o l u m e E d i t o r                                                      *
@@ -117,12 +117,12 @@ class VolumeEditor(QWidget):
             self._grid.addWidget(2, self._imageViews[1])
             self._grid.addWidget(3, self._overview)
             for i in xrange(3):
-                self._imageViews[i].drawing.connect(self.updateLabels)
+                self._imageViews[i].drawing.connect(partial(self.updateLabels, axis=i))
                 self._imageViews[i].customContextMenuRequested.connect(self.onCustomContextMenuRequested)
         
-        for v in self._imageViews:
-            v.beginDraw.connect(self.beginDraw)
-            v.endDraw.connect(self.endDraw)
+        for i, v in enumerate(self._imageViews):
+            v.beginDraw.connect(partial(self.beginDraw, axis=i))
+            v.endDraw.connect(partial(self.endDraw, axis=i))
             v.hud = SliceSelectorHud()
 
         # 2D/3D Views
@@ -498,13 +498,13 @@ class VolumeEditor(QWidget):
     def getVisibleState(self):
         return self._viewManager.getVisibleState()
 
-    def beginDraw(self, axis, pos):
+    def beginDraw(self, pos, axis):
         print "VolumeEditor.beginDraw FIXME self.labelWidget.ensureLabelOverlayVisible()"
         
-    def endDraw(self, axis, pos):
+    def endDraw(self, pos, axis):
         result = self._drawManager.endDrawing(pos)
         print "endDraw: result =", result
-        self.updateLabels(axis, pos)
+        self.updateLabels(pos, axis)
         #FIXME
         #self.pushLabelsToLabelWidget()
 
@@ -513,7 +513,8 @@ class VolumeEditor(QWidget):
         newLabels = self.getPendingLabels()
         self.labelWidget.labelMgr.newLabels(newLabels)
         
-    def updateLabels(self, axis, mousePos):
+    def updateLabels(self, mousePos, axis):
+        print "Volumeeditor.updateLabels"
         result = self._drawManager.dumpDraw(mousePos)
         image = result[2]
         ndarr = qimage2ndarray.rgb_view(image)
@@ -521,9 +522,14 @@ class VolumeEditor(QWidget):
         labels = labels.swapaxes(0,1)
         number = self._drawManager.drawnNumber
         labels = numpy.where(labels > 0, number, 0)
-        ls = LabelState('drawing', axis, self._viewManager.slicePosition[axis], result[0:2], labels.shape, self._viewManager.time, self, self._drawManager.erasing, labels, number)
-        self._history.append(ls)        
-        self.setLabels(result[0:2], axis, self._viewManager.slicePosition[axis], labels, self._drawManager.erasing)
+        import time, vigra
+        vigra.impex.writeImage(labels, str(time.time()) + ".png")
+#FIXME: resurrect
+#        ls = LabelState('drawing', axis, self._viewManager.slicePosition[axis], \
+#                        result[0:2], labels.shape, self._viewManager.time, self, \
+#                        self._drawManager.erasing, labels, number)
+#        self._history.append(ls)        
+#        self.setLabels(result[0:2], axis, self._viewManager.slicePosition[axis], labels, self._drawManager.erasing)
         
     def getPendingLabels(self):
         temp = self._pendingLabels
