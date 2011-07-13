@@ -31,6 +31,22 @@ def testVolume(N = 40):
     s[0:10,0:10,0:10] = 200
     return s
 
+def stripes(X = 8, Y = 8, Z = 8):
+    """generates 3D Data with black and white stripes to check cursor positions"""
+    array = numpy.arange(X*Y*Z).reshape(X,Y,Z).astype(numpy.uint8)
+    
+    for x in range(X):
+        for y in range(Y):
+            for z in range(Z):
+                if z % 2 == 0:
+                    array[x,y,z] = 200
+                else:
+                    array[x,y,z] = 0
+    
+    #array.astype(numpy.uint8)
+    return array    
+    
+
 class AnnotatedImageData():
     """
     Helper class to encapsulate the overlay slice and its drawing related settings

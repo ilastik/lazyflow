@@ -192,7 +192,7 @@ class NavigationControler(QObject):
         #set this view as active
         self.activeView = axis
         
-        coor = copy.copy(self._cursorPos)
+        coor = copy.copy(self._slicingPos)
         if axis == 0:
             coor[1] = x
             coor[2] = y
@@ -202,6 +202,7 @@ class NavigationControler(QObject):
         if axis == 2:
             coor[0] = x
             coor[1] = y
+
         #set the new coordinate
         self.cursorPos = coor
 
@@ -263,18 +264,24 @@ class NavigationControler(QObject):
             yView = self._views[1]._crossHairCursor
             zView = self._views[2]._crossHairCursor
             
-            yView.showXPosition(y, x)
-            zView.showYPosition(x, y)
+            #in case of the x-view, yViewYpos and zViewYpos has to be updated
+            #adding 0.5 to make line snap into middle of pixels, like the croshair
+            yView.showYPosition(y + 0.5, x)
+            zView.showYPosition(x + 0.5, y)
         elif self.activeView == 1: # y-axis
             xView = self._views[0]._crossHairCursor
             zView = self._views[2]._crossHairCursor
             
-            xView.showXPosition(y, x)
+            #in case of the y-view, yViewYpos and zViewXpos has to be updated
+            #adding 0.5 to make line snap into middle of pixels, like the croshair
+            xView.showYPosition(y + 0.5, x)
             zView.showXPosition(x, y)
         else: # z-axis
             xView = self._views[0]._crossHairCursor
             yView = self._views[1]._crossHairCursor
                 
+            #in case of the z-view, xViewYpos and yViewXpos has to be updated
+            #no adding required in this case   
             xView.showXPosition(y, x)
             yView.showXPosition(x, y)
     

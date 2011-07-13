@@ -54,6 +54,7 @@ from sliceSelectorHud import SliceSelectorHud
 from helper import HistoryManager, LabelState, VolumeUpdate, is3D
 
 
+
 #*******************************************************************************
 # V o l u m e E d i t o r                                                      *
 #*******************************************************************************
@@ -599,6 +600,8 @@ if __name__ == "__main__":
         def __init__(self, useGL, testmode):
             QObject.__init__(self)
             
+            from testing import stripes
+            
             if testmode == "hugeslab":
                 N = 2000
                 self.data = (numpy.random.rand(N,2*N, 10)*255).astype(numpy.uint8)
@@ -606,6 +609,8 @@ if __name__ == "__main__":
                 N = 100
                 from testing import testVolume
                 self.data = testVolume(N)
+            elif testmode == "stripes":
+                self.data = stripes(50,35,20)
             else:
                 raise RuntimeError("Invalid testing mode")
             
@@ -655,7 +660,7 @@ if __name__ == "__main__":
     
     def fit():
         for i in range(3):
-            t1.dialog._imageViews[i].changeViewPort(QRectF(80,20,30,60))
+            t1.dialog._imageViews[i].changeViewPort(QRectF(0,0,30,30))
             t2.dialog._imageViews[i].changeViewPort(QRectF(0,0,30,30))
             
     button.clicked.connect(fit)       
