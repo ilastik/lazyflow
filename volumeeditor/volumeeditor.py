@@ -59,7 +59,7 @@ from historyManager import HistoryManager
 # V o l u m e E d i t o r                                                      *
 #*******************************************************************************
 
-class VolumeEditor(QWidget):
+class VolumeEditorOld(QWidget):
     changedSlice      = pyqtSignal(int,int)
     onOverlaySelected = pyqtSignal(int)
     newLabelsPending  = pyqtSignal()
@@ -403,9 +403,9 @@ class VolumeEditor(QWidget):
         
         if k_ctrl:        
             if event.delta() > 0:
-                scaleFactor = VolumeEditor.zoomInFactor
+                scaleFactor = VolumeEditorOld.zoomInFactor
             else:
-                scaleFactor = VolumeEditor.zoomOutFactor
+                scaleFactor = VolumeEditorOld.zoomOutFactor
             self._imageViews[0].doScale(scaleFactor)
             self._imageViews[1].doScale(scaleFactor)
             self._imageViews[2].doScale(scaleFactor)
@@ -499,7 +499,7 @@ class VolumeEditor(QWidget):
         return self._viewManager.getVisibleState()
 
     def beginDraw(self, pos, axis):
-        print "VolumeEditor.beginDraw FIXME self.labelWidget.ensureLabelOverlayVisible()"
+        print "VolumeEditorOld.beginDraw FIXME self.labelWidget.ensureLabelOverlayVisible()"
         
     def endDraw(self, pos, axis):
         result = self._drawManager.endDrawing(pos)
@@ -620,7 +620,7 @@ if __name__ == "__main__":
             else:
                 raise RuntimeError("Invalid testing mode")
             
-            self.dialog = VolumeEditor((1,)+self.data.shape+(1,), None, useGL=useGL)
+            self.dialog = VolumeEditorOld((1,)+self.data.shape+(1,), None, useGL=useGL)
             self.dialog.setDrawingEnabled(True)
                         
             self.dataOverlay = OverlayItem(DataAccessor(self.data), alpha=1.0, color=Qt.black, colorTable=OverlayItem.createDefaultColorTable('GRAY', 256), autoVisible=True, autoAlphaChannel=False)
