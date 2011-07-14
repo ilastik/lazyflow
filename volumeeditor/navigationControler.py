@@ -146,23 +146,31 @@ class NavigationControler(QObject):
         #set this view as active
         self.activeView = axis
         
-        coor = copy.copy(self._model.cursorPos)
+        newPos = copy.copy(self._model.cursorPos)
         if axis == 0:
-            coor[1] = x
-            coor[2] = y
+            newPos[1] = x
+            newPos[2] = y
         if axis == 1:
-            coor[0] = x
-            coor[2] = y
+            newPos[0] = x
+            newPos[2] = y
         if axis == 2:
-            coor[0] = x
-            coor[1] = y
+            newPos[0] = x
+            newPos[1] = y
 
-        if coor == self._model.cursorPos:
+        if newPos == self._model.cursorPos:
+            return
+        if not self._positionValid(newPos):
             return
 
-        self._model.cursorPos = coor
+        self._model.cursorPos = newPos
         #update the cross hair cursor after the model has changed
         self._updateCrossHairCursor()
+
+    def _positionValid(self, pos):
+        for i in range(3):
+            if pos[i] < 0 or pos[i] >= self._model.shape[i]:
+                return False
+        return True
 
     def onSlicePosition(self, x, y, axis):
         newPos = copy.copy(self._model.slicingPos)
@@ -170,6 +178,8 @@ class NavigationControler(QObject):
         newPos[i] = x
         newPos[j] = y
         if newPos == self._model.slicingPos:
+            return
+        if not self._positionValid(newPos):
             return
         
         for i in 0,1,2:
@@ -206,8 +216,10 @@ class NavigationControler(QObject):
         '''
         if value < 0 or value > self._model.volumeExtent(axis):
             return
-        newPos = copy.copy(self.slicingPos)
+        newPos = copy.copy(self._model.slicingPos)
         newPos[axis] = value
+        if not self._positionValid(newPos):
+            return
         self._model.slicingPos = newPos
     
     def _updateCrossHairCursor(self):

@@ -532,21 +532,6 @@ class VolumeEditor(QWidget):
         temp = self._pendingLabels
         self._pendingLabels = []
         return temp
-    
-    def updateInfoLabels(self, axis, x, y, valid):
-        if not valid:
-            return       
-#FIXME: resurrect
-#        pos = (posX, posY, posZ) = self._imageViews[axis].coordinateUnderCursor()
-#        colorValues = self.overlayWidget.getOverlayRef("Raw Data").getOverlaySlice(pos[axis], axis, time=0, channel=0)._data[x,y]
-#        
-#        self.posLabel.setText("<b>x:</b> %03i  <b>y:</b> %03i  <b>z:</b> %03i" % (posX, posY, posZ))
-#        
-#        #FIXME RGB is a special case only
-#        if isinstance(colorValues, numpy.ndarray):
-#            self.pixelValuesLabel.setText("<b>R:</b> %03i  <b>G:</b> %03i  <b>B:</b> %03i" % (colorValues[0], colorValues[1], colorValues[2]))
-#        else:
-#            self.pixelValuesLabel.setText("<b>Gray:</b> %03i" %int(colorValues))
 
 #*******************************************************************************
 # i f   _ _ n a m e _ _   = =   " _ _ m a i n _ _ "                            *
@@ -637,7 +622,23 @@ if __name__ == "__main__":
             #FIXME: port to ilastik
             self.dialog.indicateSliceIntersectionButton.toggled.connect(nc.onIndicateSliceIntersectionToggle)
             self.dialog._channelSpin.valueChanged.connect(nc.onChannelChange)
-
+            def updateInfoLabels(pos):
+                for i in range(3):
+                    if pos[i] < 0 or pos[i] >= pm.shape[i]:
+                        self.dialog.posLabel.setText("")
+                        return
+                                
+                rawRef = self.dialog.overlayWidget.getOverlayRef("Raw Data")
+                colorValues = rawRef._data[0,pos[0], pos[1], pos[2], 0]
+                
+                self.dialog.posLabel.setText("<b>x:</b> %03i  <b>y:</b> %03i  <b>z:</b> %03i" % (pos[0], pos[1], pos[2]))
+                
+                #FIXME RGB is a special case only
+                if isinstance(colorValues, numpy.ndarray):
+                    self.dialog.pixelValuesLabel.setText("<b>R:</b> %03i  <b>G:</b> %03i  <b>B:</b> %03i" % (colorValues[0], colorValues[1], colorValues[2]))
+                else:
+                    self.dialog.pixelValuesLabel.setText("<b>Gray:</b> %03i" %int(colorValues))
+            pm.cursorPositionChanged.connect(updateInfoLabels)
 
             self.dialog.setOverlayWidget(overlayWidget)
             
