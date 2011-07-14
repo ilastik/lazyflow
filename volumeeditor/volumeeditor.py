@@ -59,123 +59,21 @@ class VolumeEditorWidget(QWidget):
     def __init__( self, volumeeditor, parent=None ):
         super(VolumeEditorWidget, self).__init__(parent=parent)
         self._ve = volumeeditor
-        
-        # setup up the ortho grid
-        self.grid = QuadView( self )
-        self.grid.addWidget(0, self._ve.imageViews[2])
-        self.grid.addWidget(1, self._ve.imageViews[0])
-        self.grid.addWidget(2, self._ve.imageViews[1])
 
+        # setup quadview
+        self.quadview = QuadView(self)
+        self.quadview.addWidget(0, self._ve.imageViews[2])
+        self.quadview.addWidget(1, self._ve.imageViews[0])
+        self.quadview.addWidget(2, self._ve.imageViews[1])
+        self.quadview.addWidget(3, self._ve.overview)
 
-class FakeLabelPaintCtrl( QObject ):
-    pass
-
-class VolumeEditor( object ):
-    def __init__( self ):
-        # add three imageViews
-        self.imageViews = []
-        self.imageViews.append(ImageView2D(None, useGL=False))
-        self.imageViews.append(ImageView2D(None, useGL=False))
-        self.imageViews.append(ImageView2D(None, useGL=False))
-
-        self.layers = []
-
-    def addVolume( self, data5d ):
-        import time
-        volume5d = time.time()
-        self.layers.append(volume5d)
-        print "addVolume(): added volume " + str(volume5d)
-        return volume5d
-
-    def getLayers( self ):
-        pass
-    
-
-    def getLabels( self ):
-        pass
-    def setLables( self, labels ):
-        pass
-
-
-
-    
-
-class VolumeEditorOld(QWidget):
-    changedSlice      = pyqtSignal(int,int)
-    onOverlaySelected = pyqtSignal(int)
-    newLabelsPending  = pyqtSignal()
-    
-    zoomInFactor  = 1.1
-    zoomOutFactor = 0.9
-    
-    def __init__(self, shape, parent, useGL = False, viewManager = None):
-        QWidget.__init__(self, parent)
-        
-        assert(len(shape) == 5)
-        self._shape = shape
-            
-        self.ilastik = parent   # FIXME: dependency cycle
-        self._grid = None #in 3D mode hold the quad view widget, otherwise remains none
-        
-        # enable interaction logger
-        #InteractionLogger()
-
-        #this setting controls the rescaling of the displayed _data to the full 0-255 range
-        self.normalizeData = False
-
-        #this settings controls the timer interval during interactive mode
-        #set to 0 to wait for complete brushstrokes !
-        #self.drawUpdateInterval = 300
-
-        self._saveThread = ImageSaveThread(self)
-        self._history = HistoryManager(self)
-        self._drawManager = DrawManager()
-        self._viewManager = viewManager
-
-        self._pendingLabels = []
-
-        self._imageViews = []
-        scene0 = ImageView2D(self._drawManager, useGL=useGL)
-        self._imageViews.append(scene0)
-        
-        self._overview = OverviewScene(self, self._shape[1:4])
-
-        #FIXME: resurrect        
-        #self._overview.changedSlice.connect(self.changeSlice)
-        self.changedSlice.connect(self._overview.ChangeSlice)
-
-        if is3D(self._shape):
-            # 3D image          
-            scene1 = ImageView2D(self._drawManager, useGL=useGL)
-            self._imageViews.append(scene1)
-            
-            scene2 = ImageView2D(self._drawManager, useGL=useGL)
-            self._imageViews.append(scene2)
-            
-            self._grid = QuadView(self)
-            self._grid.addWidget(0, self._imageViews[2])
-            self._grid.addWidget(1, self._imageViews[0])
-            self._grid.addWidget(2, self._imageViews[1])
-            self._grid.addWidget(3, self._overview)
-            for i in xrange(3):
-                self._imageViews[i].drawing.connect(partial(self.updateLabels, axis=i))
-                self._imageViews[i].customContextMenuRequested.connect(self.onCustomContextMenuRequested)
-        
-        for i, v in enumerate(self._imageViews):
-            v.beginDraw.connect(partial(self.beginDraw, axis=i))
-            v.endDraw.connect(partial(self.endDraw, axis=i))
-            v.hud = SliceSelectorHud()
-
-        # 2D/3D Views
+        # layout
         viewingLayout = QVBoxLayout()
         viewingLayout.setContentsMargins(10,2,0,2)
         viewingLayout.setSpacing(0)
-        if is3D(self._shape):
-            viewingLayout.addWidget(self._grid)
-            self._grid.setContentsMargins(0,0,10,0)
-        else:
-            viewingLayout.addWidget(self._imageViews[0])
-        
+        viewingLayout.addWidget(self.quadview)
+        self.quadview.setContentsMargins(0,0,10,0)
+
         # Label below views
         labelLayout = QHBoxLayout()
         labelLayout.setMargin(0)
@@ -193,20 +91,16 @@ class VolumeEditorOld(QWidget):
         self._toolBoxLayout = QVBoxLayout()
         self._toolBoxLayout.setMargin(5)
         self._toolBox.setLayout(self._toolBoxLayout)
-        
-        # Add label widget to toolBoxLayout
-        self.labelWidget = None
-
         self._toolBoxLayout.addStretch()
-            
-        # Check box for slice intersection marks
+
+        # Toggle slice intersection marks
         self.indicateSliceIntersectionButton = QToolButton()
         self.indicateSliceIntersectionButton.setText("Indicate Current Position")
         self.indicateSliceIntersectionButton.setCheckable(True)
         self.indicateSliceIntersectionButton.setChecked(True)        
         self._toolBoxLayout.addWidget(self.indicateSliceIntersectionButton)
 
-        #Channel Selector QComboBox in right side tool box
+        # Channel Selector QComboBox in right side tool box
         self._channelSpin = QSpinBox()
         self._channelSpin.setEnabled(True)
         
@@ -220,19 +114,71 @@ class VolumeEditorOld(QWidget):
         self._channelSpinLabel = QLabel("Channel:")
         self._toolBoxLayout.addWidget(self._channelSpinLabel)
         self._toolBoxLayout.addLayout(channelLayout)
-        
-        #TODO:
-        # == 3 checks for RGB image
-        if self._shape[-1] == 1 or self._shape[-1] == 3: #only show when needed
+
+        # == 3 checks for RGB image and activates channel selector
+        if self._ve._shape[-1] == 1 or self._ve._shape[-1] == 3: #only show when needed
             self._channelSpin.setVisible(False)
             self._channelSpinLabel.setVisible(False)
             self.channelEditBtn.setVisible(False)
-        self._channelSpin.setRange(0,self._shape[-1] - 1)
+        self._channelSpin.setRange(0,self._ve._shape[-1] - 1)
+
+
+        self._toolBoxLayout.setAlignment(Qt.AlignTop)
+
+
+class VolumeEditor( QObject ):
+    changedSlice      = pyqtSignal(int,int)
+    onOverlaySelected = pyqtSignal(int)
+    newLabelsPending  = pyqtSignal()
+    
+    zoomInFactor  = 1.1
+    zoomOutFactor = 0.9
+
+    def __init__( self, shape, useGL = False ):
+        assert(len(shape) == 5)
+        self._shape = shape
+
+        #this setting controls the rescaling of the displayed _data to the full 0-255 range
+        self.normalizeData = False
+
+        #this settings controls the timer interval during interactive mode
+        #set to 0 to wait for complete brushstrokes !
+        #self.drawUpdateInterval = 300
+
+        self._saveThread = ImageSaveThread(self)
+        self._history = HistoryManager(self)
+        self._drawManager = DrawManager()
+
+        self._pendingLabels = []
+
+        # three ortho views
+        self.imageViews = []
+        self.imageViews.append(ImageView2D(self._drawManager, useGL=useGL))
+        self.imageViews.append(ImageView2D(self._drawManager, useGL=useGL))
+        self.imageViews.append(ImageView2D(self._drawManager, useGL=useGL)) 
+
+        for i in xrange(3):
+            self.imageViews[i].drawing.connect(partial(self.updateLabels, axis=i))
+            self.imageViews[i].customContextMenuRequested.connect(self.onCustomContextMenuRequested)
+
+        # 3d overview
+        self.overview = OverviewScene(self, self._shape[1:4])
+
+        #FIXME: resurrect        
+        #self.overview.changedSlice.connect(self.changeSlice)
+        self.changedSlice.connect(self.overview.ChangeSlice)
+        for i, v in enumerate(self.imageViews):
+            v.beginDraw.connect(partial(self.beginDraw, axis=i))
+            v.endDraw.connect(partial(self.endDraw, axis=i))
+            v.hud = SliceSelectorHud()
+
+        # Add label widget to toolBoxLayout
+        self.labelWidget = None
 
         #Overlay selector
         self.overlayWidget = None
 
-        self._toolBoxLayout.setAlignment(Qt.AlignTop)
+
         
         # some auxiliary stuff
         self._initShortcuts()
@@ -256,11 +202,16 @@ class VolumeEditorOld(QWidget):
         self.update()
         if self._grid:
             self._grid.update()
-        
-    def setDrawingEnabled(self, enabled): 
-        for i in range(3):
-            self._imageViews[i].drawingEnabled = enabled
+
+
+
+
+
     
+
+class VolumeEditorOld(QWidget):
+    def __init__(self, shape, parent, useGL = False, viewManager = None):
+            
     def onCustomContextMenuRequested(self, pos):
         print "Volumeeditor.onCustomContextMenuRequested"
         self.customContextMenuRequested.emit(pos)
@@ -603,8 +554,7 @@ if __name__ == "__main__":
     #make the program quit on Ctrl+C
     import signal
     signal.signal(signal.SIGINT, signal.SIG_DFL)
-    from overlayItem  import OverlayItem
-    from _testing.volume import DataAccessor
+    from overlayItem  import OverlayItem    from _testing.volume import DataAccessor
     
     def img(N):
         def meshgrid2(*arrs):
@@ -661,8 +611,9 @@ if __name__ == "__main__":
             else:
                 raise RuntimeError("Invalid testing mode")
             
-            self.dialog = VolumeEditorOld((1,)+self.data.shape+(1,), None, useGL=useGL)
-            self.dialog.setDrawingEnabled(True)
+            self.editor = VolumeEditor((1,)+self.data.shape+(1,), useGL=useGL)
+            self.editor.setDrawingEnabled(True)            
+            self.widget = VolumeEditorWidget( self.editor )
                         
             self.dataOverlay = OverlayItem(DataAccessor(self.data), alpha=1.0, color=Qt.black, colorTable=OverlayItem.createDefaultColorTable('GRAY', 256), autoVisible=True, autoAlphaChannel=False)
             
@@ -676,15 +627,15 @@ if __name__ == "__main__":
             overlayWidget = FakeOverlayWidget()
             overlayWidget.overlays = [self.dataOverlay.getRef()]
             
-            nc = NavigationControler( self.dialog._imageViews, self.data, overlayWidget )
+            nc = NavigationControler( self.editor._imageViews, self.data, overlayWidget )
             #FIXME: port to ilastik
-            self.dialog.indicateSliceIntersectionButton.toggled.connect(nc.onIndicateSliceIntersectionToggle)
-            self.dialog._channelSpin.valueChanged.connect(nc.onChannelChange)
+            self.editor.indicateSliceIntersectionButton.toggled.connect(nc.onIndicateSliceIntersectionToggle)
+            self.editor._channelSpin.valueChanged.connect(nc.onChannelChange)
 
 
-            self.dialog.setOverlayWidget(overlayWidget)
+            self.editor.setOverlayWidget(overlayWidget)
             
-            self.dialog.show()
+            self.widget.show()
             
             #show some initial position
             nc.slicingPos = [5,10,2]
