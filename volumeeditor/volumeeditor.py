@@ -361,10 +361,6 @@ class VolumeEditor(QWidget):
         if self.ilastik:        
             self.ilastik.project.dataMgr[self.ilastik._activeImageNumber].overlayMgr.ilastik = self.ilastik
 
-        #FIXME: porting
-        for view in self._imageViews:
-            view.porting_overlaywidget = self.overlayWidget
-
     def setRgbMode(self, mode): 
         """
         change display mode of 3-channel images to either rgb, or 3-channels
@@ -635,7 +631,7 @@ if __name__ == "__main__":
             overlayWidget = FakeOverlayWidget()
             overlayWidget.overlays = [self.dataOverlay.getRef()]
             
-            nc = NavigationControler( self.dialog._imageViews, self.data, overlayWidget )
+            nc = NavigationControler( self.dialog._imageViews, self.data.shape, overlayWidget )
             #FIXME: port to ilastik
             self.dialog.indicateSliceIntersectionButton.toggled.connect(nc.onIndicateSliceIntersectionToggle)
             self.dialog._channelSpin.valueChanged.connect(nc.onChannelChange)

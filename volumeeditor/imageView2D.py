@@ -226,7 +226,6 @@ class ImageView2D(QGraphicsView):
             #reset the background cache
             self.resetCachedContent()
 
-
     def swapAxes(self):          
         '''Displays this image as if the x and y axes were swapped.
         '''

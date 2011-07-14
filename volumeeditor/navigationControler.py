@@ -80,7 +80,7 @@ class NavigationControler(QObject):
 
     @property
     def shape( self ):
-        return self._volume.shape
+        return self._volumeShape
 
     @property    
     def time( self ):
@@ -117,17 +117,18 @@ class NavigationControler(QObject):
         for v in self._views:
             v._sliceIntersectionMarker.setVisibility(show)
         
-    def __init__(self, imageView2Ds, volume, overlaywidget, time = 0, channel = 0):
+    def __init__(self, imageView2Ds, volumeShape, overlaywidget, time = 0, channel = 0):
         '''
-        volume - scalar, 3d numpy array containing the raw volume
+        volumeShape - 3D shape of the voxel data
 
         '''
         QObject.__init__(self)
         assert len(imageView2Ds) == 3
+        assert len(volumeShape) == 3
 
         # init fields
         self._views = imageView2Ds
-        self._volume = volume
+        self._volumeShape = volumeShape
         self._overlaywidget = overlaywidget
         self._beginStackIndex = 0
         self._endStackIndex   = 1
@@ -242,7 +243,7 @@ class NavigationControler(QObject):
            
     def sliceShape(self, axis):
         """returns the 2D shape of slices perpendicular to axis"""
-        shape = self._volume.shape
+        shape = self._volumeShape
         if len(shape) == 2:
             return shape
         else:
@@ -252,7 +253,7 @@ class NavigationControler(QObject):
     
     def volumeExtent(self, axis):
         """returns the 1D extent of the volume along axis"""
-        return self._volume.shape[axis]
+        return self._volumeShape[axis]
 
 
     
@@ -291,7 +292,7 @@ class NavigationControler(QObject):
             v._sliceIntersectionMarker.setPosition(x,y)
 
     def _updateSlice(self, num, axis):
-        if num < 0 or num >= self._volume.shape[axis]:
+        if num < 0 or num >= self._volumeShape[axis]:
             raise Exception("NavigationControler._setSlice(): invalid slice number")
 
         # update view
