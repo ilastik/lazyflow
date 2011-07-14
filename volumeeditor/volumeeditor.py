@@ -200,12 +200,6 @@ class VolumeEditor( QObject ):
         self._initShortcuts()
         self.focusAxis =  0 #the currently focused axis
 
-
-
-
-    
-
-class VolumeEditorOld(QWidget):            
     def onCustomContextMenuRequested(self, pos):
         print "Volumeeditor.onCustomContextMenuRequested"
         self.customContextMenuRequested.emit(pos)
@@ -537,6 +531,7 @@ class VolumeEditorOld(QWidget):
 #        else:
 #            self.pixelValuesLabel.setText("<b>Gray:</b> %03i" %int(colorValues))
 
+
 #*******************************************************************************
 # i f   _ _ n a m e _ _   = =   " _ _ m a i n _ _ "                            *
 #*******************************************************************************
@@ -548,7 +543,8 @@ if __name__ == "__main__":
     #make the program quit on Ctrl+C
     import signal
     signal.signal(signal.SIGINT, signal.SIG_DFL)
-    from overlayItem  import OverlayItem    from _testing.volume import DataAccessor
+    from overlayItem  import OverlayItem  
+    from _testing.volume import DataAccessor
     
     def img(N):
         def meshgrid2(*arrs):
