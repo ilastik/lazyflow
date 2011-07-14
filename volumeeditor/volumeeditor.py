@@ -51,6 +51,7 @@ from imageSaveThread import ImageSaveThread
 from navigationControler import NavigationControler
 from drawManager import DrawManager
 from sliceSelectorHud import SliceSelectorHud
+from positionModel import PositionModel
 
 from helper import is3D
 from historyManager import HistoryManager
@@ -339,10 +340,6 @@ class VolumeEditor( QObject ):
         self.overlayWidget = widget
         self.overlayWidget.selectedOverlay.connect(self.onOverlaySelected)
         
-        #FIXME: porting
-        for view in self.imageViews:
-            view.porting_overlaywidget = self.overlayWidget
-
     def setRgbMode(self, mode): 
         """
         change display mode of 3-channel images to either rgb, or 3-channels
@@ -513,21 +510,6 @@ class VolumeEditor( QObject ):
         temp = self._pendingLabels
         self._pendingLabels = []
         return temp
-    
-    def updateInfoLabels(self, axis, x, y, valid):
-        if not valid:
-            return       
-#FIXME: resurrect
-#        pos = (posX, posY, posZ) = self._imageViews[axis].coordinateUnderCursor()
-#        colorValues = self.overlayWidget.getOverlayRef("Raw Data").getOverlaySlice(pos[axis], axis, time=0, channel=0)._data[x,y]
-#        
-#        self.posLabel.setText("<b>x:</b> %03i  <b>y:</b> %03i  <b>z:</b> %03i" % (posX, posY, posZ))
-#        
-#        #FIXME RGB is a special case only
-#        if isinstance(colorValues, numpy.ndarray):
-#            self.pixelValuesLabel.setText("<b>R:</b> %03i  <b>G:</b> %03i  <b>B:</b> %03i" % (colorValues[0], colorValues[1], colorValues[2]))
-#        else:
-#            self.pixelValuesLabel.setText("<b>Gray:</b> %03i" %int(colorValues))
 
 
 #*******************************************************************************
@@ -615,11 +597,28 @@ if __name__ == "__main__":
             overlayWidget = FakeOverlayWidget()
             overlayWidget.overlays = [self.dataOverlay.getRef()]
             
-            nc = NavigationControler( self.editor.imageViews, self.data, overlayWidget )
+            pm = PositionModel(self.data.shape)
+            nc = NavigationControler( self.editor.imageViews, pm, overlayWidget )
             #FIXME: port to ilastik
             self.widget.indicateSliceIntersectionButton.toggled.connect(nc.onIndicateSliceIntersectionToggle)
             self.widget._channelSpin.valueChanged.connect(nc.onChannelChange)
-
+            def updateInfoLabels(pos):
+                for i in range(3):
+                    if pos[i] < 0 or pos[i] >= pm.shape[i]:
+                        self.widget.posLabel.setText("")
+                        return
+                                
+                rawRef = self.editor.overlayWidget.getOverlayRef("Raw Data")
+                colorValues = rawRef._data[0,pos[0], pos[1], pos[2], 0]
+                
+                self.widget.posLabel.setText("<b>x:</b> %03i  <b>y:</b> %03i  <b>z:</b> %03i" % (pos[0], pos[1], pos[2]))
+                
+                #FIXME RGB is a special case only
+                if isinstance(colorValues, numpy.ndarray):
+                    self.widget.pixelValuesLabel.setText("<b>R:</b> %03i  <b>G:</b> %03i  <b>B:</b> %03i" % (colorValues[0], colorValues[1], colorValues[2]))
+                else:
+                    self.widget.pixelValuesLabel.setText("<b>Gray:</b> %03i" %int(colorValues))
+            pm.cursorPositionChanged.connect(updateInfoLabels)
 
             self.editor.setOverlayWidget(overlayWidget)
             

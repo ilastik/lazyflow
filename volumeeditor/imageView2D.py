@@ -226,7 +226,6 @@ class ImageView2D(QGraphicsView):
             #reset the background cache
             self.resetCachedContent()
 
-
     def swapAxes(self):          
         '''Displays this image as if the x and y axes were swapped.
         '''
@@ -506,23 +505,47 @@ if __name__ == '__main__':
     from PyQt4.QtGui import QMainWindow
     from scipy.misc import lena
     
+    def checkerboard(shape, squareSize):
+        cb = numpy.zeros(shape)
+        for i in range(shape[0]/squareSize):
+            for j in range(shape[1]/squareSize):
+                a = i*squareSize
+                b = min((i+1)*squareSize, shape[0])
+                c = j*squareSize
+                d = min((j+1)*squareSize, shape[1])
+                if i%2 == j%2:
+                    cb[a:b,c:d] = 255
+        return cb
+    
+    def cross(shape, width):
+        c = numpy.zeros(shape)
+        w2 = shape[0]/2
+        h2 = shape[1]/2
+        c[0:shape[0], h2-width/2:h2+width/2] = 255
+        c[w2-width/2:w2+width/2, 0:shape[1]] = 255
+        return c
+    
     class ImageView2DTest(QMainWindow):    
         def __init__(self, useGL):
             QMainWindow.__init__(self)
             
-            self.data = lena()
-            self.data = self.data.swapaxes(0,1)
+            self.lena = lena().swapaxes(0,1)
+            self.checkerboard = checkerboard(self.lena.shape, 20)
+            self.cross = cross(self.lena.shape, 30)
 
             drawManager = DrawManager()
             self.imageView2D = ImageView2D(drawManager, useGL=useGL)
             self.imageView2D.drawingEnabled = True
             self.imageView2D.name = 'ImageView2D:'
-            self.imageView2D.shape = [self.data.shape[0], self.data.shape[1]]
+            self.imageView2D.shape = self.lena.shape
             self.imageView2D.slices = 1
             self.setCentralWidget(self.imageView2D)
 
-            image = OverlaySlice(self.data, color = QColor("red"), alpha = 1.0, colorTable = None, min = None, max = None, autoAlphaChannel = False)
-            self.imageView2D.scene().setContent(self.imageView2D.viewportRect(), None, (image,))
+            imageSlice = OverlaySlice(self.lena, color = QColor("red"), alpha = 1.0, colorTable = None, min = None, max = None, autoAlphaChannel = False)
+            cbSlice    = OverlaySlice(self.checkerboard, color = QColor("green"), alpha = 0.5, colorTable = None, min = None, max = None, autoAlphaChannel = False)
+            crossSlice = OverlaySlice(self.cross, color = QColor("blue"), alpha = 0.5, colorTable = None, min = None, max = None, autoAlphaChannel = False)
+            
+            self.imageView2D.scene().setContent(self.imageView2D.viewportRect(), None, (imageSlice, cbSlice, crossSlice))
 
     if not 'gl' in sys.argv and not 's' in sys.argv:
         print "Usage: python imageView2D.py mode"
