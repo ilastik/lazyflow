@@ -51,6 +51,7 @@ from imageSaveThread import ImageSaveThread
 from navigationControler import NavigationControler
 from drawManager import DrawManager
 from sliceSelectorHud import SliceSelectorHud
+from positionModel import PositionModel
 
 from helper import is3D
 from historyManager import HistoryManager
@@ -631,7 +632,8 @@ if __name__ == "__main__":
             overlayWidget = FakeOverlayWidget()
             overlayWidget.overlays = [self.dataOverlay.getRef()]
             
-            nc = NavigationControler( self.dialog._imageViews, self.data.shape, overlayWidget )
+            pm = PositionModel(self.data.shape)
+            nc = NavigationControler( self.dialog._imageViews, pm, overlayWidget )
             #FIXME: port to ilastik
             self.dialog.indicateSliceIntersectionButton.toggled.connect(nc.onIndicateSliceIntersectionToggle)
             self.dialog._channelSpin.valueChanged.connect(nc.onChannelChange)

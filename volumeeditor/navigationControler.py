@@ -42,7 +42,7 @@ def posView2D(pos3d, axis):
     return pos2d
 
 #*******************************************************************************
-# NavigationControler                                                          *
+# N a v i g a t i o n C o n t r o l e r                                        *
 #*******************************************************************************
 
 class NavigationControler(QObject):
@@ -50,26 +50,6 @@ class NavigationControler(QObject):
     ##
     ## properties
     ##
-    @property
-    def cursorPos(self):
-        return self._cursorPos
-    @cursorPos.setter
-    def cursorPos(self, coordinates):
-        self._cursorPos = coordinates
-        self._updateCrossHairCursor()
-    
-    @property
-    def slicingPos(self):
-        return self._slicingPos
-    @slicingPos.setter
-    def slicingPos(self, pos):
-        oldSP = self._slicingPos
-        self._slicingPos = pos
-        self._updateSliceIntersection()
-
-        for i in 0,1,2:
-            if pos[i] is not oldSP[i]:
-                self._updateSlice(pos[i], i)
 
     @property
     def activeView(self):
@@ -77,24 +57,6 @@ class NavigationControler(QObject):
     @activeView.setter
     def activeView(self, view):
         self._activeView = view
-
-    @property
-    def shape( self ):
-        return self._volumeShape
-
-    @property    
-    def time( self ):
-        return self._time
-    @time.setter
-    def time( self, value ):
-        self._time = value
-
-    @property
-    def channel( self ):
-        return self._channel
-    @channel.setter
-    def channel( self, value):
-        self._channel = value
     
     @property
     def axisColors( self ):
@@ -117,18 +79,17 @@ class NavigationControler(QObject):
         for v in self._views:
             v._sliceIntersectionMarker.setVisibility(show)
         
-    def __init__(self, imageView2Ds, volumeShape, overlaywidget, time = 0, channel = 0):
+    def __init__(self, imageView2Ds, positionModel, overlaywidget, time = 0, channel = 0):
         '''
         volumeShape - 3D shape of the voxel data
 
         '''
         QObject.__init__(self)
         assert len(imageView2Ds) == 3
-        assert len(volumeShape) == 3
 
         # init fields
         self._views = imageView2Ds
-        self._volumeShape = volumeShape
+        self._model = positionModel
         self._overlaywidget = overlaywidget
         self._beginStackIndex = 0
         self._endStackIndex   = 1
@@ -140,29 +101,21 @@ class NavigationControler(QObject):
             v.mouseMoved.connect(partial(self.onCursorPosition, axis=i))
             v.mouseDoubleClicked.connect(partial(self.onSlicePosition, axis=i))
             v.changeSliceDelta.connect(partial(self.onRelativeSliceChange, axis=i))
-            v.shape = self.sliceShape(axis=i)
-            v.slices = self.volumeExtent(axis=i)
+            v.shape = self._model.sliceShape(axis=i)
+            v.slices = self._model.volumeExtent(axis=i)
             
             v.hud.label = axisLabels[i]
             v.hud.minimum = 0
-            v.hud.maximum = self.volumeExtent(i)
+            v.hud.maximum = self._model.volumeExtent(i)
             v.hud.sliceSelector.valueChanged.connect(partial(self.onAbsoluteSliceChange, axis=i))
         self._views[0].swapAxes()
 
         # init property fields
-        self._cursorPos  = [0,0,0]
-        self._slicingPos = [0,0,0]
         self._activeView = 0
-        self._time = 0
-        self._channel = 0
         self._axisColors = [QColor(255,0,0,255), QColor(0,255,0,255), QColor(0,0,255,255)]
 
         # call property setters to trigger updates etc. 
-        self.cursorPos  = [0,0,0]
-        self.slicingPos = [0,0,0]
         self.activeView = 0
-        self.time = time
-        self.channel = channel
         self.axisColors = [QColor(255,0,0,255), QColor(0,255,0,255), QColor(0,0,255,255)]
 
 
@@ -193,7 +146,7 @@ class NavigationControler(QObject):
         #set this view as active
         self.activeView = axis
         
-        coor = copy.copy(self._slicingPos)
+        coor = copy.copy(self._model.cursorPos)
         if axis == 0:
             coor[1] = x
             coor[2] = y
@@ -204,15 +157,27 @@ class NavigationControler(QObject):
             coor[0] = x
             coor[1] = y
 
-        #set the new coordinate
-        self.cursorPos = coor
+        if coor == self._model.cursorPos:
+            return
+
+        self._model.cursorPos = coor
+        #update the cross hair cursor after the model has changed
+        self._updateCrossHairCursor()
 
     def onSlicePosition(self, x, y, axis):
-        newPos = copy.copy(self.slicingPos)
+        newPos = copy.copy(self._model.slicingPos)
         i,j = posView2D([0,1,2], axis)
         newPos[i] = x
         newPos[j] = y
-        self.slicingPos = newPos
+        if newPos == self._model.slicingPos:
+            return
+        
+        for i in 0,1,2:
+            self._updateSlice(newPos[i], i)
+        
+        self._model.slicingPos = newPos
+        #update the slice intersection after the model has changed
+        self._updateSliceIntersection()
 
     def onRelativeSliceChange(self, delta, axis):
         '''Change slice along a certain axis relative to current slice.
@@ -221,12 +186,16 @@ class NavigationControler(QObject):
         axis -- along which axis [0,1,2]
  
         '''
-        newSlice = self.slicingPos[axis] + delta
-        if newSlice < 0 or newSlice > self.volumeExtent(axis):
+        if delta == 0:
             return
-        newPos = copy.copy(self.slicingPos)
+        newSlice = self._model.slicingPos[axis] + delta
+        if newSlice < 0 or newSlice > self._model.volumeExtent(axis):
+            return
+        newPos = copy.copy(self._model.slicingPos)
         newPos[axis] = newSlice
-        self.slicingPos = newPos
+        
+        self._updateSlice(newSlice, axis)
+        self._model.slicingPos = newPos
 
     def onAbsoluteSliceChange(self, value, axis):
         '''Change slice along a certain axis.
@@ -235,30 +204,14 @@ class NavigationControler(QObject):
         axis -- along which axis [0,1,2]
  
         '''
-        if value < 0 or value > self.volumeExtent(axis):
+        if value < 0 or value > self._model.volumeExtent(axis):
             return
         newPos = copy.copy(self.slicingPos)
         newPos[axis] = value
-        self.slicingPos = newPos
-           
-    def sliceShape(self, axis):
-        """returns the 2D shape of slices perpendicular to axis"""
-        shape = self._volumeShape
-        if len(shape) == 2:
-            return shape
-        else:
-            shape = list(shape)
-            del shape[axis]
-            return numpy.asarray(shape)
-    
-    def volumeExtent(self, axis):
-        """returns the 1D extent of the volume along axis"""
-        return self._volumeShape[axis]
-
-
+        self._model.slicingPos = newPos
     
     def _updateCrossHairCursor(self):
-        x,y = posView2D(self.cursorPos, axis=self.activeView)
+        x,y = posView2D(self._model.cursorPos, axis=self.activeView)
         self._views[self.activeView]._crossHairCursor.showXYPosition(x,y)
         
         if self.activeView == 0: # x-axis
@@ -288,11 +241,11 @@ class NavigationControler(QObject):
     
     def _updateSliceIntersection(self):
         for axis, v in enumerate(self._views):
-            x,y = posView2D(self.slicingPos, axis)
+            x,y = posView2D(self._model.slicingPos, axis)
             v._sliceIntersectionMarker.setPosition(x,y)
 
     def _updateSlice(self, num, axis):
-        if num < 0 or num >= self._volumeShape[axis]:
+        if num < 0 or num >= self._model.volumeExtent(axis):
             raise Exception("NavigationControler._setSlice(): invalid slice number")
 
         # update view
