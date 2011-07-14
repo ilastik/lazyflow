@@ -34,7 +34,7 @@
 #    1f810747c21380eda916c2c5b7b5d1893f92663e
 #    e65f5bad2cd9fdaefbe7ceaafa0cce0e071b56e4
 
-from PyQt4.QtCore import Qt, pyqtSignal, QDir
+from PyQt4.QtCore import Qt, pyqtSignal, QDir, QObject
 from PyQt4.QtGui import QApplication, QWidget, QLabel, QSpinBox, \
                         QShortcut, QKeySequence, QSplitter, \
                         QVBoxLayout, QHBoxLayout, QPushButton, QToolButton, QImageWriter
@@ -55,9 +55,50 @@ from sliceSelectorHud import SliceSelectorHud
 from helper import is3D
 from historyManager import HistoryManager
 
-#*******************************************************************************
-# V o l u m e E d i t o r                                                      *
-#*******************************************************************************
+class VolumeEditorWidget(QWidget):
+    def __init__( self, volumeeditor, parent=None ):
+        super(VolumeEditorWidget, self).__init__(parent=parent)
+        self._ve = volumeeditor
+        
+        # setup up the ortho grid
+        self.grid = QuadView( self )
+        self.grid.addWidget(0, self._ve.imageViews[2])
+        self.grid.addWidget(1, self._ve.imageViews[0])
+        self.grid.addWidget(2, self._ve.imageViews[1])
+
+
+class FakeLabelPaintCtrl( QObject ):
+    pass
+
+class VolumeEditor( object ):
+    def __init__( self ):
+        # add three imageViews
+        self.imageViews = []
+        self.imageViews.append(ImageView2D(None, useGL=False))
+        self.imageViews.append(ImageView2D(None, useGL=False))
+        self.imageViews.append(ImageView2D(None, useGL=False))
+
+        self.layers = []
+
+    def addVolume( self, data5d ):
+        import time
+        volume5d = time.time()
+        self.layers.append(volume5d)
+        print "addVolume(): added volume " + str(volume5d)
+        return volume5d
+
+    def getLayers( self ):
+        pass
+    
+
+    def getLabels( self ):
+        pass
+    def setLables( self, labels ):
+        pass
+
+
+
+    
 
 class VolumeEditorOld(QWidget):
     changedSlice      = pyqtSignal(int,int)
@@ -651,27 +692,36 @@ if __name__ == "__main__":
     app = QApplication(sys.argv)
     
     if len(sys.argv) < 2:
-        raise RuntimeError("Usage: python volumeeditor.py <testmode> (hugeslab or cuboid)")
+        raise RuntimeError("Usage: python volumeeditor.py <testmode> (hugeslab, cuboid, veng)")
     testmode = sys.argv[1]
     
-    s = QSplitter()
-    t1 = Test(True, testmode)
-    t2 = Test(False, testmode)
-    s.addWidget(t1.dialog)
-    s.addWidget(t2.dialog)
+    if testmode in ['cuboid', 'hugeslab']:
+        s = QSplitter()
+        t1 = Test(True, testmode)
+        t2 = Test(False, testmode)
+        s.addWidget(t1.dialog)
+        s.addWidget(t2.dialog)
+
+        button=QPushButton("fitToView");
     
-    button=QPushButton("fitToView");
+        s.addWidget(button)
     
-    s.addWidget(button)
-    
-    def fit():
-        for i in range(3):
-            t1.dialog._imageViews[i].changeViewPort(QRectF(0,0,30,30))
-            t2.dialog._imageViews[i].changeViewPort(QRectF(0,0,30,30))
+        def fit():
+            for i in range(3):
+                t1.dialog._imageViews[i].changeViewPort(QRectF(0,0,30,30))
+                t2.dialog._imageViews[i].changeViewPort(QRectF(0,0,30,30))
             
-    button.clicked.connect(fit)       
+        button.clicked.connect(fit)       
     
-    s.showMaximized()
+        s.showMaximized()
+
+    if testmode == 'veng':
+        ve = VolumeEditor()
+        frame = VolumeEditorWidget( ve )
+        frame.showMaximized()
+
+        ve.addVolume( 0 )
+        ve.addVolume( 0 )
 
     app.exec_()
 
