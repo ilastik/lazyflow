@@ -65,10 +65,10 @@ class VolumeEditorWidget(QWidget):
         self.quadview.addWidget(0, self._ve.imageViews[2])
         self.quadview.addWidget(1, self._ve.imageViews[0])
         self.quadview.addWidget(2, self._ve.imageViews[1])
-        self.quadview.addWidget(3, self._ve.overview)
 
         #3d overview
         self.overview = OverviewScene(self, self._ve._shape[1:4])
+        self.quadview.addWidget(3, self.overview)
         #FIXME: resurrect        
         #self.overview.changedSlice.connect(self.changeSlice)
         self._ve.changedSlice.connect(self.overview.ChangeSlice)
@@ -111,7 +111,7 @@ class VolumeEditorWidget(QWidget):
         self._channelSpin.setEnabled(True)
         
         self.channelEditBtn = QPushButton('Edit channels')
-        self.channelEditBtn.clicked.connect(self.on_editChannels)
+        self.channelEditBtn.clicked.connect(self._ve.on_editChannels)
         
         channelLayout = QHBoxLayout()
         channelLayout.addWidget(self._channelSpin)
@@ -143,15 +143,52 @@ class VolumeEditorWidget(QWidget):
         self.setLayout(splitterLayout)
 
         # drawing
-        for i, v in enumerate(self.imageViews):
-            v.beginDraw.connect(partial(self.beginDraw, axis=i))
-            v.endDraw.connect(partial(self.endDraw, axis=i))
+        for i, v in enumerate(self._ve.imageViews):
+            v.beginDraw.connect(partial(self._ve.beginDraw, axis=i))
+            v.endDraw.connect(partial(self._ve.endDraw, axis=i))
             v.hud = SliceSelectorHud()
+
+        # shortcuts
+        self._initShortcuts()
 
         
         self.updateGeometry()
         self.update()
         self.quadview.update()
+
+    def _shortcutHelper(self, keySequence, group, description, parent, function, context = None, enabled = None):
+        shortcut = QShortcut(QKeySequence(keySequence), parent, member=function, ambiguousMember=function)
+        if context != None:
+            shortcut.setContext(context)
+        if enabled != None:
+            shortcut.setEnabled(True)
+        return shortcut, group, description
+
+    def _initShortcuts(self):
+        self.shortcuts = []
+        self.shortcuts.append(self._shortcutHelper("Ctrl+Z", "Labeling", "History undo", self, self._ve.historyUndo, Qt.ApplicationShortcut, True))
+        self.shortcuts.append(self._shortcutHelper("Ctrl+Shift+Z", "Labeling", "History redo", self, self._ve.historyRedo, Qt.ApplicationShortcut, True))
+        self.shortcuts.append(self._shortcutHelper("Ctrl+Y", "Labeling", "History redo", self, self._ve.historyRedo, Qt.ApplicationShortcut, True))
+        self.shortcuts.append(self._shortcutHelper("Space", "Overlays", "Invert overlay visibility", self, self._ve.toggleOverlays, enabled = True))
+        self.shortcuts.append(self._shortcutHelper("l", "Labeling", "Go to next label (cyclic, forward)", self, self._ve.nextLabel))
+        self.shortcuts.append(self._shortcutHelper("k", "Labeling", "Go to previous label (cyclic, backwards)", self, self._ve.prevLabel))
+        self.shortcuts.append(self._shortcutHelper("x", "Navigation", "Enlarge slice view x to full size", self, self._ve.toggleFullscreenX))
+        self.shortcuts.append(self._shortcutHelper("y", "Navigation", "Enlarge slice view y to full size", self, self._ve.toggleFullscreenY))
+        self.shortcuts.append(self._shortcutHelper("z", "Navigation", "Enlarge slice view z to full size", self, self._ve.toggleFullscreenZ))
+        self.shortcuts.append(self._shortcutHelper("q", "Navigation", "Switch to next channel", self, self._ve.nextChannel))
+        self.shortcuts.append(self._shortcutHelper("a", "Navigation", "Switch to previous channel", self, self._ve.previousChannel))
+        
+        for scene in self._ve.imageViews:
+            self.shortcuts.append(self._shortcutHelper("n", "Labeling", "Increase brush size", scene,self._ve._drawManager.brushSmaller, Qt.WidgetShortcut))
+            self.shortcuts.append(self._shortcutHelper("m", "Labeling", "Decrease brush size", scene, self._ve._drawManager.brushBigger, Qt.WidgetShortcut))
+            self.shortcuts.append(self._shortcutHelper("+", "Navigation", "Zoom in", scene, scene.zoomIn, Qt.WidgetShortcut))
+            self.shortcuts.append(self._shortcutHelper("-", "Navigation", "Zoom out", scene, scene.zoomOut, Qt.WidgetShortcut))
+            self.shortcuts.append(self._shortcutHelper("p", "Navigation", "Slice up", scene, scene.sliceUp, Qt.WidgetShortcut))
+            self.shortcuts.append(self._shortcutHelper("o", "Navigation", "Slice down", scene, scene.sliceDown, Qt.WidgetShortcut))
+            self.shortcuts.append(self._shortcutHelper("Ctrl+Up", "Navigation", "Slice up", scene, scene.sliceUp, Qt.WidgetShortcut))
+            self.shortcuts.append(self._shortcutHelper("Ctrl+Down", "Navigation", "Slice down", scene, scene.sliceDown, Qt.WidgetShortcut))
+            self.shortcuts.append(self._shortcutHelper("Ctrl+Shift+Up", "Navigation", "10 slices up", scene, scene.sliceUp10, Qt.WidgetShortcut))
+            self.shortcuts.append(self._shortcutHelper("Ctrl+Shift+Down", "Navigation", "10 slices down", scene, scene.sliceDown10, Qt.WidgetShortcut))
 
 
 
@@ -164,6 +201,7 @@ class VolumeEditor( QObject ):
     zoomOutFactor = 0.9
 
     def __init__( self, shape, useGL = False ):
+        super(VolumeEditor, self).__init__()
         assert(len(shape) == 5)
         self._shape = shape
 
@@ -197,50 +235,16 @@ class VolumeEditor( QObject ):
         self.overlayWidget = None
         
         # some auxiliary stuff
-        self._initShortcuts()
         self.focusAxis =  0 #the currently focused axis
+
+
+    def setDrawingEnabled(self, enabled): 
+        for i in range(3):
+            self.imageViews[i].drawingEnabled = enabled
 
     def onCustomContextMenuRequested(self, pos):
         print "Volumeeditor.onCustomContextMenuRequested"
         self.customContextMenuRequested.emit(pos)
-
-    #===========================================================================
-    # Shortcuts
-    #===========================================================================              
-    def _shortcutHelper(self, keySequence, group, description, parent, function, context = None, enabled = None):
-        shortcut = QShortcut(QKeySequence(keySequence), parent, member=function, ambiguousMember=function)
-        if context != None:
-            shortcut.setContext(context)
-        if enabled != None:
-            shortcut.setEnabled(True)
-        return shortcut, group, description
-
-    def _initShortcuts(self):
-        self.shortcuts = []
-        self.shortcuts.append(self._shortcutHelper("Ctrl+Z", "Labeling", "History undo", self, self.historyUndo, Qt.ApplicationShortcut, True))
-        self.shortcuts.append(self._shortcutHelper("Ctrl+Shift+Z", "Labeling", "History redo", self, self.historyRedo, Qt.ApplicationShortcut, True))
-        self.shortcuts.append(self._shortcutHelper("Ctrl+Y", "Labeling", "History redo", self, self.historyRedo, Qt.ApplicationShortcut, True))
-        self.shortcuts.append(self._shortcutHelper("Space", "Overlays", "Invert overlay visibility", self, self.toggleOverlays, enabled = True))
-        self.shortcuts.append(self._shortcutHelper("l", "Labeling", "Go to next label (cyclic, forward)", self, self.nextLabel))
-        self.shortcuts.append(self._shortcutHelper("k", "Labeling", "Go to previous label (cyclic, backwards)", self, self.prevLabel))
-        self.shortcuts.append(self._shortcutHelper("x", "Navigation", "Enlarge slice view x to full size", self, self.toggleFullscreenX))
-        self.shortcuts.append(self._shortcutHelper("y", "Navigation", "Enlarge slice view y to full size", self, self.toggleFullscreenY))
-        self.shortcuts.append(self._shortcutHelper("z", "Navigation", "Enlarge slice view z to full size", self, self.toggleFullscreenZ))
-        self.shortcuts.append(self._shortcutHelper("q", "Navigation", "Switch to next channel", self, self.nextChannel))
-        self.shortcuts.append(self._shortcutHelper("a", "Navigation", "Switch to previous channel", self, self.previousChannel))
-        
-        for scene in self._imageViews:
-            self.shortcuts.append(self._shortcutHelper("n", "Labeling", "Increase brush size", scene, self._drawManager.brushSmaller, Qt.WidgetShortcut))
-            self.shortcuts.append(self._shortcutHelper("m", "Labeling", "Decrease brush size", scene, self._drawManager.brushBigger, Qt.WidgetShortcut))
-        
-            self.shortcuts.append(self._shortcutHelper("+", "Navigation", "Zoom in", scene, scene.zoomIn, Qt.WidgetShortcut))
-            self.shortcuts.append(self._shortcutHelper("-", "Navigation", "Zoom out", scene, scene.zoomOut, Qt.WidgetShortcut))
-            self.shortcuts.append(self._shortcutHelper("p", "Navigation", "Slice up", scene, scene.sliceUp, Qt.WidgetShortcut))
-            self.shortcuts.append(self._shortcutHelper("o", "Navigation", "Slice down", scene, scene.sliceDown, Qt.WidgetShortcut))
-            self.shortcuts.append(self._shortcutHelper("Ctrl+Up", "Navigation", "Slice up", scene, scene.sliceUp, Qt.WidgetShortcut))
-            self.shortcuts.append(self._shortcutHelper("Ctrl+Down", "Navigation", "Slice down", scene, scene.sliceDown, Qt.WidgetShortcut))
-            self.shortcuts.append(self._shortcutHelper("Ctrl+Shift+Up", "Navigation", "10 slices up", scene, scene.sliceUp10, Qt.WidgetShortcut))
-            self.shortcuts.append(self._shortcutHelper("Ctrl+Shift+Down", "Navigation", "10 slices down", scene, scene.sliceDown10, Qt.WidgetShortcut))
         
     def onLabelSelected(self):
         item = self.labelWidget.currentItem()
@@ -330,19 +334,13 @@ class VolumeEditor( QObject ):
         Public interface function for setting the overlayWidget toolBox
         """
         if self.overlayWidget:
-            self._toolBoxLayout.removeWidget(self.overlayWidget)
             self.overlayWidget.close()
             del self.overlayWidget
         self.overlayWidget = widget
         self.overlayWidget.selectedOverlay.connect(self.onOverlaySelected)
-        self._toolBoxLayout.insertWidget( 1, self.overlayWidget)
         
         #FIXME: porting
-        if self.ilastik:        
-            self.ilastik.project.dataMgr[self.ilastik._activeImageNumber].overlayMgr.ilastik = self.ilastik
-
-        #FIXME: porting
-        for view in self._imageViews:
+        for view in self.imageViews:
             view.porting_overlaywidget = self.overlayWidget
 
     def setRgbMode(self, mode): 
@@ -617,10 +615,10 @@ if __name__ == "__main__":
             overlayWidget = FakeOverlayWidget()
             overlayWidget.overlays = [self.dataOverlay.getRef()]
             
-            nc = NavigationControler( self.editor._imageViews, self.data, overlayWidget )
+            nc = NavigationControler( self.editor.imageViews, self.data, overlayWidget )
             #FIXME: port to ilastik
-            self.editor.indicateSliceIntersectionButton.toggled.connect(nc.onIndicateSliceIntersectionToggle)
-            self.editor._channelSpin.valueChanged.connect(nc.onChannelChange)
+            self.widget.indicateSliceIntersectionButton.toggled.connect(nc.onIndicateSliceIntersectionToggle)
+            self.widget._channelSpin.valueChanged.connect(nc.onChannelChange)
 
 
             self.editor.setOverlayWidget(overlayWidget)
@@ -640,8 +638,8 @@ if __name__ == "__main__":
         s = QSplitter()
         t1 = Test(True, testmode)
         t2 = Test(False, testmode)
-        s.addWidget(t1.dialog)
-        s.addWidget(t2.dialog)
+        s.addWidget(t1.widget)
+        s.addWidget(t2.widget)
 
         button=QPushButton("fitToView");
     
@@ -649,8 +647,8 @@ if __name__ == "__main__":
     
         def fit():
             for i in range(3):
-                t1.dialog._imageViews[i].changeViewPort(QRectF(0,0,30,30))
-                t2.dialog._imageViews[i].changeViewPort(QRectF(0,0,30,30))
+                t1.editor.imageViews[i].changeViewPort(QRectF(0,0,30,30))
+                t2.editor.imageViews[i].changeViewPort(QRectF(0,0,30,30))
             
         button.clicked.connect(fit)       
     
