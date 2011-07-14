@@ -67,6 +67,12 @@ class VolumeEditorWidget(QWidget):
         self.quadview.addWidget(2, self._ve.imageViews[1])
         self.quadview.addWidget(3, self._ve.overview)
 
+        #3d overview
+        self.overview = OverviewScene(self, self._ve._shape[1:4])
+        #FIXME: resurrect        
+        #self.overview.changedSlice.connect(self.changeSlice)
+        self._ve.changedSlice.connect(self.overview.ChangeSlice)
+
         # layout
         viewingLayout = QVBoxLayout()
         viewingLayout.setContentsMargins(10,2,0,2)
@@ -114,6 +120,7 @@ class VolumeEditorWidget(QWidget):
         self._channelSpinLabel = QLabel("Channel:")
         self._toolBoxLayout.addWidget(self._channelSpinLabel)
         self._toolBoxLayout.addLayout(channelLayout)
+        self._toolBoxLayout.setAlignment(Qt.AlignTop)
 
         # == 3 checks for RGB image and activates channel selector
         if self._ve._shape[-1] == 1 or self._ve._shape[-1] == 3: #only show when needed
@@ -122,8 +129,30 @@ class VolumeEditorWidget(QWidget):
             self.channelEditBtn.setVisible(False)
         self._channelSpin.setRange(0,self._ve._shape[-1] - 1)
 
+        # setup the layout for display
+        self.splitter = QSplitter()
+        self.splitter.setContentsMargins(0,0,0,0)
+        tempWidget = QWidget()
+        tempWidget.setLayout(viewingLayout)
+        self.splitter.addWidget(tempWidget)
+        self.splitter.addWidget(self._toolBox)
+        splitterLayout = QVBoxLayout()
+        splitterLayout.setMargin(0)
+        splitterLayout.setSpacing(0)
+        splitterLayout.addWidget(self.splitter)
+        self.setLayout(splitterLayout)
 
-        self._toolBoxLayout.setAlignment(Qt.AlignTop)
+        # drawing
+        for i, v in enumerate(self.imageViews):
+            v.beginDraw.connect(partial(self.beginDraw, axis=i))
+            v.endDraw.connect(partial(self.endDraw, axis=i))
+            v.hud = SliceSelectorHud()
+
+        
+        self.updateGeometry()
+        self.update()
+        self.quadview.update()
+
 
 
 class VolumeEditor( QObject ):
@@ -161,57 +190,22 @@ class VolumeEditor( QObject ):
             self.imageViews[i].drawing.connect(partial(self.updateLabels, axis=i))
             self.imageViews[i].customContextMenuRequested.connect(self.onCustomContextMenuRequested)
 
-        # 3d overview
-        self.overview = OverviewScene(self, self._shape[1:4])
-
-        #FIXME: resurrect        
-        #self.overview.changedSlice.connect(self.changeSlice)
-        self.changedSlice.connect(self.overview.ChangeSlice)
-        for i, v in enumerate(self.imageViews):
-            v.beginDraw.connect(partial(self.beginDraw, axis=i))
-            v.endDraw.connect(partial(self.endDraw, axis=i))
-            v.hud = SliceSelectorHud()
-
         # Add label widget to toolBoxLayout
         self.labelWidget = None
 
         #Overlay selector
         self.overlayWidget = None
-
-
         
         # some auxiliary stuff
         self._initShortcuts()
-        
         self.focusAxis =  0 #the currently focused axis
-        
-        #setup the layout for display
-        self.splitter = QSplitter()
-        self.splitter.setContentsMargins(0,0,0,0)
-        tempWidget = QWidget()
-        tempWidget.setLayout(viewingLayout)
-        self.splitter.addWidget(tempWidget)
-        self.splitter.addWidget(self._toolBox)
-        splitterLayout = QVBoxLayout()
-        splitterLayout.setMargin(0)
-        splitterLayout.setSpacing(0)
-        splitterLayout.addWidget(self.splitter)
-        self.setLayout(splitterLayout)
-        
-        self.updateGeometry()
-        self.update()
-        if self._grid:
-            self._grid.update()
-
 
 
 
 
     
 
-class VolumeEditorOld(QWidget):
-    def __init__(self, shape, parent, useGL = False, viewManager = None):
-            
+class VolumeEditorOld(QWidget):            
     def onCustomContextMenuRequested(self, pos):
         print "Volumeeditor.onCustomContextMenuRequested"
         self.customContextMenuRequested.emit(pos)
