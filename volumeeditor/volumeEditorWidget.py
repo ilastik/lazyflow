@@ -139,10 +139,24 @@ class VolumeEditorWidget(QWidget):
         self.setLayout(splitterLayout)
 
         # drawing
+        axisLabels = ["X:", "Y:", "Z:"]
         for i, v in enumerate(self._ve.imageViews):
             v.beginDraw.connect(partial(self._ve.beginDraw, axis=i))
             v.endDraw.connect(partial(self._ve.endDraw, axis=i))
             v.hud = SliceSelectorHud()
+            #connect interpreter
+            v.hud.sliceSelector.valueChanged.connect(partial(self._ve.navInterpret.changeSliceAbsolute, axis=i))
+            #hud
+            v.hud.bgColor = self._ve.navCtrl.axisColors[i] #FIXME
+            v.hud.label = axisLabels[i]
+            v.hud.minimum = 0
+            v.hud.maximum = self._ve.posModel.volumeExtent(i)
+
+        def toggleSliceIntersection(state):
+            self._ve.navCtrl.indicateSliceIntersection = state
+        self.indicateSliceIntersectionButton.toggled.connect(toggleSliceIntersection)
+
+        self._ve.posModel.cursorPositionChanged.connect(self._updateInfoLabels)
 
         # shortcuts
         self._initShortcuts()
@@ -185,6 +199,23 @@ class VolumeEditorWidget(QWidget):
             self.shortcuts.append(self._shortcutHelper("Ctrl+Down", "Navigation", "Slice down", scene, scene.sliceDown, Qt.WidgetShortcut))
             self.shortcuts.append(self._shortcutHelper("Ctrl+Shift+Up", "Navigation", "10 slices up", scene, scene.sliceUp10, Qt.WidgetShortcut))
             self.shortcuts.append(self._shortcutHelper("Ctrl+Shift+Down", "Navigation", "10 slices down", scene, scene.sliceDown10, Qt.WidgetShortcut))
+
+    def _updateInfoLabels(self, pos):
+        for i in range(3):
+            if pos[i] < 0 or pos[i] >= self._ve.posModel.shape[i]:
+                self._ve.posLabel.setText("")
+                return
+                                
+        rawRef = self._ve.overlayWidget.getOverlayRef("Raw Data")
+        colorValues = rawRef._data[0,pos[0], pos[1], pos[2], 0]
+        
+        self.posLabel.setText("<b>x:</b> %03i  <b>y:</b> %03i  <b>z:</b> %03i" % (pos[0], pos[1], pos[2]))
+        
+        #FIXME RGB is a special case only
+        if isinstance(colorValues, numpy.ndarray):
+            self.pixelValuesLabel.setText("<b>R:</b> %03i  <b>G:</b> %03i  <b>B:</b> %03i" % (colorValues[0], colorValues[1], colorValues[2]))
+        else:
+            self.pixelValuesLabel.setText("<b>Gray:</b> %03i" %int(colorValues))
             
 #*******************************************************************************
 # i f   _ _ n a m e _ _   = =   " _ _ m a i n _ _ "                            *
@@ -192,7 +223,7 @@ class VolumeEditorWidget(QWidget):
 
 if __name__ == "__main__":
     import sys
-    from PyQt4.QtCore import QObject, QRectF
+    from PyQt4.QtCore import QObject, QRectF, QTimer
     from PyQt4.QtGui import QColor
     #make the program quit on Ctrl+C
     import signal
@@ -238,28 +269,22 @@ if __name__ == "__main__":
         return s
     
     class Test(QObject):
-        def __init__(self, useGL, testmode):
+        def __init__(self, useGL, argv):
             QObject.__init__(self)
             
             from testing import stripes
             
-            if testmode == "hugeslab":
+            if "hugeslab" in argv:
                 N = 2000
                 self.data = (numpy.random.rand(N,2*N, 10)*255).astype(numpy.uint8)
-            elif testmode == "cuboid":
+            elif "cuboid" in argv:
                 N = 100
                 from testing import testVolume
                 self.data = testVolume(N)
-            elif testmode == "stripes":
+            elif "stripes" in argv:
                 self.data = stripes(50,35,20)
             else:
                 raise RuntimeError("Invalid testing mode")
-            
-            self.editor = VolumeEditor((1,)+self.data.shape+(1,), useGL=useGL)
-            self.editor.setDrawingEnabled(True)            
-            self.widget = VolumeEditorWidget( self.editor )
-                        
-            self.dataOverlay = OverlayItem(DataAccessor(self.data), alpha=1.0, color=Qt.black, colorTable=OverlayItem.createDefaultColorTable('GRAY', 256), autoVisible=True, autoAlphaChannel=False)
             
             class FakeOverlayWidget(QWidget):
                 selectedOverlay = pyqtSignal(int)
@@ -269,65 +294,32 @@ if __name__ == "__main__":
                 def getOverlayRef(self, key):
                     return self.overlays[0]            
             overlayWidget = FakeOverlayWidget()
+            self.dataOverlay = OverlayItem(DataAccessor(self.data), alpha=1.0, \
+                                           color=Qt.black, \
+                                           colorTable=OverlayItem.createDefaultColorTable('GRAY', 256), \
+                                           autoVisible=True, \
+                                           autoAlphaChannel=False)
             overlayWidget.overlays = [self.dataOverlay.getRef()]
             
-            self.posModel     = PositionModel(self.data.shape)
-            self.navCtrl      = NavigationControler( self.editor.imageViews, self.posModel, overlayWidget )
-            self.navInterpret = NavigationInterpreter(self.posModel)
+            self.editor = VolumeEditor((1,)+self.data.shape+(1,), useGL=useGL, overlayWidget=overlayWidget)
+            self.editor.setDrawingEnabled(True)            
+            self.widget = VolumeEditorWidget( self.editor )
             
-            axisLabels = ["X:", "Y:", "Z:"]
-            for i in range(3):
-                v = self.editor.imageViews[i]
-                
-                #connect interpreter
-                v.shape  = self.posModel.sliceShape(axis=i)
-                v.mouseMoved.connect(partial(self.navInterpret.positionCursor, axis=i))
-                v.mouseDoubleClicked.connect(partial(self.navInterpret.positionSlice, axis=i))
-                v.changeSliceDelta.connect(partial(self.navInterpret.changeSliceRelative, axis=i))
-                v.hud.sliceSelector.valueChanged.connect(partial(self.navInterpret.changeSliceAbsolute, axis=i))
-                
-                #hud
-                v.hud.label = axisLabels[i]
-                v.hud.minimum = 0
-                v.hud.maximum = self.posModel.volumeExtent(i)
-            
-            print "connect controler"
-            #connect controler
-            self.posModel.slicingPositionChanged.connect(self.navCtrl.moveSlicingPosition)
-            self.posModel.cursorPositionChanged.connect(self.navCtrl.moveCrosshair)
-            #self.posModel.viewActive.connect(self.navCtrl.moveSlicingPosition)
-            
+            #FIXME: porting
             self.editor.setOverlayWidget(overlayWidget)
-            
-            def toggleSliceIntersection(state):
-                self.navCtrl.indicateSliceIntersection = state
-            self.widget.indicateSliceIntersectionButton.toggled.connect(toggleSliceIntersection)
-            
-            #FIXME: port to ilastik
-            #self.dialog._channelSpin.valueChanged.connect(nc.onChannelChange)
-            
-            def updateInfoLabels(pos):
-                for i in range(3):
-                    if pos[i] < 0 or pos[i] >= self.posModel.shape[i]:
-                        self.widget.posLabel.setText("")
-                        return
-                                
-                rawRef = self.editor.overlayWidget.getOverlayRef("Raw Data")
-                colorValues = rawRef._data[0,pos[0], pos[1], pos[2], 0]
-                
-                self.widget.posLabel.setText("<b>x:</b> %03i  <b>y:</b> %03i  <b>z:</b> %03i" % (pos[0], pos[1], pos[2]))
-                
-                #FIXME RGB is a special case only
-                if isinstance(colorValues, numpy.ndarray):
-                    self.widget.pixelValuesLabel.setText("<b>R:</b> %03i  <b>G:</b> %03i  <b>B:</b> %03i" % (colorValues[0], colorValues[1], colorValues[2]))
-                else:
-                    self.widget.pixelValuesLabel.setText("<b>Gray:</b> %03i" %int(colorValues))
-            self.posModel.cursorPositionChanged.connect(updateInfoLabels)
             
             self.widget.show()
             
-            #show some initial position
-            self.posModel.slicingPos = [5,10,2]
+            if not 't' in sys.argv:
+                #show some initial position
+                self.editor.posModel.slicingPos = [5,10,2]
+            else:
+                def randomMove():
+                    self.editor.posModel.slicingPos = [numpy.random.randint(0,self.data.shape[i]) for i in range(3)]
+                t = QTimer(self)
+                t.setInterval(1000)
+                t.timeout.connect(randomMove)
+                t.start()
 
     app = QApplication(sys.argv)
     
@@ -336,12 +328,10 @@ if __name__ == "__main__":
         app.quit()
         sys.exit(0)
     
-    testmode = sys.argv[1]
-    
-    if testmode in ['cuboid', 'hugeslab']:
+    if 'cuboid' in sys.argv or 'hugeslab' in sys.argv:
         s = QSplitter()
-        t1 = Test(True, testmode)
-        t2 = Test(False, testmode)
+        t1 = Test(True, sys.argv)
+        t2 = Test(False, sys.argv)
         s.addWidget(t1.widget)
         s.addWidget(t2.widget)
 
@@ -358,7 +348,7 @@ if __name__ == "__main__":
     
         s.showMaximized()
 
-    if testmode == 'veng':
+    if 'veng' in sys.argv:
         ve = VolumeEditor()
         frame = VolumeEditorWidget( ve )
         frame.showMaximized()

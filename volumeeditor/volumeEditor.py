@@ -44,6 +44,8 @@ from imageSaveThread import ImageSaveThread
 from historyManager import HistoryManager
 from drawManager import DrawManager
 from imageView2D import ImageView2D
+from positionModel import PositionModel
+from navigationControler import NavigationControler, NavigationInterpreter
 
 class VolumeEditor( QObject ):
     changedSlice      = pyqtSignal(int,int)
@@ -53,7 +55,7 @@ class VolumeEditor( QObject ):
     zoomInFactor  = 1.1
     zoomOutFactor = 0.9
 
-    def __init__( self, shape, useGL = False ):
+    def __init__( self, shape, useGL = False, overlayWidget=None):
         super(VolumeEditor, self).__init__()
         assert(len(shape) == 5)
         self._shape = shape
@@ -81,6 +83,10 @@ class VolumeEditor( QObject ):
             self.imageViews[i].drawing.connect(partial(self.updateLabels, axis=i))
             self.imageViews[i].customContextMenuRequested.connect(self.onCustomContextMenuRequested)
 
+        self.posModel     = PositionModel(self._shape[1:4])
+        self.navCtrl      = NavigationControler(self.imageViews, self.posModel, overlayWidget)
+        self.navInterpret = NavigationInterpreter(self.posModel)
+
         # Add label widget to toolBoxLayout
         self.labelWidget = None
 
@@ -89,7 +95,20 @@ class VolumeEditor( QObject ):
         
         # some auxiliary stuff
         self.focusAxis =  0 #the currently focused axis
+        
+        self._initConnects()
 
+    def _initConnects(self):
+        for i, v in enumerate(self.imageViews):
+            #connect interpreter
+            v.shape  = self.posModel.sliceShape(axis=i)
+            v.mouseMoved.connect(partial(self.navInterpret.positionCursor, axis=i))
+            v.mouseDoubleClicked.connect(partial(self.navInterpret.positionSlice, axis=i))
+            v.changeSliceDelta.connect(partial(self.navInterpret.changeSliceRelative, axis=i))
+            
+        #connect controler
+        self.posModel.slicingPositionChanged.connect(self.navCtrl.moveSlicingPosition)
+        self.posModel.cursorPositionChanged.connect(self.navCtrl.moveCrosshair)
 
     def setDrawingEnabled(self, enabled): 
         for i in range(3):
