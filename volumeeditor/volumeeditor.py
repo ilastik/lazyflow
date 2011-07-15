@@ -623,28 +623,32 @@ if __name__ == "__main__":
             self.posModel.cursorPositionChanged.connect(self.navCtrl.moveCrosshair)
             #self.posModel.viewActive.connect(self.navCtrl.moveSlicingPosition)
             
-            #FIXME: port to ilastik
-            #self.dialog.indicateSliceIntersectionButton.toggled.connect(nc.onIndicateSliceIntersectionToggle)
-            #self.dialog._channelSpin.valueChanged.connect(nc.onChannelChange)
-#            def updateInfoLabels(pos):
-#                for i in range(3):
-#                    if pos[i] < 0 or pos[i] >= pm.shape[i]:
-#                        self.dialog.posLabel.setText("")
-#                        return
-#                                
-#                rawRef = self.dialog.overlayWidget.getOverlayRef("Raw Data")
-#                colorValues = rawRef._data[0,pos[0], pos[1], pos[2], 0]
-#                
-#                self.dialog.posLabel.setText("<b>x:</b> %03i  <b>y:</b> %03i  <b>z:</b> %03i" % (pos[0], pos[1], pos[2]))
-#                
-#                #FIXME RGB is a special case only
-#                if isinstance(colorValues, numpy.ndarray):
-#                    self.dialog.pixelValuesLabel.setText("<b>R:</b> %03i  <b>G:</b> %03i  <b>B:</b> %03i" % (colorValues[0], colorValues[1], colorValues[2]))
-#                else:
-#                    self.dialog.pixelValuesLabel.setText("<b>Gray:</b> %03i" %int(colorValues))
-#            pm.cursorPositionChanged.connect(updateInfoLabels)
-
             self.editor.setOverlayWidget(overlayWidget)
+            
+            def toggleSliceIntersection(state):
+                self.navCtrl.indicateSliceIntersection = state
+            self.widget.indicateSliceIntersectionButton.toggled.connect(toggleSliceIntersection)
+            
+            #FIXME: port to ilastik
+            #self.dialog._channelSpin.valueChanged.connect(nc.onChannelChange)
+            
+            def updateInfoLabels(pos):
+                for i in range(3):
+                    if pos[i] < 0 or pos[i] >= self.posModel.shape[i]:
+                        self.widget.posLabel.setText("")
+                        return
+                                
+                rawRef = self.editor.overlayWidget.getOverlayRef("Raw Data")
+                colorValues = rawRef._data[0,pos[0], pos[1], pos[2], 0]
+                
+                self.widget.posLabel.setText("<b>x:</b> %03i  <b>y:</b> %03i  <b>z:</b> %03i" % (pos[0], pos[1], pos[2]))
+                
+                #FIXME RGB is a special case only
+                if isinstance(colorValues, numpy.ndarray):
+                    self.widget.pixelValuesLabel.setText("<b>R:</b> %03i  <b>G:</b> %03i  <b>B:</b> %03i" % (colorValues[0], colorValues[1], colorValues[2]))
+                else:
+                    self.widget.pixelValuesLabel.setText("<b>Gray:</b> %03i" %int(colorValues))
+            self.posModel.cursorPositionChanged.connect(updateInfoLabels)
             
             self.widget.show()
             
