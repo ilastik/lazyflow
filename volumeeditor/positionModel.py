@@ -36,8 +36,9 @@ from PyQt4.QtCore import QObject, pyqtSignal
 #*******************************************************************************
 
 class PositionModel(QObject):
-    cursorPositionChanged  = pyqtSignal(object)
-    slicingPositionChanged = pyqtSignal(object)
+    cursorPositionChanged  = pyqtSignal(object, object)
+    slicingPositionChanged = pyqtSignal(object, object)
+    viewActive             = pyqtSignal(int)
     
     def __init__(self, volumeShape, parent=None):
         QObject.__init__(self, parent)
@@ -69,6 +70,14 @@ class PositionModel(QObject):
         return self._volumeShape[axis]
     
     @property
+    def activeView(self):
+        return self._activeView
+    @activeView.setter
+    def activeView(self, view):
+        self._activeView = view
+        self.viewActive.emit(view)
+        
+    @property
     def shape( self ):
         return self._volumeShape
         
@@ -93,8 +102,10 @@ class PositionModel(QObject):
     def cursorPos(self, coordinates):
         if coordinates == self._cursorPos:
             return
+        oldPos = copy.copy(self._cursorPos)
         self._cursorPos = coordinates
-        self.cursorPositionChanged.emit(self.cursorPos)
+        print "PositionModel emitting 'cursorPositionChanged(%r, %r)'" % (oldPos, self.slicingPos)
+        self.cursorPositionChanged.emit(oldPos, self.cursorPos)
     
     @property
     def slicingPos(self):
@@ -103,6 +114,8 @@ class PositionModel(QObject):
     def slicingPos(self, pos):
         if pos == self._slicingPos:
             return
+        oldPos = copy.copy(self._slicingPos)
         self._slicingPos = pos
-        self.slicingPositionChanged.emit(self._slicingPos)
+        print "PositionModel emitting 'slicingPositionChanged(%r, %r)'" % (oldPos, self.slicingPos)
+        self.slicingPositionChanged.emit(oldPos, self.slicingPos)
         

@@ -48,10 +48,10 @@ from exportDialog import ExportDialog
       
 from imageView2D import ImageView2D
 from imageSaveThread import ImageSaveThread
-from navigationControler import NavigationControler
 from drawManager import DrawManager
 from sliceSelectorHud import SliceSelectorHud
 from positionModel import PositionModel
+from navigationControler import NavigationControler, NavigationInterpreter
 
 from helper import is3D
 from historyManager import HistoryManager
@@ -597,35 +597,59 @@ if __name__ == "__main__":
             overlayWidget = FakeOverlayWidget()
             overlayWidget.overlays = [self.dataOverlay.getRef()]
             
-            pm = PositionModel(self.data.shape)
-            nc = NavigationControler( self.editor.imageViews, pm, overlayWidget )
+            self.posModel     = PositionModel(self.data.shape)
+            self.navCtrl      = NavigationControler( self.editor.imageViews, self.posModel, overlayWidget )
+            self.navInterpret = NavigationInterpreter(self.posModel)
+            
+            axisLabels = ["X:", "Y:", "Z:"]
+            for i in range(3):
+                v = self.editor.imageViews[i]
+                
+                #connect interpreter
+                v.shape  = self.posModel.sliceShape(axis=i)
+                v.mouseMoved.connect(partial(self.navInterpret.positionCursor, axis=i))
+                v.mouseDoubleClicked.connect(partial(self.navInterpret.positionSlice, axis=i))
+                v.changeSliceDelta.connect(partial(self.navInterpret.changeSliceRelative, axis=i))
+                v.hud.sliceSelector.valueChanged.connect(partial(self.navInterpret.changeSliceAbsolute, axis=i))
+                
+                #hud
+                v.hud.label = axisLabels[i]
+                v.hud.minimum = 0
+                v.hud.maximum = self.posModel.volumeExtent(i)
+            
+            print "connect controler"
+            #connect controler
+            self.posModel.slicingPositionChanged.connect(self.navCtrl.moveSlicingPosition)
+            self.posModel.cursorPositionChanged.connect(self.navCtrl.moveCrosshair)
+            #self.posModel.viewActive.connect(self.navCtrl.moveSlicingPosition)
+            
             #FIXME: port to ilastik
-            self.widget.indicateSliceIntersectionButton.toggled.connect(nc.onIndicateSliceIntersectionToggle)
-            self.widget._channelSpin.valueChanged.connect(nc.onChannelChange)
-            def updateInfoLabels(pos):
-                for i in range(3):
-                    if pos[i] < 0 or pos[i] >= pm.shape[i]:
-                        self.widget.posLabel.setText("")
-                        return
-                                
-                rawRef = self.editor.overlayWidget.getOverlayRef("Raw Data")
-                colorValues = rawRef._data[0,pos[0], pos[1], pos[2], 0]
-                
-                self.widget.posLabel.setText("<b>x:</b> %03i  <b>y:</b> %03i  <b>z:</b> %03i" % (pos[0], pos[1], pos[2]))
-                
-                #FIXME RGB is a special case only
-                if isinstance(colorValues, numpy.ndarray):
-                    self.widget.pixelValuesLabel.setText("<b>R:</b> %03i  <b>G:</b> %03i  <b>B:</b> %03i" % (colorValues[0], colorValues[1], colorValues[2]))
-                else:
-                    self.widget.pixelValuesLabel.setText("<b>Gray:</b> %03i" %int(colorValues))
-            pm.cursorPositionChanged.connect(updateInfoLabels)
+            #self.dialog.indicateSliceIntersectionButton.toggled.connect(nc.onIndicateSliceIntersectionToggle)
+            #self.dialog._channelSpin.valueChanged.connect(nc.onChannelChange)
+#            def updateInfoLabels(pos):
+#                for i in range(3):
+#                    if pos[i] < 0 or pos[i] >= pm.shape[i]:
+#                        self.dialog.posLabel.setText("")
+#                        return
+#                                
+#                rawRef = self.dialog.overlayWidget.getOverlayRef("Raw Data")
+#                colorValues = rawRef._data[0,pos[0], pos[1], pos[2], 0]
+#                
+#                self.dialog.posLabel.setText("<b>x:</b> %03i  <b>y:</b> %03i  <b>z:</b> %03i" % (pos[0], pos[1], pos[2]))
+#                
+#                #FIXME RGB is a special case only
+#                if isinstance(colorValues, numpy.ndarray):
+#                    self.dialog.pixelValuesLabel.setText("<b>R:</b> %03i  <b>G:</b> %03i  <b>B:</b> %03i" % (colorValues[0], colorValues[1], colorValues[2]))
+#                else:
+#                    self.dialog.pixelValuesLabel.setText("<b>Gray:</b> %03i" %int(colorValues))
+#            pm.cursorPositionChanged.connect(updateInfoLabels)
 
             self.editor.setOverlayWidget(overlayWidget)
             
             self.widget.show()
             
             #show some initial position
-            nc.slicingPos = [5,10,2]
+            self.posModel.slicingPos = [5,10,2]
 
     app = QApplication(sys.argv)
     

@@ -41,11 +41,12 @@ class CrossHairCursor(QGraphicsItem) :
     
     def boundingRect(self):
         return QRectF(0,0, self.width, self.height)
-    def __init__(self, width, height):
+    
+    def __init__(self):
         QGraphicsItem.__init__(self)
         
-        self.width = width
-        self.height = height
+        self.width = 0
+        self.height = 0
         
         self.penDotted = QPen(Qt.red, 2, Qt.DotLine, Qt.RoundCap, Qt.RoundJoin)
         self.penDotted.setCosmetic(True)
@@ -58,6 +59,14 @@ class CrossHairCursor(QGraphicsItem) :
         self.brushSize = 0
         
         self.mode = self.modeXYPosition
+    
+    @property
+    def shape(self):
+        return [self.width, self.height]
+    @shape.setter
+    def shape(self, shape2D):
+        self.width = shape2D[0]
+        self.height = shape2D[1]
     
     def setColor(self, color):
         self.penDotted = QPen(color, 2, Qt.DotLine, Qt.RoundCap, Qt.RoundJoin)

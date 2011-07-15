@@ -68,28 +68,9 @@ class ImageView2D(QGraphicsView):
         return self._shape
     @shape.setter
     def shape(self, s):
-        self._shape = s
-        self.setScene(ImageScene2D(self._shape, self.viewport()))
-
-        # observe the scene, waiting for changes of the content
-        self.scene().contentChanged.connect(self.onContentChange)
-
-        if self._useGL:
-            self._initializeGL()
-    
-        if self._crossHairCursor:
-            self.scene().removeItem(self._crossHairCursor)
-        self._crossHairCursor = CrossHairCursor(*self._shape)
-        self._crossHairCursor.setZValue(100)
-        self.scene().addItem(self._crossHairCursor)
-
-        if self._sliceIntersectionMarker:
-            self.scene().removeItem(self._sliceIntersectionMarker)
-        self._sliceIntersectionMarker = SliceIntersectionMarker(*self.shape)
-        self.scene().addItem(self._sliceIntersectionMarker)
-        #FIXME: Use a QAction here so that we do not have to synchronize
-        #between this initial state and the toggle button's initial state
-        self._sliceIntersectionMarker.setVisibility(True)
+        self.scene().shape                  = s
+        self._crossHairCursor.shape         = s
+        self._sliceIntersectionMarker.shape = s
     
     @property
     def name(self):
@@ -169,6 +150,23 @@ class ImageView2D(QGraphicsView):
             #the cursor
             self.setCacheMode(QGraphicsView.CacheBackground)
         self.setRenderHint(QPainter.Antialiasing, False)
+        
+        #Intitialize the scene
+        self.setScene(ImageScene2D(self.viewport()))
+        #observe the scene, waiting for changes of the content
+        self.scene().contentChanged.connect(self.onContentChange)
+        if self._useGL:
+            self._initializeGL()
+        self._crossHairCursor = CrossHairCursor()
+        self._crossHairCursor.setZValue(99)
+        self.scene().addItem(self._crossHairCursor)
+        
+        self._sliceIntersectionMarker = SliceIntersectionMarker()
+        self._sliceIntersectionMarker.setZValue(100)
+        self.scene().addItem(self._sliceIntersectionMarker)
+        #FIXME: Use a QAction here so that we do not have to synchronize
+        #between this initial state and the toggle button's initial state
+        self._sliceIntersectionMarker.setVisibility(True)
         
         #FIXME: MVC refactor 
         self._drawManager = drawManager

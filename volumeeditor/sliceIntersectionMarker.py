@@ -39,11 +39,11 @@ class SliceIntersectionMarker(QGraphicsItem) :
     def boundingRect(self):
         return QRectF(0,0, self.width, self.height)
     
-    def __init__(self, width, height):
+    def __init__(self):
         QGraphicsItem.__init__(self)
         
-        self.width = width
-        self.height = height
+        self.width = 0
+        self.height = 0
               
         self.penX = QPen(Qt.red, 2)
         self.penX.setCosmetic(True)
@@ -55,6 +55,14 @@ class SliceIntersectionMarker(QGraphicsItem) :
         self.y = 0
         
         self.isVisible = False
+
+    @property
+    def shape(self):
+        return [self.width, self.height]
+    @shape.setter
+    def shape(self, shape2D):
+        self.width = shape2D[0]
+        self.height = shape2D[1]
 
     def setPosition(self, x, y):
         self.x = x

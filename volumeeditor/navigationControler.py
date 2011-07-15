@@ -42,6 +42,109 @@ def posView2D(pos3d, axis):
     return pos2d
 
 #*******************************************************************************
+# N a v i g a t i o n I n t e r p r e t e r                                    *
+#*******************************************************************************
+
+class NavigationInterpreter(QObject):
+    def __init__(self, model):
+        QObject.__init__(self)
+        self._model = model
+    
+    def changeSliceRelative(self, delta, axis):
+        """
+        Change slice along a certain axis relative to current slice.
+
+        delta -- add delta to current slice position [positive or negative int]
+        axis  -- along which axis [0,1,2]
+        """
+        
+        if delta == 0:
+            return
+        newSlice = self._model.slicingPos[axis] + delta
+        if newSlice < 0 or newSlice > self._model.volumeExtent(axis):
+            return
+        newPos = copy.copy(self._model.slicingPos)
+        newPos[axis] = newSlice
+        
+        self._model.slicingPos = newPos
+
+    def changeSliceAbsolute(self, value, axis):
+        """
+        Change slice along a certain axis.
+
+        value -- slice number
+        axis  -- along which axis [0,1,2]
+        """
+        
+        if value < 0 or value > self._model.volumeExtent(axis):
+            return
+        newPos = copy.copy(self._model.slicingPos)
+        newPos[axis] = value
+        if not self._positionValid(newPos):
+            return
+        self._model.slicingPos = newPos
+        
+    def sliceIntersectionIndicatorToggle(self, show):
+        self.indicateSliceIntersection = show
+    
+    def changeChannel(self, channel, axis):
+        print "channel change not implemented"
+        #if len(self.overlayWidget.overlays) > 0:
+        #    ov = self.overlayWidget.getOverlayRef("Raw Data")
+        #     if ov.shape[-1] == self._shape[-1]:
+        #         self.overlayWidget.getOverlayRef("Raw Data").channel = channel
+
+    
+    def positionCursor(self, x, y, axis):
+        """
+        Change position of the crosshair cursor.
+
+        x,y  -- cursor position on a certain image scene
+        axis -- perpendicular axis [0,1,2]
+        """
+        
+        #we get the 2D coordinates x,y from the view that
+        #shows the projection perpendicular to axis
+        #set this view as active
+        self._model.activeView = axis
+        
+        newPos = copy.copy(self._model.cursorPos)
+        if axis == 0:
+            newPos[1] = x
+            newPos[2] = y
+        if axis == 1:
+            newPos[0] = x
+            newPos[2] = y
+        if axis == 2:
+            newPos[0] = x
+            newPos[1] = y
+
+        if newPos == self._model.cursorPos:
+            return
+        if not self._positionValid(newPos):
+            return
+
+        self._model.cursorPos = newPos
+        
+    def positionSlice(self, x, y, axis):
+        newPos = copy.copy(self._model.slicingPos)
+        i,j = posView2D([0,1,2], axis)
+        newPos[i] = x
+        newPos[j] = y
+        if newPos == self._model.slicingPos:
+            return
+        if not self._positionValid(newPos):
+            return
+        
+        self._model.slicingPos = newPos
+        
+    def _positionValid(self, pos):
+        for i in range(3):
+            if pos[i] < 0 or pos[i] >= self._model.shape[i]:
+                return False
+        return True
+    
+#*******************************************************************************
 # N a v i g a t i o n C o n t r o l e r                                        *
 #*******************************************************************************
 
@@ -50,13 +153,6 @@ class NavigationControler(QObject):
     ##
     ## properties
     ##
-
-    @property
-    def activeView(self):
-        return self._activeView
-    @activeView.setter
-    def activeView(self, view):
-        self._activeView = view
     
     @property
     def axisColors( self ):
@@ -80,10 +176,6 @@ class NavigationControler(QObject):
             v._sliceIntersectionMarker.setVisibility(show)
         
     def __init__(self, imageView2Ds, positionModel, overlaywidget, time = 0, channel = 0):
-        '''
-        volumeShape - 3D shape of the voxel data
-
-        '''
         QObject.__init__(self)
         assert len(imageView2Ds) == 3
 
@@ -94,139 +186,42 @@ class NavigationControler(QObject):
         self._beginStackIndex = 0
         self._endStackIndex   = 1
 
-        # init views
-        axisLabels = ["X:", "Y:", "Z:"]
-        for i in range(3):
-            v = self._views[i]
-            v.mouseMoved.connect(partial(self.onCursorPosition, axis=i))
-            v.mouseDoubleClicked.connect(partial(self.onSlicePosition, axis=i))
-            v.changeSliceDelta.connect(partial(self.onRelativeSliceChange, axis=i))
-            v.shape = self._model.sliceShape(axis=i)
-            v.slices = self._model.volumeExtent(axis=i)
-            
-            v.hud.label = axisLabels[i]
-            v.hud.minimum = 0
-            v.hud.maximum = self._model.volumeExtent(i)
-            v.hud.sliceSelector.valueChanged.connect(partial(self.onAbsoluteSliceChange, axis=i))
+#        # init views
+#        axisLabels = ["X:", "Y:", "Z:"]
+#        for i in range(3):
+#            v = self._views[i]
+#            v.mouseMoved.connect(partial(self.onCursorPosition, axis=i))
+#            v.mouseDoubleClicked.connect(partial(self.onSlicePosition, axis=i))
+#            v.changeSliceDelta.connect(partial(self.onRelativeSliceChange, axis=i))
+#            v.shape = self._model.sliceShape(axis=i)
+#            v.slices = self._model.volumeExtent(axis=i)
+#            
+#            v.hud.label = axisLabels[i]
+#            v.hud.minimum = 0
+#            v.hud.maximum = self._model.volumeExtent(i)
+#            v.hud.sliceSelector.valueChanged.connect(partial(self.onAbsoluteSliceChange, axis=i))
         self._views[0].swapAxes()
 
-        # init property fields
-        self._activeView = 0
-        self._axisColors = [QColor(255,0,0,255), QColor(0,255,0,255), QColor(0,0,255,255)]
-
-        # call property setters to trigger updates etc. 
-        self.activeView = 0
         self.axisColors = [QColor(255,0,0,255), QColor(0,255,0,255), QColor(0,0,255,255)]
-
-
     
-    ##
-    ## incoming signal handling
-    ##
-    def onIndicateSliceIntersectionToggle(self, show):
-        self.indicateSliceIntersection = show
-    
-    def onChannelChange(self, channel, axis):
-        print "channel change not implemented"
-        #if len(self.overlayWidget.overlays) > 0:
-        #    ov = self.overlayWidget.getOverlayRef("Raw Data")
-        #     if ov.shape[-1] == self._shape[-1]:
-        #         self.overlayWidget.getOverlayRef("Raw Data").channel = channel
-
-    
-    def onCursorPosition(self, x, y, axis):
-        '''Change position of the crosshair cursor.
-
-        x,y  -- cursor position on a certain image scene
-        axis -- perpendicular axis [0,1,2]
- 
-        '''
-        #we get the 2D coordinates x,y from the view that
-        #shows the projection perpendicular to axis
-        #set this view as active
-        self.activeView = axis
-        
-        newPos = copy.copy(self._model.cursorPos)
-        if axis == 0:
-            newPos[1] = x
-            newPos[2] = y
-        if axis == 1:
-            newPos[0] = x
-            newPos[2] = y
-        if axis == 2:
-            newPos[0] = x
-            newPos[1] = y
-
-        if newPos == self._model.cursorPos:
-            return
-        if not self._positionValid(newPos):
-            return
-
-        self._model.cursorPos = newPos
-        #update the cross hair cursor after the model has changed
+    def moveCrosshair(self, oldPos, newPos):
+        print "NavigationControler.moveCrosshair(%r, %r)" % (oldPos, newPos)
         self._updateCrossHairCursor()
-
-    def _positionValid(self, pos):
+    
+    def moveSlicingPosition(self, oldPos, newPos):
+        print "NavigationControler.moveSlicingPosition(%r, %r)" % (oldPos, newPos)
         for i in range(3):
-            if pos[i] < 0 or pos[i] >= self._model.shape[i]:
-                return False
-        return True
-
-    def onSlicePosition(self, x, y, axis):
-        newPos = copy.copy(self._model.slicingPos)
-        i,j = posView2D([0,1,2], axis)
-        newPos[i] = x
-        newPos[j] = y
-        if newPos == self._model.slicingPos:
-            return
-        if not self._positionValid(newPos):
-            return
-        
-        for i in 0,1,2:
-            self._updateSlice(newPos[i], i)
-        
-        self._model.slicingPos = newPos
-        #update the slice intersection after the model has changed
+            if oldPos[i] != newPos[i]:
+                self._updateSlice(self._model.slicingPos[i], i)
         self._updateSliceIntersection()
-
-    def onRelativeSliceChange(self, delta, axis):
-        '''Change slice along a certain axis relative to current slice.
-
-        delta  -- add delta to current slice position [positive or negative int]
-        axis -- along which axis [0,1,2]
- 
-        '''
-        if delta == 0:
-            return
-        newSlice = self._model.slicingPos[axis] + delta
-        if newSlice < 0 or newSlice > self._model.volumeExtent(axis):
-            return
-        newPos = copy.copy(self._model.slicingPos)
-        newPos[axis] = newSlice
-        
-        self._updateSlice(newSlice, axis)
-        self._model.slicingPos = newPos
-
-    def onAbsoluteSliceChange(self, value, axis):
-        '''Change slice along a certain axis.
-
-        value  -- slice number
-        axis -- along which axis [0,1,2]
- 
-        '''
-        if value < 0 or value > self._model.volumeExtent(axis):
-            return
-        newPos = copy.copy(self._model.slicingPos)
-        newPos[axis] = value
-        if not self._positionValid(newPos):
-            return
-        self._model.slicingPos = newPos
+    
+    #private functions ########################################################
     
     def _updateCrossHairCursor(self):
-        x,y = posView2D(self._model.cursorPos, axis=self.activeView)
-        self._views[self.activeView]._crossHairCursor.showXYPosition(x,y)
+        x,y = posView2D(self._model.cursorPos, axis=self._model.activeView)
+        self._views[self._model.activeView]._crossHairCursor.showXYPosition(x,y)
         
-        if self.activeView == 0: # x-axis
+        if self._model.activeView == 0: # x-axis
             yView = self._views[1]._crossHairCursor
             zView = self._views[2]._crossHairCursor
             
@@ -234,7 +229,7 @@ class NavigationControler(QObject):
             #adding 0.5 to make line snap into middle of pixels, like the croshair
             yView.showYPosition(y + 0.5, x)
             zView.showYPosition(x + 0.5, y)
-        elif self.activeView == 1: # y-axis
+        elif self._model.activeView == 1: # y-axis
             xView = self._views[0]._crossHairCursor
             zView = self._views[2]._crossHairCursor
             
@@ -280,5 +275,3 @@ class NavigationControler(QObject):
         #make sure all tiles are regenerated
         self._views[axis].scene().markTilesDirty()
         self._views[axis].scene().setContent(self._views[axis].viewportRect(), image, overlays) 
-
-

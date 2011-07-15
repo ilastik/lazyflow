@@ -100,31 +100,43 @@ class ImageScene2D(QGraphicsScene):
     # update delay when a new patch arrives in ms
     glUpdateDelay = 10
     
-    def __init__(self, shape2D, viewport):
+    def __init__(self, viewport):
         QGraphicsScene.__init__(self)
         self._glWidget = viewport
         self._useGL = isinstance(viewport, QGLWidget)
-        self._shape2D = shape2D
+        self._shape2D = None
         self._updatableTiles = []
-        
-        self.imagePatches   = []
-        patchAccessor = PatchAccessor(*self._shape2D, blockSize=self.blockSize)
 
+        # tile rendering
+        self.imagePatches = None
+        self._image = None
+        self._overlays = None
+        self._renderThread = None
+
+    @property
+    def shape(self):
+        return [self.sceneRect().width(), self.sceneRect().height()]
+    @shape.setter
+    def shape(self, shape2D):
+        assert len(shape2D) == 2
+        self.setSceneRect(0,0, *shape2D)
+        
+        del self._renderThread
+        del self.imagePatches
+        
+        self.imagePatches = []
+        patchAccessor = PatchAccessor(*shape2D, blockSize=self.blockSize)
         for i in range(patchAccessor.patchCount):
             r = patchAccessor.patchRectF(i, self.overlap)
             patch = ImagePatch(r)
             self.imagePatches.append(patch)
-        
-        self.setSceneRect(0,0, *self._shape2D)
-
-        # tile rendering
-        self._image = None
-        self._overlays = None
         self._renderThread = ImageSceneRenderThread(self.imagePatches)
         self._renderThread.start()
         self._renderThread.patchAvailable.connect(self.updatePatch)
 
     def setContent(self, rect, image, overlays = ()):
+        #FIXME: assert we have the right shape
+        
         '''ImageScene immediately starts to render tiles, that display the new content.'''
         # store data for later rerendering when the rect changes, but not the data
         self._image = image
