@@ -68,6 +68,7 @@ class ImageView2D(QGraphicsView):
         return self._shape
     @shape.setter
     def shape(self, s):
+        self._shape = s
         self.scene().shape                  = s
         self._crossHairCursor.shape         = s
         self._sliceIntersectionMarker.shape = s
