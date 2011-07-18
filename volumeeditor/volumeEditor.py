@@ -311,23 +311,6 @@ class VolumeEditor( QObject ):
 
     def previousChannel(self):
         self._channelSpin.setValue(self._viewManager.channel - 1)
-        
-    def toggleFullscreenX(self):
-        self.maximizeSliceView(0)
-
-    def toggleFullscreenY(self):
-        self.maximizeSliceView(1)
-
-    def toggleFullscreenZ(self):
-        self.maximizeSliceView(2)
-
-    def maximizeSliceView(self, axis):
-        if axis == 2:
-            self._grid.toggleMaximized(0)
-        if axis == 1:
-            self._grid.toggleMaximized(2)
-        if axis == 0:
-            self._grid.toggleMaximized(1)
           
     def nextLabel(self):
         self.labelWidget.nextLabel()

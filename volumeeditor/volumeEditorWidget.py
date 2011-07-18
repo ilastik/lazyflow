@@ -56,6 +56,8 @@ class VolumeEditorWidget(QWidget):
         super(VolumeEditorWidget, self).__init__(parent=parent)
         self._ve = volumeeditor
 
+        self.setFocusPolicy(Qt.StrongFocus)
+
         # setup quadview
         self.quadview = QuadView(self)
         self.quadview.addWidget(0, self._ve.imageViews[2])
@@ -182,13 +184,22 @@ class VolumeEditorWidget(QWidget):
         self.shortcuts.append(self._shortcutHelper("Space", "Overlays", "Invert overlay visibility", self, self._ve.toggleOverlays, enabled = True))
         self.shortcuts.append(self._shortcutHelper("l", "Labeling", "Go to next label (cyclic, forward)", self, self._ve.nextLabel))
         self.shortcuts.append(self._shortcutHelper("k", "Labeling", "Go to previous label (cyclic, backwards)", self, self._ve.prevLabel))
-        self.shortcuts.append(self._shortcutHelper("x", "Navigation", "Enlarge slice view x to full size", self, self._ve.toggleFullscreenX))
-        self.shortcuts.append(self._shortcutHelper("y", "Navigation", "Enlarge slice view y to full size", self, self._ve.toggleFullscreenY))
-        self.shortcuts.append(self._shortcutHelper("z", "Navigation", "Enlarge slice view z to full size", self, self._ve.toggleFullscreenZ))
+        
+        def fullscreenView(axis):
+            m = not self.quadview.maximized
+            print "maximize axis=%d = %r" % (axis, m)
+            self.quadview.setMaximized(m, axis)
+        
         self.shortcuts.append(self._shortcutHelper("q", "Navigation", "Switch to next channel", self, self._ve.nextChannel))
         self.shortcuts.append(self._shortcutHelper("a", "Navigation", "Switch to previous channel", self, self._ve.previousChannel))
         
+        maximizeShortcuts = ['x', 'y', 'z']
+        maximizeViews     = [1,   2,     0]
         for i, v in enumerate(self._ve.imageViews):
+            self.shortcuts.append(self._shortcutHelper(maximizeShortcuts[i], "Navigation", \
+                                  "Enlarge slice view %s to full size" % maximizeShortcuts[i], \
+                                  self, partial(fullscreenView, maximizeViews[i]), Qt.WidgetShortcut))
+            
             self.shortcuts.append(self._shortcutHelper("n", "Labeling", "Increase brush size", v,self._ve._drawManager.brushSmaller, Qt.WidgetShortcut))
             self.shortcuts.append(self._shortcutHelper("m", "Labeling", "Decrease brush size", v, self._ve._drawManager.brushBigger, Qt.WidgetShortcut))
             self.shortcuts.append(self._shortcutHelper("+", "Navigation", "Zoom in", v,  v.zoomIn, Qt.WidgetShortcut))
