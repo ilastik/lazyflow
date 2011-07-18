@@ -232,12 +232,6 @@ class ImageView2D(QGraphicsView):
         #       3D slice views. Can this be made more elegant
         self.rotate(90.0)
         self.scale(1.0,-1.0)
-    
-    def setBorderMarginIndicator(self, margin):
-        """
-        update the border margin indicator (left, right, top, bottom)
-        to reflect the new given margin
-        """
         
     def _cleanUp(self):        
         self._ticker.stop()
@@ -449,22 +443,6 @@ class ImageView2D(QGraphicsView):
     def mouseDoubleClickEvent(self, event):
         mousePos = self.mapToScene(event.pos())
         self.mouseDoubleClicked.emit(mousePos.x(), mousePos.y())
-
-    #===========================================================================
-    # Navigate in Volume
-    #===========================================================================
-    
-    def sliceUp(self):
-        self.changeSlice(1)
-        
-    def sliceUp10(self):
-        self.changeSlice(10)
-
-    def sliceDown(self):
-        self.changeSlice(-1)
-
-    def sliceDown10(self):
-        self.changeSlice(-10)
 
     def changeSlice(self, delta):
         if self._isDrawing:

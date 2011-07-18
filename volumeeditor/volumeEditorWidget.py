@@ -39,7 +39,7 @@ from PyQt4.QtGui import QApplication, QWidget, QLabel, QSpinBox, \
                         QShortcut, QKeySequence, QSplitter, \
                         QVBoxLayout, QHBoxLayout, QPushButton, QToolButton
 
-import numpy
+import numpy, copy
 from functools import partial
 
 from quadsplitter import QuadView
@@ -188,17 +188,24 @@ class VolumeEditorWidget(QWidget):
         self.shortcuts.append(self._shortcutHelper("q", "Navigation", "Switch to next channel", self, self._ve.nextChannel))
         self.shortcuts.append(self._shortcutHelper("a", "Navigation", "Switch to previous channel", self, self._ve.previousChannel))
         
-        for scene in self._ve.imageViews:
-            self.shortcuts.append(self._shortcutHelper("n", "Labeling", "Increase brush size", scene,self._ve._drawManager.brushSmaller, Qt.WidgetShortcut))
-            self.shortcuts.append(self._shortcutHelper("m", "Labeling", "Decrease brush size", scene, self._ve._drawManager.brushBigger, Qt.WidgetShortcut))
-            self.shortcuts.append(self._shortcutHelper("+", "Navigation", "Zoom in", scene, scene.zoomIn, Qt.WidgetShortcut))
-            self.shortcuts.append(self._shortcutHelper("-", "Navigation", "Zoom out", scene, scene.zoomOut, Qt.WidgetShortcut))
-            self.shortcuts.append(self._shortcutHelper("p", "Navigation", "Slice up", scene, scene.sliceUp, Qt.WidgetShortcut))
-            self.shortcuts.append(self._shortcutHelper("o", "Navigation", "Slice down", scene, scene.sliceDown, Qt.WidgetShortcut))
-            self.shortcuts.append(self._shortcutHelper("Ctrl+Up", "Navigation", "Slice up", scene, scene.sliceUp, Qt.WidgetShortcut))
-            self.shortcuts.append(self._shortcutHelper("Ctrl+Down", "Navigation", "Slice down", scene, scene.sliceDown, Qt.WidgetShortcut))
-            self.shortcuts.append(self._shortcutHelper("Ctrl+Shift+Up", "Navigation", "10 slices up", scene, scene.sliceUp10, Qt.WidgetShortcut))
-            self.shortcuts.append(self._shortcutHelper("Ctrl+Shift+Down", "Navigation", "10 slices down", scene, scene.sliceDown10, Qt.WidgetShortcut))
+        for i, v in enumerate(self._ve.imageViews):
+            self.shortcuts.append(self._shortcutHelper("n", "Labeling", "Increase brush size", v,self._ve._drawManager.brushSmaller, Qt.WidgetShortcut))
+            self.shortcuts.append(self._shortcutHelper("m", "Labeling", "Decrease brush size", v, self._ve._drawManager.brushBigger, Qt.WidgetShortcut))
+            self.shortcuts.append(self._shortcutHelper("+", "Navigation", "Zoom in", v,  v.zoomIn, Qt.WidgetShortcut))
+            self.shortcuts.append(self._shortcutHelper("-", "Navigation", "Zoom out", v, v.zoomOut, Qt.WidgetShortcut))
+            
+            def sliceDelta(axis, delta):
+                newPos = copy.copy(self._ve.posModel.slicingPos)
+                newPos[axis] += delta
+                self._ve.posModel.slicingPos = newPos
+            self.shortcuts.append(self._shortcutHelper("p", "Navigation", "Slice up",   v, partial(sliceDelta, i, 1),  Qt.WidgetShortcut))
+            self.shortcuts.append(self._shortcutHelper("o", "Navigation", "Slice down", v, partial(sliceDelta, i, -1), Qt.WidgetShortcut))
+            
+            self.shortcuts.append(self._shortcutHelper("Ctrl+Up",   "Navigation", "Slice up",   v, partial(sliceDelta, i, 1),  Qt.WidgetShortcut))
+            self.shortcuts.append(self._shortcutHelper("Ctrl+Down", "Navigation", "Slice down", v, partial(sliceDelta, i, -1), Qt.WidgetShortcut))
+            
+            self.shortcuts.append(self._shortcutHelper("Ctrl+Shift+Up",   "Navigation", "10 slices up",   v, partial(sliceDelta, i, 10),  Qt.WidgetShortcut))
+            self.shortcuts.append(self._shortcutHelper("Ctrl+Shift+Down", "Navigation", "10 slices down", v, partial(sliceDelta, i, -10), Qt.WidgetShortcut))
 
     def _updateInfoLabels(self, pos):
         for i in range(3):
