@@ -2,28 +2,53 @@ from PyQt4.QtCore import QObject, pyqtSignal
 
 def mkSlicer( abscissa = 1, ordinate = 2, along = [0,3,4] ):
     assert(hasattr(along, "__iter__"))
-    def slicer( array, through = [0,0,0], ranges = ((None, None), (None,None)) ):
+    def slicer( through = [0,0,0], abscissa_range = slice(None, None), ordinate_range = slice(None,None) ):
         slicing = range(len(through) + 2)
-        slicing[abscissa] = slice(ranges[0][0], ranges[0][1])
-        slicing[ordinate] = slice(ranges[1][0], ranges[1][1])
+        slicing[abscissa] = abscissa_range
+        slicing[ordinate] = ordinate_range
         for i,a in enumerate(along):
             slicing[a] = through[i]
-        return array[slicing]
+        return slicing
     return slicer
 
+XYSlicer5D = mkSlicer(1,2, [0,3,4])
+XZSlicer5D = mkSlicer(1,3, [0,2,4])
+YZSlicer5D = mkSlicer(2,3, [0,1,4])
 
 
-class SpatialSliceSource5D( QObject ):
-    changed = pyqtSignal()
+
+class Slice( QObject ):
+    throughChanged = pyqtSignal()
+    slicingChanged = pyqtSignal()
 
     @property
     def through( self ):
         return self._through
     @through.setter
-    def through( self, value ):
-        self._through = value
-        self.changed.emit()
+    def through( self ):
+        self._through
 
+    def __init__(self, datasource, slicer = XYSlicer5D):
+        self._datasource = datasource
+        self._through = []
+        self._slicer = slicer
+
+    def request( self, slicing ):
+        self._slicer(self._through, slicing[0], slicing[1])
+
+
+
+class SliceOf5D( QObject ):
+    changed = pyqtSignal()
+
+    @property
+    def through( self ):
+        return self._coords[1]
+    @through.setter
+    def through( self, value ):
+        self._coords[1] = value
+        self.request()
+    '''
     @property
     def time( self ):
         return self._time
@@ -32,20 +57,28 @@ class SpatialSliceSource5D( QObject ):
         self._time = value
         self.changed.emit()
 
+    '''
     @property
     def channel( self ):
-        return self._channel
+        return self._coords[2]
     @channel.setter
     def channel( self, value ):
-        self._channel = value
-        self.changed.emit()
-
-    def __init__( self, array, along = 'z' ):
+        self._coords[2] = value
+        self.request()
+    
+    def __init__( self, datasource, along = 'z' ):
         super(SpatialSliceSource5D, self).__init__()
-        self._time = 0
-        self._channel = 0
-        self._array = array
-        self._through = 0
+
+        self._slice = None
+        self._coords = [0,0,0] # time, through, channel
+        self._ranges = ((None, None), (None, None))
+
+        #self._time = 0
+        #self._channel = 0
+        self._datasource = datasource
+        #self._through = 0
+
+        self._datasource.changed.connect(self._do)
 
         # create slicer
         axis = {'x': 1, 'y': 2, 'z': 3}
@@ -55,7 +88,11 @@ class SpatialSliceSource5D( QObject ):
         self._slicer = mkSlicer(axes[0],axes[1],[0,_along,4])
 
     def request( self , ranges = ((None, None), (None, None)) ):
-        return self._slicer(self._array, [self.time, self.through, self.channel], ranges)
+        self._datasource.request((slice(None), slice(None), slice(None), slice(None), slice(None)) )
+
+    def _do( self, slicing, slicedarray ):
+        self._slice = self._slicer(slicedarray, self._coords, self._ranges)
+        self.changed.emit()
 
 
 
