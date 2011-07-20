@@ -1,4 +1,5 @@
 from PyQt4.QtCore import QObject, pyqtSignal
+import asyncabcs
 
 def mkSlicer( abscissa = 1, ordinate = 2, along = [0,3,4] ):
     assert(hasattr(along, "__iter__"))
@@ -17,100 +18,83 @@ YZSlicer5D = mkSlicer(2,3, [0,1,4])
 
 
 
-class Slice( QObject ):
-    throughChanged = pyqtSignal()
-    slicingChanged = pyqtSignal()
+class SliceSource( QObject ):
+    throughChanged = pyqtSignal( object )
 
     @property
     def through( self ):
         return self._through
     @through.setter
-    def through( self ):
-        self._through
+    def through( self, value ):
+        self._through = value
+        self.throughChanged.emit( self._through )
 
     def __init__(self, datasource, slicer = XYSlicer5D):
+        assert isinstance(datasource, asyncabcs.ArraySourceABC)
+        super(SliceSource, self).__init__()
+
         self._datasource = datasource
         self._through = []
         self._slicer = slicer
 
-    def request( self, slicing ):
-        self._slicer(self._through, slicing[0], slicing[1])
+    def request( self, slicing2D ):
+        slicing = self._slicer(self._through, slicing2D[0], slicing2D[1])
+        return self._datasource.request(slicing)
+asyncabcs.ArraySourceABC.register(SliceSource)
+assert issubclass(SliceSource, asyncabcs.ArraySourceABC)
 
 
-
-class SliceOf5D( QObject ):
-    changed = pyqtSignal()
-
+class SpatialSliceSource( SliceSource ):
     @property
-    def through( self ):
-        return self._coords[1]
-    @through.setter
-    def through( self, value ):
-        self._coords[1] = value
-        self.request()
-    '''
+    def index( self ):
+        return self.through[self._along_axis]
+    @index.setter
+    def index( self, value ):
+        self.through[1] = value
+
     @property
     def time( self ):
-        return self._time
+        return self.through[0]
     @time.setter
     def time( self, value ):
-        self._time = value
-        self.changed.emit()
+        self.through[0] = value
 
-    '''
     @property
     def channel( self ):
-        return self._coords[2]
+        return self._through[2]
     @channel.setter
     def channel( self, value ):
-        self._coords[2] = value
-        self.request()
-    
+        self.through[2] = value
+
     def __init__( self, datasource, along = 'z' ):
-        super(SpatialSliceSource5D, self).__init__()
+        slicers = {'x': YZSlicer5D, 'y': XZSlicer5D, 'z': XYSlicer5D}
+        slicer = slicers[along]
+        super(SpatialSliceSource, self).__init__( datasource, slicer )
+        self._through = [0,0,0]
 
-        self._slice = None
-        self._coords = [0,0,0] # time, through, channel
-        self._ranges = ((None, None), (None, None))
-
-        #self._time = 0
-        #self._channel = 0
-        self._datasource = datasource
-        #self._through = 0
-
-        self._datasource.changed.connect(self._do)
-
-        # create slicer
-        axis = {'x': 1, 'y': 2, 'z': 3}
-        _along = axis[along]
-        axes = [1,2,3]
-        axes.remove(_along)
-        self._slicer = mkSlicer(axes[0],axes[1],[0,_along,4])
-
-    def request( self , ranges = ((None, None), (None, None)) ):
-        self._datasource.request((slice(None), slice(None), slice(None), slice(None), slice(None)) )
-
-    def _do( self, slicing, slicedarray ):
-        self._slice = self._slicer(slicedarray, self._coords, self._ranges)
-        self.changed.emit()
+        self.along = along
+        self._along_axis = {'x': 1, 'y': 2, 'z': 3}[along]
+assert issubclass(SliceSource, asyncabcs.ArraySourceABC)
 
 
 
 import unittest as ut
-class SpatialSliceSource5DTest( ut.TestCase ):
+class SpatialSliceSourceTest( ut.TestCase ):
     def testRequest( self ):
         import numpy as np
-        a = np.random.randint(0,100,(10,3,3,128,3))
-        ss = SpatialSliceSource5D( a, 'z' )
+        from datasources import ArraySource
+        raw = np.random.randint(0,100,(10,3,3,128,3))
+        a = ArraySource(raw)
+        ss = SpatialSliceSource( a, 'z' )
         ss.time = 1
         ss.channel = 2
-        ss.through = 127
+        ss.index = 127
 
-        sl = ss.request()
-        self.assertTrue(np.all(sl == a[1,:,:,127,2]))
+        sl = ss.request((slice(None), slice(None))).wait()
+        self.assertTrue(np.all(sl == raw[1,:,:,127,2]))
 
-        sl_bounded = ss.request(((0, 3), (1, None)))
-        self.assertTrue(np.all(sl_bounded == a[1,0:3,1:,127,2]))
+        sl_bounded = ss.request((slice(0, 3), slice(1, None))).wait()
+        self.assertTrue(np.all(sl_bounded == raw[1,0:3,1:,127,2]))
 
 if __name__ == '__main__':
     ut.main()
