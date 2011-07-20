@@ -127,6 +127,9 @@ class VolumeEditorWidget(QWidget):
             self._channelSpinLabel.setVisible(False)
             #self.channelEditBtn.setVisible(False)
         self._channelSpin.setRange(0,self._ve._shape[-1] - 1)
+        def setChannel(c):
+            self._ve.posModel.channel = c
+        self._channelSpin.valueChanged.connect(setChannel)
 
         # setup the layout for display
         self.splitter = QSplitter()

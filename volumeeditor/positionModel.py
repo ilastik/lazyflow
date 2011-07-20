@@ -93,6 +93,7 @@ class PositionModel(QObject):
         return self._channel
     @channel.setter
     def channel( self, value):
+        print "PositionModel: setting channel to %d" % value
         self._channel = value    
     
     @property
