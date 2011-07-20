@@ -366,7 +366,6 @@ class ImageView2D(QGraphicsView):
             hBar.setValue(hBar.value() + self._deltaPan.x())
         else:
             hBar.setValue(hBar.value() - self._deltaPan.x())
-        self.scene().changeVisibleContent(self.viewportRect())
         
     def _deaccelerate(self, speed, a=1, maxVal=64):
         x = self._qBound(-maxVal, speed.x(), maxVal)
@@ -468,7 +467,6 @@ class ImageView2D(QGraphicsView):
         self._zoomFactor = self._zoomFactor * factor
         InteractionLogger.log("%f: zoomFactor(factor) %f" % (time.clock(), self._zoomFactor))     
         self.scale(factor, factor)
-        self.scene().changeVisibleContent(self.viewportRect())
 
 #*******************************************************************************
 # i f   _ _ n a m e _ _   = =   " _ _ m a i n _ _ "                            *

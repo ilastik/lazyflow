@@ -1,14 +1,10 @@
-from vtk import *
-from PyQt4.QtCore import *
-from PyQt4.QtGui import *
+#from vtk import *
+#from PyQt4.QtCore import *
+#from PyQt4.QtGui import *
 from functools import partial
 
 import sys, h5py, copy
 from numpy2vtk import toVtkImageData
-
-#make the program quit on Ctrl+C
-import signal, numpy
-signal.signal(signal.SIGINT, signal.SIG_DFL)
 
 #*******************************************************************************
 # M e s h E x t r a c t o r                                                    *
@@ -229,6 +225,10 @@ class MeshExtractorDialog(QDialog):
 #*******************************************************************************
 
 if __name__ == '__main__':
+    #make the program quit on Ctrl+C
+    import signal, numpy
+    signal.signal(signal.SIGINT, signal.SIG_DFL)
+    
     app = QApplication(sys.argv)
     
     f=h5py.File("/home/thorben/phd/src/vtkqt-test/seg.h5")

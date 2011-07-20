@@ -1,3 +1,5 @@
+import copy
+
 from PyQt4.QtCore import QObject, pyqtSignal
 import asyncabcs
 
@@ -47,10 +49,10 @@ assert issubclass(SliceSource, asyncabcs.ArraySourceABC)
 class SpatialSliceSource( SliceSource ):
     @property
     def index( self ):
-        return self.through[self._along_axis]
+        return self.through[1]
     @index.setter
     def index( self, value ):
-        t = self.through
+        t = copy.copy(self.through)
         t[1] = value
         self.through = t
 
