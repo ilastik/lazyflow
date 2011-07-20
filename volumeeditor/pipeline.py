@@ -13,7 +13,7 @@ class FakeImageView( QLabel ):
         self.updateImage()
 
     def updateImage( self ):
-        img = self._imageSource.request()
+        img = self._imageSource.request((100,90, 200, 150))
         pixmap = QPixmap()
         pixmap.convertFromImage(img)
         self.setPixmap(pixmap)
@@ -34,18 +34,19 @@ if __name__ == "__main__":
     raw = np.zeros((1,512,512,2,1))
     raw[0,:,:,0,0] = l1
     raw[0,:,:,1,0] = l2
-    dataSrc = DataSource(raw)
+    dataSrc = ArraySource(raw)
 
-    sliceSrc = SpatialSliceSource5D(dataSrc)
+    sliceSrc = SliceSource(dataSrc)
+    sliceSrc.through = [0,1,0]
     imageSrc = MonochromeImageSource(sliceSrc)
 
     view = FakeImageView(imageSrc)
     view.show()
 
-    dataSrc.changed.connect(sliceSrc.changed.emit)
-    sliceSrc.changed.connect(imageSrc.changed.emit)
-    imageSrc.changed.connect(view.updateImage)
-
+    #dataSrc.changed.connect(sliceSrc.changed.emit)
+    #sliceSrc.changed.connect(imageSrc.changed.emit)
+    #imageSrc.changed.connect(view.updateImage)
+    '''
     import time
     def toggle():
         c = int((time.time()*50) % 256)
@@ -77,7 +78,7 @@ if __name__ == "__main__":
     t3 = QTimer()
     t3.timeout.connect(toggle3)
     t3.start(1500)
-
+    '''
     app.exec_()
 
     
