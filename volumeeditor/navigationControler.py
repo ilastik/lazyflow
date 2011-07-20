@@ -164,7 +164,8 @@ class NavigationControler(QObject):
         self._views[1]._sliceIntersectionMarker.setColor(self.axisColors[0], self.axisColors[2])
         self._views[2]._sliceIntersectionMarker.setColor(self.axisColors[0], self.axisColors[1])
         for axis, v in enumerate(self._views):
-            v.hud.bgColor = self.axisColors[axis]
+            #FIXME: Bad dependency here on hud to be available!
+            if v.hud: v.hud.bgColor = self.axisColors[axis]
         
     @property
     def indicateSliceIntersection(self):
@@ -186,20 +187,6 @@ class NavigationControler(QObject):
         self._beginStackIndex = 0
         self._endStackIndex   = 1
 
-#        # init views
-#        axisLabels = ["X:", "Y:", "Z:"]
-#        for i in range(3):
-#            v = self._views[i]
-#            v.mouseMoved.connect(partial(self.onCursorPosition, axis=i))
-#            v.mouseDoubleClicked.connect(partial(self.onSlicePosition, axis=i))
-#            v.changeSliceDelta.connect(partial(self.onRelativeSliceChange, axis=i))
-#            v.shape = self._model.sliceShape(axis=i)
-#            v.slices = self._model.volumeExtent(axis=i)
-#            
-#            v.hud.label = axisLabels[i]
-#            v.hud.minimum = 0
-#            v.hud.maximum = self._model.volumeExtent(i)
-#            v.hud.sliceSelector.valueChanged.connect(partial(self.onAbsoluteSliceChange, axis=i))
         self._views[0].swapAxes()
 
         self.axisColors = [QColor(255,0,0,255), QColor(0,255,0,255), QColor(0,0,255,255)]
