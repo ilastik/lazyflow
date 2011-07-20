@@ -108,12 +108,13 @@ class VolumeEditorWidget(QWidget):
         self._channelSpin = QSpinBox()
         self._channelSpin.setEnabled(True)
         
-        self.channelEditBtn = QPushButton('Edit channels')
-        self.channelEditBtn.clicked.connect(self._ve.on_editChannels)
+        #FIXME: resurrect
+        #self.channelEditBtn = QPushButton('Edit channels')
+        #self.channelEditBtn.clicked.connect(self._ve.on_editChannels)
         
         channelLayout = QHBoxLayout()
         channelLayout.addWidget(self._channelSpin)
-        channelLayout.addWidget(self.channelEditBtn)
+        #channelLayout.addWidget(self.channelEditBtn) #FIXME: resurrect
         
         self._channelSpinLabel = QLabel("Channel:")
         self._toolBoxLayout.addWidget(self._channelSpinLabel)
@@ -124,7 +125,7 @@ class VolumeEditorWidget(QWidget):
         if self._ve._shape[-1] == 1 or self._ve._shape[-1] == 3: #only show when needed
             self._channelSpin.setVisible(False)
             self._channelSpinLabel.setVisible(False)
-            self.channelEditBtn.setVisible(False)
+            #self.channelEditBtn.setVisible(False)
         self._channelSpin.setRange(0,self._ve._shape[-1] - 1)
 
         # setup the layout for display
