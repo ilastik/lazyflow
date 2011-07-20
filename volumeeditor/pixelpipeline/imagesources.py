@@ -30,7 +30,7 @@ class GrayscaleImageSource( QObject ):
         self._sliceSource = sliceSource
 
     def request( self, rect ):
-        req = self._sliceSource.request((slice(rect[0], rect[0] + rect[2]), slice(rect[1], rect[1] + rect[3])))
+        req = self._sliceSource.request((slice(rect[1], rect[1] + rect[3]), slice(rect[0], rect[0] + rect[2])))
         return GrayscaleImageRequest( req )
 asyncabcs.ImageSourceABC.register(GrayscaleImageSource)
 assert issubclass(GrayscaleImageSource, asyncabcs.ImageSourceABC)
