@@ -113,6 +113,9 @@ class ImageScene2D(QGraphicsScene):
         self._overlays = None
         self._renderThread = None
 
+        # experimental
+        self.imageSource = None
+
     @property
     def shape(self):
         return [self.sceneRect().width(), self.sceneRect().height()]
@@ -131,6 +134,10 @@ class ImageScene2D(QGraphicsScene):
             patch = ImagePatch(r)
             self.imagePatches.append(patch)
         self._renderThread = ImageSceneRenderThread(self.imagePatches)
+        
+        #### experimental
+        self._renderThread.imageSource = self.imageSource
+        ####
         self._renderThread.start()
         self._renderThread.patchAvailable.connect(self.updatePatch)
 

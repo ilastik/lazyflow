@@ -27,6 +27,9 @@ class ImageSceneRenderThread(QThread):
         self.freeQueue.clear()
         self.stopped = False
         
+        # experimental
+        self.imageSource = None
+
         print "initialized ImageSceneRenderThread"
 
     def callMyFunction(self, itemdata, origitem, origitemColor, itemcolorTable):
@@ -69,6 +72,7 @@ class ImageSceneRenderThread(QThread):
                 self.newerDataPending.clear()
                 break
             patch = self._imagePatches[patchNr]
+            '''
             p = QPainter(patch.image)
             r = patch.rectF
 
@@ -86,6 +90,10 @@ class ImageSceneRenderThread(QThread):
 
                 p.drawImage(0,0, image0)
             p.end()
+            '''
+            rect = patch.rect
+            img = self.imageSource.request((rect.x(), rect.y(), rect.width(), rect.height())).wait()
+            patch.image = img
             patch.dirty = False
             self.patchAvailable.emit(patchNr)
             
