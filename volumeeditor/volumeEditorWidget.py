@@ -39,7 +39,7 @@ from PyQt4.QtGui import QApplication, QWidget, QLabel, QSpinBox, \
                         QShortcut, QKeySequence, QSplitter, \
                         QVBoxLayout, QHBoxLayout, QPushButton, QToolButton
 
-import numpy
+import numpy, copy
 from functools import partial
 
 from quadsplitter import QuadView
@@ -55,6 +55,8 @@ class VolumeEditorWidget(QWidget):
     def __init__( self, volumeeditor, parent=None ):
         super(VolumeEditorWidget, self).__init__(parent=parent)
         self._ve = volumeeditor
+
+        self.setFocusPolicy(Qt.StrongFocus)
 
         # setup quadview
         self.quadview = QuadView(self)
@@ -106,12 +108,13 @@ class VolumeEditorWidget(QWidget):
         self._channelSpin = QSpinBox()
         self._channelSpin.setEnabled(True)
         
-        self.channelEditBtn = QPushButton('Edit channels')
-        self.channelEditBtn.clicked.connect(self._ve.on_editChannels)
+        #FIXME: resurrect
+        #self.channelEditBtn = QPushButton('Edit channels')
+        #self.channelEditBtn.clicked.connect(self._ve.on_editChannels)
         
         channelLayout = QHBoxLayout()
         channelLayout.addWidget(self._channelSpin)
-        channelLayout.addWidget(self.channelEditBtn)
+        #channelLayout.addWidget(self.channelEditBtn) #FIXME: resurrect
         
         self._channelSpinLabel = QLabel("Channel:")
         self._toolBoxLayout.addWidget(self._channelSpinLabel)
@@ -122,7 +125,7 @@ class VolumeEditorWidget(QWidget):
         if self._ve._shape[-1] == 1 or self._ve._shape[-1] == 3: #only show when needed
             self._channelSpin.setVisible(False)
             self._channelSpinLabel.setVisible(False)
-            self.channelEditBtn.setVisible(False)
+            #self.channelEditBtn.setVisible(False)
         self._channelSpin.setRange(0,self._ve._shape[-1] - 1)
 
         # setup the layout for display
@@ -139,10 +142,24 @@ class VolumeEditorWidget(QWidget):
         self.setLayout(splitterLayout)
 
         # drawing
+        axisLabels = ["X:", "Y:", "Z:"]
         for i, v in enumerate(self._ve.imageViews):
             v.beginDraw.connect(partial(self._ve.beginDraw, axis=i))
             v.endDraw.connect(partial(self._ve.endDraw, axis=i))
             v.hud = SliceSelectorHud()
+            #connect interpreter
+            v.hud.sliceSelector.valueChanged.connect(partial(self._ve.navInterpret.changeSliceAbsolute, axis=i))
+            #hud
+            v.hud.bgColor = self._ve.navCtrl.axisColors[i] #FIXME
+            v.hud.label = axisLabels[i]
+            v.hud.minimum = 0
+            v.hud.maximum = self._ve.posModel.volumeExtent(i)
+
+        def toggleSliceIntersection(state):
+            self._ve.navCtrl.indicateSliceIntersection = state
+        self.indicateSliceIntersectionButton.toggled.connect(toggleSliceIntersection)
+
+        self._ve.posModel.cursorPositionChanged.connect(self._updateInfoLabels)
 
         # shortcuts
         self._initShortcuts()
@@ -168,31 +185,65 @@ class VolumeEditorWidget(QWidget):
         self.shortcuts.append(self._shortcutHelper("Space", "Overlays", "Invert overlay visibility", self, self._ve.toggleOverlays, enabled = True))
         self.shortcuts.append(self._shortcutHelper("l", "Labeling", "Go to next label (cyclic, forward)", self, self._ve.nextLabel))
         self.shortcuts.append(self._shortcutHelper("k", "Labeling", "Go to previous label (cyclic, backwards)", self, self._ve.prevLabel))
-        self.shortcuts.append(self._shortcutHelper("x", "Navigation", "Enlarge slice view x to full size", self, self._ve.toggleFullscreenX))
-        self.shortcuts.append(self._shortcutHelper("y", "Navigation", "Enlarge slice view y to full size", self, self._ve.toggleFullscreenY))
-        self.shortcuts.append(self._shortcutHelper("z", "Navigation", "Enlarge slice view z to full size", self, self._ve.toggleFullscreenZ))
+        
+        def fullscreenView(axis):
+            m = not self.quadview.maximized
+            print "maximize axis=%d = %r" % (axis, m)
+            self.quadview.setMaximized(m, axis)
+        
         self.shortcuts.append(self._shortcutHelper("q", "Navigation", "Switch to next channel", self, self._ve.nextChannel))
         self.shortcuts.append(self._shortcutHelper("a", "Navigation", "Switch to previous channel", self, self._ve.previousChannel))
         
-        for scene in self._ve.imageViews:
-            self.shortcuts.append(self._shortcutHelper("n", "Labeling", "Increase brush size", scene,self._ve._drawManager.brushSmaller, Qt.WidgetShortcut))
-            self.shortcuts.append(self._shortcutHelper("m", "Labeling", "Decrease brush size", scene, self._ve._drawManager.brushBigger, Qt.WidgetShortcut))
-            self.shortcuts.append(self._shortcutHelper("+", "Navigation", "Zoom in", scene, scene.zoomIn, Qt.WidgetShortcut))
-            self.shortcuts.append(self._shortcutHelper("-", "Navigation", "Zoom out", scene, scene.zoomOut, Qt.WidgetShortcut))
-            self.shortcuts.append(self._shortcutHelper("p", "Navigation", "Slice up", scene, scene.sliceUp, Qt.WidgetShortcut))
-            self.shortcuts.append(self._shortcutHelper("o", "Navigation", "Slice down", scene, scene.sliceDown, Qt.WidgetShortcut))
-            self.shortcuts.append(self._shortcutHelper("Ctrl+Up", "Navigation", "Slice up", scene, scene.sliceUp, Qt.WidgetShortcut))
-            self.shortcuts.append(self._shortcutHelper("Ctrl+Down", "Navigation", "Slice down", scene, scene.sliceDown, Qt.WidgetShortcut))
-            self.shortcuts.append(self._shortcutHelper("Ctrl+Shift+Up", "Navigation", "10 slices up", scene, scene.sliceUp10, Qt.WidgetShortcut))
-            self.shortcuts.append(self._shortcutHelper("Ctrl+Shift+Down", "Navigation", "10 slices down", scene, scene.sliceDown10, Qt.WidgetShortcut))
+        maximizeShortcuts = ['x', 'y', 'z']
+        maximizeViews     = [1,   2,     0]
+        for i, v in enumerate(self._ve.imageViews):
+            self.shortcuts.append(self._shortcutHelper(maximizeShortcuts[i], "Navigation", \
+                                  "Enlarge slice view %s to full size" % maximizeShortcuts[i], \
+                                  self, partial(fullscreenView, maximizeViews[i]), Qt.WidgetShortcut))
+            
+            self.shortcuts.append(self._shortcutHelper("n", "Labeling", "Increase brush size", v,self._ve._drawManager.brushSmaller, Qt.WidgetShortcut))
+            self.shortcuts.append(self._shortcutHelper("m", "Labeling", "Decrease brush size", v, self._ve._drawManager.brushBigger, Qt.WidgetShortcut))
+            self.shortcuts.append(self._shortcutHelper("+", "Navigation", "Zoom in", v,  v.zoomIn, Qt.WidgetShortcut))
+            self.shortcuts.append(self._shortcutHelper("-", "Navigation", "Zoom out", v, v.zoomOut, Qt.WidgetShortcut))
+            
+            def sliceDelta(axis, delta):
+                newPos = copy.copy(self._ve.posModel.slicingPos)
+                newPos[axis] += delta
+                self._ve.posModel.slicingPos = newPos
+            self.shortcuts.append(self._shortcutHelper("p", "Navigation", "Slice up",   v, partial(sliceDelta, i, 1),  Qt.WidgetShortcut))
+            self.shortcuts.append(self._shortcutHelper("o", "Navigation", "Slice down", v, partial(sliceDelta, i, -1), Qt.WidgetShortcut))
+            
+            self.shortcuts.append(self._shortcutHelper("Ctrl+Up",   "Navigation", "Slice up",   v, partial(sliceDelta, i, 1),  Qt.WidgetShortcut))
+            self.shortcuts.append(self._shortcutHelper("Ctrl+Down", "Navigation", "Slice down", v, partial(sliceDelta, i, -1), Qt.WidgetShortcut))
+            
+            self.shortcuts.append(self._shortcutHelper("Ctrl+Shift+Up",   "Navigation", "10 slices up",   v, partial(sliceDelta, i, 10),  Qt.WidgetShortcut))
+            self.shortcuts.append(self._shortcutHelper("Ctrl+Shift+Down", "Navigation", "10 slices down", v, partial(sliceDelta, i, -10), Qt.WidgetShortcut))
+
+    def _updateInfoLabels(self, pos):
+        for i in range(3):
+            if pos[i] < 0 or pos[i] >= self._ve.posModel.shape[i]:
+                self._ve.posLabel.setText("")
+                return
+                                
+        rawRef = self._ve.overlayWidget.getOverlayRef("Raw Data")
+        colorValues = rawRef._data[0,pos[0], pos[1], pos[2], 0]
+        
+        self.posLabel.setText("<b>x:</b> %03i  <b>y:</b> %03i  <b>z:</b> %03i" % (pos[0], pos[1], pos[2]))
+        
+        #FIXME RGB is a special case only
+        if isinstance(colorValues, numpy.ndarray):
+            self.pixelValuesLabel.setText("<b>R:</b> %03i  <b>G:</b> %03i  <b>B:</b> %03i" % (colorValues[0], colorValues[1], colorValues[2]))
+        else:
+            self.pixelValuesLabel.setText("<b>Gray:</b> %03i" %int(colorValues))
             
 #*******************************************************************************
 # i f   _ _ n a m e _ _   = =   " _ _ m a i n _ _ "                            *
 #*******************************************************************************
 
 if __name__ == "__main__":
-    import sys
-    from PyQt4.QtCore import QObject, QRectF
+    import os, sys
+    from PyQt4.QtCore import QObject, QRectF, QTimer
+
     from PyQt4.QtGui import QColor
     #make the program quit on Ctrl+C
     import signal
@@ -238,28 +289,28 @@ if __name__ == "__main__":
         return s
     
     class Test(QObject):
-        def __init__(self, useGL, testmode):
+        def __init__(self, useGL, argv):
             QObject.__init__(self)
             
             from testing import stripes
             
-            if testmode == "hugeslab":
+            if "hugeslab" in argv:
                 N = 2000
                 self.data = (numpy.random.rand(N,2*N, 10)*255).astype(numpy.uint8)
-            elif testmode == "cuboid":
+            elif "5d" in argv:
+                file = os.path.split(os.path.abspath(__file__))[0] +"/_testing/5d-5-213-202-13-2.npy"
+                print "loading file '%s'" % file
+                self.data = numpy.load(file)
+                self.data = self.data.astype(numpy.uint16)
+                print "...done"
+            elif "cuboid" in argv:
                 N = 100
                 from testing import testVolume
                 self.data = testVolume(N)
-            elif testmode == "stripes":
+            elif "stripes" in argv:
                 self.data = stripes(50,35,20)
             else:
                 raise RuntimeError("Invalid testing mode")
-            
-            self.editor = VolumeEditor((1,)+self.data.shape+(1,), useGL=useGL)
-            self.editor.setDrawingEnabled(True)            
-            self.widget = VolumeEditorWidget( self.editor )
-                        
-            self.dataOverlay = OverlayItem(DataAccessor(self.data), alpha=1.0, color=Qt.black, colorTable=OverlayItem.createDefaultColorTable('GRAY', 256), autoVisible=True, autoAlphaChannel=False)
             
             class FakeOverlayWidget(QWidget):
                 selectedOverlay = pyqtSignal(int)
@@ -269,65 +320,36 @@ if __name__ == "__main__":
                 def getOverlayRef(self, key):
                     return self.overlays[0]            
             overlayWidget = FakeOverlayWidget()
+            self.dataOverlay = OverlayItem(DataAccessor(self.data), alpha=1.0, \
+                                           color=Qt.black, \
+                                           colorTable=OverlayItem.createDefaultColorTable('GRAY', 256), \
+                                           autoVisible=True, \
+                                           autoAlphaChannel=False)
             overlayWidget.overlays = [self.dataOverlay.getRef()]
+
+            shape = self.data.shape
+            if len(self.data.shape) == 3:
+                shape = (1,)+self.data.shape+(1,)
             
-            self.posModel     = PositionModel(self.data.shape)
-            self.navCtrl      = NavigationControler( self.editor.imageViews, self.posModel, overlayWidget )
-            self.navInterpret = NavigationInterpreter(self.posModel)
+            self.editor = VolumeEditor(shape, useGL=useGL, overlayWidget=overlayWidget)
+            self.editor.setDrawingEnabled(True)            
+            self.widget = VolumeEditorWidget( self.editor )
             
-            axisLabels = ["X:", "Y:", "Z:"]
-            for i in range(3):
-                v = self.editor.imageViews[i]
-                
-                #connect interpreter
-                v.shape  = self.posModel.sliceShape(axis=i)
-                v.mouseMoved.connect(partial(self.navInterpret.positionCursor, axis=i))
-                v.mouseDoubleClicked.connect(partial(self.navInterpret.positionSlice, axis=i))
-                v.changeSliceDelta.connect(partial(self.navInterpret.changeSliceRelative, axis=i))
-                v.hud.sliceSelector.valueChanged.connect(partial(self.navInterpret.changeSliceAbsolute, axis=i))
-                
-                #hud
-                v.hud.label = axisLabels[i]
-                v.hud.minimum = 0
-                v.hud.maximum = self.posModel.volumeExtent(i)
-            
-            print "connect controler"
-            #connect controler
-            self.posModel.slicingPositionChanged.connect(self.navCtrl.moveSlicingPosition)
-            self.posModel.cursorPositionChanged.connect(self.navCtrl.moveCrosshair)
-            #self.posModel.viewActive.connect(self.navCtrl.moveSlicingPosition)
-            
+            #FIXME: porting
             self.editor.setOverlayWidget(overlayWidget)
-            
-            def toggleSliceIntersection(state):
-                self.navCtrl.indicateSliceIntersection = state
-            self.widget.indicateSliceIntersectionButton.toggled.connect(toggleSliceIntersection)
-            
-            #FIXME: port to ilastik
-            #self.dialog._channelSpin.valueChanged.connect(nc.onChannelChange)
-            
-            def updateInfoLabels(pos):
-                for i in range(3):
-                    if pos[i] < 0 or pos[i] >= self.posModel.shape[i]:
-                        self.widget.posLabel.setText("")
-                        return
-                                
-                rawRef = self.editor.overlayWidget.getOverlayRef("Raw Data")
-                colorValues = rawRef._data[0,pos[0], pos[1], pos[2], 0]
-                
-                self.widget.posLabel.setText("<b>x:</b> %03i  <b>y:</b> %03i  <b>z:</b> %03i" % (pos[0], pos[1], pos[2]))
-                
-                #FIXME RGB is a special case only
-                if isinstance(colorValues, numpy.ndarray):
-                    self.widget.pixelValuesLabel.setText("<b>R:</b> %03i  <b>G:</b> %03i  <b>B:</b> %03i" % (colorValues[0], colorValues[1], colorValues[2]))
-                else:
-                    self.widget.pixelValuesLabel.setText("<b>Gray:</b> %03i" %int(colorValues))
-            self.posModel.cursorPositionChanged.connect(updateInfoLabels)
             
             self.widget.show()
             
-            #show some initial position
-            self.posModel.slicingPos = [5,10,2]
+            if not 't' in sys.argv:
+                #show some initial position
+                self.editor.posModel.slicingPos = [5,10,2]
+            else:
+                def randomMove():
+                    self.editor.posModel.slicingPos = [numpy.random.randint(0,self.data.shape[i]) for i in range(3)]
+                t = QTimer(self)
+                t.setInterval(1000)
+                t.timeout.connect(randomMove)
+                t.start()
 
     app = QApplication(sys.argv)
     
@@ -336,12 +358,10 @@ if __name__ == "__main__":
         app.quit()
         sys.exit(0)
     
-    testmode = sys.argv[1]
-    
-    if testmode in ['cuboid', 'hugeslab']:
+    if 'cuboid' in sys.argv or 'hugeslab' in sys.argv or '5d' in sys.argv:
         s = QSplitter()
-        t1 = Test(True, testmode)
-        t2 = Test(False, testmode)
+        t1 = Test(True, sys.argv)
+        t2 = Test(False, sys.argv)
         s.addWidget(t1.widget)
         s.addWidget(t2.widget)
 
@@ -358,7 +378,7 @@ if __name__ == "__main__":
     
         s.showMaximized()
 
-    if testmode == 'veng':
+    if 'veng' in sys.argv:
         ve = VolumeEditor()
         frame = VolumeEditorWidget( ve )
         frame.showMaximized()
