@@ -240,8 +240,9 @@ class VolumeEditorWidget(QWidget):
 #*******************************************************************************
 
 if __name__ == "__main__":
-    import sys
+    import os, sys
     from PyQt4.QtCore import QObject, QRectF, QTimer
+
     from PyQt4.QtGui import QColor
     #make the program quit on Ctrl+C
     import signal
@@ -295,6 +296,11 @@ if __name__ == "__main__":
             if "hugeslab" in argv:
                 N = 2000
                 self.data = (numpy.random.rand(N,2*N, 10)*255).astype(numpy.uint8)
+            elif "5d" in argv:
+                file = os.path.split(os.path.abspath(__file__))[0] +"/_testing/5d-5-213-202-13-2.npy"
+                print "loading file '%s'" % file
+                self.data = numpy.load(file)
+                print "...done"
             elif "cuboid" in argv:
                 N = 100
                 from testing import testVolume
@@ -346,7 +352,7 @@ if __name__ == "__main__":
         app.quit()
         sys.exit(0)
     
-    if 'cuboid' in sys.argv or 'hugeslab' in sys.argv:
+    if 'cuboid' in sys.argv or 'hugeslab' in sys.argv or '5d' in sys.argv:
         s = QSplitter()
         t1 = Test(True, sys.argv)
         t2 = Test(False, sys.argv)
