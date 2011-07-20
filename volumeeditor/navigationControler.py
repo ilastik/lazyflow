@@ -243,25 +243,8 @@ class NavigationControler(QObject):
         if num < 0 or num >= self._model.volumeExtent(axis):
             raise Exception("NavigationControler._setSlice(): invalid slice number")
 
-        # update view
+        #FIXME: Shouldnt the hud listen to the model changes itself?
         self._views[axis].hud.sliceSelector.setValue(num)
 
-        # update model
-        '''
-        overlays = []
-        for item in reversed(self._overlaywidget.overlays):
-            if item.visible:
-                overlays.append(item.getOverlaySlice(num, axis, 0, item.channel))
-        if len(self._overlaywidget.overlays) == 0 \
-           or self._overlaywidget.getOverlayRef("Raw Data") is None:
-            return
-        
-        rawData = self._overlaywidget.getOverlayRef("Raw Data")._data
-        image = rawData.getSlice(num,\
-                                 axis, 0,\
-                                 self._overlaywidget.getOverlayRef("Raw Data").channel)
-        '''
-        #make sure all tiles are regenerated
-        self._views[axis].scene().markTilesDirty()
+        #re-configure the slice source
         self._sliceSources[axis].index = num
-        self._views[axis].scene().setContent(self._views[axis].viewportRect(), None, None)

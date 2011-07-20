@@ -1,8 +1,4 @@
 import numpy, vigra
-import warnings
-with warnings.catch_warnings():
-    warnings.simplefilter("ignore")
-    import h5py
 
 class DataAccessor():
     """
