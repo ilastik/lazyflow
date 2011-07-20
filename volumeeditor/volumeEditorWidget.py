@@ -300,6 +300,7 @@ if __name__ == "__main__":
                 file = os.path.split(os.path.abspath(__file__))[0] +"/_testing/5d-5-213-202-13-2.npy"
                 print "loading file '%s'" % file
                 self.data = numpy.load(file)
+                self.data = self.data.astype(numpy.uint16)
                 print "...done"
             elif "cuboid" in argv:
                 N = 100
@@ -324,8 +325,12 @@ if __name__ == "__main__":
                                            autoVisible=True, \
                                            autoAlphaChannel=False)
             overlayWidget.overlays = [self.dataOverlay.getRef()]
+
+            shape = self.data.shape
+            if len(self.data.shape) == 3:
+                shape = (1,)+self.data.shape+(1,)
             
-            self.editor = VolumeEditor((1,)+self.data.shape+(1,), useGL=useGL, overlayWidget=overlayWidget)
+            self.editor = VolumeEditor(shape, useGL=useGL, overlayWidget=overlayWidget)
             self.editor.setDrawingEnabled(True)            
             self.widget = VolumeEditorWidget( self.editor )
             
