@@ -48,6 +48,7 @@ from view3d.view3d import OverviewScene
 from sliceSelectorHud import SliceSelectorHud
 from positionModel import PositionModel
 from navigationControler import NavigationControler, NavigationInterpreter
+from pixelpipeline.datasources import ArraySource
 
 from volumeEditor import VolumeEditor
 
@@ -305,6 +306,7 @@ if __name__ == "__main__":
                 print "loading file '%s'" % file
                 self.data = numpy.load(file)
                 self.data = self.data.astype(numpy.uint16)
+                self.data = self.data / 20
                 print "...done"
             elif "cuboid" in argv:
                 N = 100
@@ -334,7 +336,8 @@ if __name__ == "__main__":
             if len(self.data.shape) == 3:
                 shape = (1,)+self.data.shape+(1,)
             
-            self.editor = VolumeEditor(shape, useGL=useGL, overlayWidget=overlayWidget)
+            ds = ArraySource(self.data)
+            self.editor = VolumeEditor(shape, useGL=useGL, overlayWidget=overlayWidget, datasource=ds)
             self.editor.setDrawingEnabled(True)            
             self.widget = VolumeEditorWidget( self.editor )
             
