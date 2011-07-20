@@ -13,7 +13,7 @@ class ImageSceneRenderThread(QThread):
     finishedQueue = pyqtSignal()
     patchAvailable = pyqtSignal(int)
     
-    def __init__(self, imagePatches):
+    def __init__(self, imagePatches, imageSource):
         QThread.__init__(self, None)
         self._imagePatches = imagePatches
 
@@ -28,7 +28,7 @@ class ImageSceneRenderThread(QThread):
         self.stopped = False
         
         # experimental
-        self.imageSource = None
+        self._imageSource = imageSource
 
         print "initialized ImageSceneRenderThread"
 
@@ -92,7 +92,7 @@ class ImageSceneRenderThread(QThread):
             p.end()
             '''
             rect = patch.rect
-            img = self.imageSource.request((rect.x(), rect.y(), rect.width(), rect.height())).wait()
+            img = self._imageSource.request((rect.x(), rect.y(), rect.width(), rect.height())).wait()
             patch.image = img
             patch.dirty = False
             self.patchAvailable.emit(patchNr)

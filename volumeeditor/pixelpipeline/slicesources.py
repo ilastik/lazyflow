@@ -50,7 +50,9 @@ class SpatialSliceSource( SliceSource ):
         return self.through[self._along_axis]
     @index.setter
     def index( self, value ):
-        self.through[1] = value
+        t = self.through
+        t[1] = value
+        self.through = t
 
     @property
     def time( self ):
