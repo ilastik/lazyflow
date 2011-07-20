@@ -100,8 +100,9 @@ class VolumeEditor( QObject ):
             self.imageViews[i].drawing.connect(partial(self.updateLabels, axis=i))
             self.imageViews[i].customContextMenuRequested.connect(self.onCustomContextMenuRequested)
 
+        # navigation control
         self.posModel     = PositionModel(self._shape[1:4])
-        self.navCtrl      = NavigationControler(self.imageViews, self.posModel, overlayWidget)
+        self.navCtrl      = NavigationControler(self.imageViews, self.sliceSources, self.posModel, overlayWidget)
         self.navInterpret = NavigationInterpreter(self.posModel)
 
         # Add label widget to toolBoxLayout

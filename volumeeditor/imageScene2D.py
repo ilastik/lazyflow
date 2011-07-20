@@ -133,21 +133,17 @@ class ImageScene2D(QGraphicsScene):
             r = patchAccessor.patchRectF(i, self.overlap)
             patch = ImagePatch(r)
             self.imagePatches.append(patch)
-        self._renderThread = ImageSceneRenderThread(self.imagePatches)
-        
-        #### experimental
-        self._renderThread.imageSource = self.imageSource
-        ####
+        self._renderThread = ImageSceneRenderThread(self.imagePatches, self.imageSource)
         self._renderThread.start()
         self._renderThread.patchAvailable.connect(self.updatePatch)
-
+        
     def setContent(self, rect, image, overlays = ()):
         #FIXME: assert we have the right shape
         
         '''ImageScene immediately starts to render tiles, that display the new content.'''
         # store data for later rerendering when the rect changes, but not the data
-        self._image = image
-        self._overlays = overlays
+        #self._image = image
+        #self._overlays = overlays
 
         #Abandon previous workloads
         self._renderThread.queue.clear()
@@ -161,7 +157,7 @@ class ImageScene2D(QGraphicsScene):
         if len(patches) == 0: return
 
         #Update these patches using the thread below
-        workPackage = [patches, overlays, 0, 255]
+        workPackage = [patches, None, 0, 255]
         self._renderThread.queue.append(workPackage)
         self._renderThread.dataPending.set()
 

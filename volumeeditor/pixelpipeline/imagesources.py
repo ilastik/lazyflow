@@ -24,16 +24,25 @@ assert issubclass(GrayscaleImageRequest, asyncabcs.RequestABC)
 
 
 class GrayscaleImageSource( QObject ):
+    changed = pyqtSignal()
+
     def __init__( self, sliceSource ):
         assert isinstance(sliceSource, asyncabcs.ArraySourceABC)
         super(GrayscaleImageSource, self).__init__()
         self._sliceSource = sliceSource
+        self._sliceSource.throughChanged.connect(self._onThroughChanged)
 
     def request( self, rect ):
         req = self._sliceSource.request((slice(rect[1], rect[1] + rect[3]), slice(rect[0], rect[0] + rect[2])))
         return GrayscaleImageRequest( req )
+
+    def _onThroughChanged( self, through):
+        self.changed.emit()
+
 asyncabcs.ImageSourceABC.register(GrayscaleImageSource)
 assert issubclass(GrayscaleImageSource, asyncabcs.ImageSourceABC)
+
+
 
 
 

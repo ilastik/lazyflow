@@ -176,12 +176,13 @@ class NavigationControler(QObject):
         for v in self._views:
             v._sliceIntersectionMarker.setVisibility(show)
         
-    def __init__(self, imageView2Ds, positionModel, overlaywidget, time = 0, channel = 0):
+    def __init__(self, imageView2Ds, sliceSources, positionModel, overlaywidget, time = 0, channel = 0):
         QObject.__init__(self)
         assert len(imageView2Ds) == 3
 
         # init fields
         self._views = imageView2Ds
+        self._sliceSources = sliceSources
         self._model = positionModel
         self._overlaywidget = overlaywidget
         self._beginStackIndex = 0
@@ -246,6 +247,7 @@ class NavigationControler(QObject):
         self._views[axis].hud.sliceSelector.setValue(num)
 
         # update model
+        '''
         overlays = []
         for item in reversed(self._overlaywidget.overlays):
             if item.visible:
@@ -258,7 +260,8 @@ class NavigationControler(QObject):
         image = rawData.getSlice(num,\
                                  axis, 0,\
                                  self._overlaywidget.getOverlayRef("Raw Data").channel)
-
+        '''
         #make sure all tiles are regenerated
         self._views[axis].scene().markTilesDirty()
-        self._views[axis].scene().setContent(self._views[axis].viewportRect(), image, overlays) 
+        self._sliceSources[axis].index = num
+        self._views[axis].scene().setContent(self._views[axis].viewportRect(), None, None)
