@@ -32,7 +32,7 @@ class SliceSource( QObject ):
         self.throughChanged.emit( self._through )
 
     def __init__(self, datasource, slicer = XYSlicer5D):
-        assert isinstance(datasource, asyncabcs.ArraySourceABC)
+        #assert isinstance(datasource, asyncabcs.ArraySourceABC), "datasource = %r" % datasource
         super(SliceSource, self).__init__()
 
         self._datasource = datasource

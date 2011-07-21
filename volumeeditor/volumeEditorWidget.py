@@ -336,7 +336,16 @@ if __name__ == "__main__":
             if len(self.data.shape) == 3:
                 shape = (1,)+self.data.shape+(1,)
             
-            ds = ArraySource(self.data)
+            from lazyflow.graph import Graph, Operator, InputSlot, OutputSlot
+            from volumeeditor.pixelpipeline.datasources import LazyflowSource
+            from volumeeditor._testing.from_lazyflow import OpDataProvider5D, OpDelay
+            g = Graph()
+            fn = os.path.split(os.path.abspath(__file__))[0] +"/_testing/5d-5-213-202-13-2.npy"
+            op1 = OpDataProvider5D(g, fn)
+            op2 = OpDelay(g, 0.1)
+            op2.inputs["Input"].connect(op1.outputs["Data5D"])
+            ds = LazyflowSource( op2, "Output" )
+
             self.editor = VolumeEditor(shape, useGL=useGL, overlayWidget=overlayWidget, datasource=ds)
             self.editor.setDrawingEnabled(True)            
             self.widget = VolumeEditorWidget( self.editor )
