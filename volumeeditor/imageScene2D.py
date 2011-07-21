@@ -101,6 +101,15 @@ class ImageScene2D(QGraphicsScene):
     # update delay when a new patch arrives in ms
     glUpdateDelay = 10
     
+    @property
+    def imageSource(self):
+        return self._imageSource
+    
+    @imageSource.setter
+    def imageSource(self, s):
+        self._imageSource = s
+        self._imageSource.changed.connect(self._invalidateRect)
+    
     def __init__(self, viewport):
         QGraphicsScene.__init__(self)
         self._glWidget = viewport
@@ -115,7 +124,7 @@ class ImageScene2D(QGraphicsScene):
         self._renderThread = None
 
         # experimental
-        self.imageSource = None
+        self._imageSource = None
     
         def cleanup():
             print "cleaning up some more"
@@ -141,12 +150,17 @@ class ImageScene2D(QGraphicsScene):
             self.imagePatches.append(patch)
         self._renderThread = ImageSceneRenderThread(self.imagePatches, self.imageSource, parent=self)
         self._renderThread.start()
-        self._renderThread.patchAvailable.connect(self._invalidatePatch)
-
-    def _invalidatePatch(self, patchNr):
-        p = self.imagePatches[patchNr]
-        p.dirty = True
+        self._renderThread.patchAvailable.connect(self._schedulePatchRedraw)
         
+    def _invalidateRect(self, rect):
+        for i,patch in enumerate(self.imagePatches):
+            if not rect.isValid() or rect.intersects(patch.rect):
+                #convention: if a rect is invalid, it is infinitely large
+                patch.dirty = True
+                self._schedulePatchRedraw(i)
+
+    def _schedulePatchRedraw(self, patchNr):
+        p = self.imagePatches[patchNr]
         self._updatableTiles.append(patchNr)
         if not self._useGL:
             self.invalidate(p.rectF, QGraphicsScene.BackgroundLayer)
@@ -225,6 +239,7 @@ class ImageScene2D(QGraphicsScene):
         #Find all patches that intersect the given 'rect'.
         for i,patch in enumerate(self.imagePatches):
             if patch.dirty and not patch.rendering and rect.intersects(patch.rectF):
+                print "QGraphicsScene [id=%d] reqeusts patch %d" % (id(self), i)
                 self._renderThread.requestPatch(i)
         
         if self._useGL:

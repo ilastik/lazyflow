@@ -52,6 +52,7 @@ class SpatialSliceSource( SliceSource ):
         return self.through[1]
     @index.setter
     def index( self, value ):
+        print self._along_axis, value
         t = copy.copy(self.through)
         t[1] = value
         self.through = t
