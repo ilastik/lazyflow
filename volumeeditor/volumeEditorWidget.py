@@ -245,15 +245,22 @@ class VolumeEditorWidget(QWidget):
 #*******************************************************************************
 
 if __name__ == "__main__":
-    import os, sys
-    from PyQt4.QtCore import QObject, QRectF, QTimer
-
-    from PyQt4.QtGui import QColor
     #make the program quit on Ctrl+C
     import signal
     signal.signal(signal.SIGINT, signal.SIG_DFL)
+    
+    import os, sys
+    
+    from PyQt4.QtCore import QObject, QRectF, QTime
+    from PyQt4.QtGui import QColor
+    
+    from lazyflow.graph import Graph, Operator, InputSlot, OutputSlot
+    from volumeeditor.pixelpipeline.datasources import LazyflowSource
+    from volumeeditor._testing.from_lazyflow import OpDataProvider5D, OpDelay
+    
     from overlayItem  import OverlayItem  
     from _testing.volume import DataAccessor
+    from testing import stripes
     
     def img(N):
         def meshgrid2(*arrs):
@@ -296,24 +303,28 @@ if __name__ == "__main__":
         def __init__(self, useGL, argv):
             QObject.__init__(self)
             
-            from testing import stripes
+            source = None
             
             if "hugeslab" in argv:
                 N = 2000
-                self.data = (numpy.random.rand(N,2*N, 10)*255).astype(numpy.uint8)
+                source = ArraySource((numpy.random.rand(N,2*N, 10)*255).astype(numpy.uint8))
             elif "5d" in argv:
                 file = os.path.split(os.path.abspath(__file__))[0] +"/_testing/5d-5-213-202-13-2.npy"
                 print "loading file '%s'" % file
-                self.data = numpy.load(file)
-                self.data = self.data.astype(numpy.uint16)
-                self.data = self.data / 20
+                
+                g = Graph()
+                op1 = OpDataProvider5D(g, file)
+                op2 = OpDelay(g, 0.000003)
+                op2.inputs["Input"].connect(op1.outputs["Data5D"])
+                source = LazyflowSource(op2, "Output")
+                
                 print "...done"
             elif "cuboid" in argv:
                 N = 100
                 from testing import testVolume
-                self.data = testVolume(N)
+                source = ArraySource(testVolume(N))
             elif "stripes" in argv:
-                self.data = stripes(50,35,20)
+                source = ArraySource(stripes(50,35,20))
             else:
                 raise RuntimeError("Invalid testing mode")
             
@@ -325,28 +336,29 @@ if __name__ == "__main__":
                 def getOverlayRef(self, key):
                     return self.overlays[0]            
             overlayWidget = FakeOverlayWidget()
-            self.dataOverlay = OverlayItem(DataAccessor(self.data), alpha=1.0, \
+            
+            arr = None
+            if hasattr(source, '_array'):
+                arr = source._array
+            else:
+                arr = source._op.outputs[source._outslot]
+            
+            self.dataOverlay = OverlayItem(DataAccessor(arr), alpha=1.0, \
                                            color=Qt.black, \
                                            colorTable=OverlayItem.createDefaultColorTable('GRAY', 256), \
                                            autoVisible=True, \
                                            autoAlphaChannel=False)
             overlayWidget.overlays = [self.dataOverlay.getRef()]
 
-            shape = self.data.shape
-            if len(self.data.shape) == 3:
-                shape = (1,)+self.data.shape+(1,)
-            
-            from lazyflow.graph import Graph, Operator, InputSlot, OutputSlot
-            from volumeeditor.pixelpipeline.datasources import LazyflowSource
-            from volumeeditor._testing.from_lazyflow import OpDataProvider5D, OpDelay
-            g = Graph()
-            fn = os.path.split(os.path.abspath(__file__))[0] +"/_testing/5d-5-213-202-13-2.npy"
-            op1 = OpDataProvider5D(g, fn)
-            op2 = OpDelay(g, 0.000003)
-            op2.inputs["Input"].connect(op1.outputs["Data5D"])
-            ds = LazyflowSource( op2, "Output" )
+            shape = None
+            if hasattr(source, '_array'):
+                shape = source._array.shape
+            else:
+                shape = source._op.outputs[source._outslot].shape
+            if len(shape) == 3:
+                shape = (1,)+shape+(1,)
 
-            self.editor = VolumeEditor(shape, useGL=useGL, overlayWidget=overlayWidget, datasource=ds)
+            self.editor = VolumeEditor(shape, useGL=useGL, overlayWidget=overlayWidget, datasource=source)
             self.editor.setDrawingEnabled(True)            
             self.widget = VolumeEditorWidget( self.editor )
             
