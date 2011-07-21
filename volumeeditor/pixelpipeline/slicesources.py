@@ -2,7 +2,9 @@ import copy
 
 from PyQt4.QtCore import QObject, pyqtSignal
 from asyncabcs import ArraySourceABC, RequestABC
+import copy
 import numpy as np
+
 
 def mkSlicer( abscissa = 1, ordinate = 2, along = [0,3,4] ):
     assert(hasattr(along, "__iter__"))
@@ -71,7 +73,6 @@ class SpatialSliceSource( SliceSource ):
         return self.through[1]
     @index.setter
     def index( self, value ):
-        print self._along_axis, value
         t = copy.copy(self.through)
         t[1] = value
         self.through = t
@@ -80,15 +81,19 @@ class SpatialSliceSource( SliceSource ):
     def time( self ):
         return self.through[0]
     @time.setter
-    def time( self, value ):
-        self.through[0] = value
+    def time( self, value )
+        t = copy.copy(self.through)
+        t[0] = value
+        self.through = t
 
     @property
     def channel( self ):
         return self._through[2]
     @channel.setter
     def channel( self, value ):
-        self.through[2] = value
+        t = copy.copy(self.through)
+        t[2] = value
+        self.through = t
 
     def __init__( self, datasource, along = 'z' ):
         slicers = {'x': YZSlicer5D, 'y': XZSlicer5D, 'z': XYSlicer5D}
