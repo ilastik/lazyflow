@@ -21,19 +21,10 @@ class ImageSceneRenderThread(QThread):
         
         self._dataPending = threading.Event()
         self._dataPending.clear()
-        self._newerDataPending = threading.Event()
-        self._newerDataPending.clear()
         self._stopped = False
         
         # experimental
         self._imageSource = imageSource
-
-#        def cleanup():
-#            print "cleaning up the thread some more"
-#            self.stop()
-#        self.destroyed.connect(cleanup)
-
-        print "initialized ImageSceneRenderThread"
 
     def requestPatch(self, patchNr):
         if patchNr not in self._queue:
@@ -44,7 +35,6 @@ class ImageSceneRenderThread(QThread):
         self._stopped = True
         self._dataPending.set()
         self.wait()
-        print "xxx render thread stopped"
 
     # private functions
 
@@ -80,12 +70,6 @@ class ImageSceneRenderThread(QThread):
 
     def _takeJob(self):
         patchNr = self._queue.pop()
-        if patchNr is None:
-            return
-        
-        if self._newerDataPending.isSet():
-            self._newerDataPending.clear()
-            return
         
         patch = self._imagePatches[patchNr]
         patch.rendering = True
@@ -116,7 +100,6 @@ class ImageSceneRenderThread(QThread):
 
     def _runImpl(self):
         self._dataPending.wait()
-        self._newerDataPending.clear()
         while len(self._queue) > 0:
             self._takeJob()
         self._dataPending.clear()
@@ -124,7 +107,6 @@ class ImageSceneRenderThread(QThread):
     def run(self):
         while not self._stopped:
             self._runImpl()
-        print "thread stopped"
 
 def _convertImageUInt8(itemdata, itemcolorTable):
     if itemdata.dtype == numpy.uint8 or itemcolorTable == None:
