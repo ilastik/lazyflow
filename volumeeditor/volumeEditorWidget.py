@@ -256,6 +256,7 @@ if __name__ == "__main__":
     
     from lazyflow.graph import Graph, Operator, InputSlot, OutputSlot
     from volumeeditor.pixelpipeline.datasources import LazyflowSource
+    from volumeeditor.pixelpipeline._testing import OpDataProvider
     from volumeeditor._testing.from_lazyflow import OpDataProvider5D, OpDelay
     
     from overlayItem  import OverlayItem  
@@ -307,7 +308,13 @@ if __name__ == "__main__":
             
             if "hugeslab" in argv:
                 N = 2000
-                source = ArraySource((numpy.random.rand(N,2*N, 10)*255).astype(numpy.uint8))
+                
+                g = Graph()
+                op1 = OpDataProvider(g, (numpy.random.rand(1,N,2*N, 10,1)*255).astype(numpy.uint8))
+                op2 = OpDelay(g, 0.000003)
+                op2.inputs["Input"].connect(op1.outputs["Data"])
+                source = LazyflowSource(op2, "Output")
+
             elif "5d" in argv:
                 file = os.path.split(os.path.abspath(__file__))[0] +"/_testing/5d-5-213-202-13-2.npy"
                 print "loading file '%s'" % file
