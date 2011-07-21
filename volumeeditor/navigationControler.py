@@ -203,6 +203,12 @@ class NavigationControler(QObject):
                 self._updateSlice(self._model.slicingPos[i], i)
         self._updateSliceIntersection()
     
+    def changeTime(self, oldTime, newTime):
+        print "CHANGE TIME", oldTime, newTime
+        if oldTime != newTime:
+            for i in range(3):
+                self._sliceSources[i].time = newTime
+    
     def changeChannel(self, oldChannel, newChannel):
         print "CHANGE CHANNEL", oldChannel, newChannel
         if oldChannel != newChannel:

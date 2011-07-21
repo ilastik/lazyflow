@@ -36,6 +36,7 @@ from PyQt4.QtCore import QObject, pyqtSignal
 #*******************************************************************************
 
 class PositionModel(QObject):
+    timeChanged            = pyqtSignal(int, int)
     channelChanged         = pyqtSignal(int, int)
     cursorPositionChanged  = pyqtSignal(object, object)
     slicingPositionChanged = pyqtSignal(object, object)
@@ -87,7 +88,10 @@ class PositionModel(QObject):
         return self._time
     @time.setter
     def time( self, value ):
-        self._time = value
+        print "PositionModel: setting time to %d" % value
+        oldValue = self._time
+        self._time = value    
+        self.timeChanged.emit(oldValue, value)
 
     @property
     def channel( self ):

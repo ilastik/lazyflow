@@ -126,6 +126,7 @@ class VolumeEditor( QObject ):
             
         #connect controler
         self.posModel.channelChanged.connect(self.navCtrl.changeChannel)
+        self.posModel.timeChanged.connect(self.navCtrl.changeTime)
         self.posModel.slicingPositionChanged.connect(self.navCtrl.moveSlicingPosition)
         self.posModel.cursorPositionChanged.connect(self.navCtrl.moveCrosshair)
 

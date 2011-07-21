@@ -108,29 +108,38 @@ class VolumeEditorWidget(QWidget):
         # Channel Selector QComboBox in right side tool box
         self._channelSpin = QSpinBox()
         self._channelSpin.setEnabled(True)
-        
-        #FIXME: resurrect
-        #self.channelEditBtn = QPushButton('Edit channels')
-        #self.channelEditBtn.clicked.connect(self._ve.on_editChannels)
-        
         channelLayout = QHBoxLayout()
         channelLayout.addWidget(self._channelSpin)
-        #channelLayout.addWidget(self.channelEditBtn) #FIXME: resurrect
-        
         self._channelSpinLabel = QLabel("Channel:")
         self._toolBoxLayout.addWidget(self._channelSpinLabel)
         self._toolBoxLayout.addLayout(channelLayout)
+
+        #time selector
+        self._timeSpin = QSpinBox()
+        self._timeSpin.setEnabled(True)
+        timeLayout = QHBoxLayout()
+        timeLayout.addWidget(self._timeSpin)
+        self._timeSpinLabel = QLabel("Time:")
+        self._toolBoxLayout.addWidget(self._timeSpinLabel)
+        self._toolBoxLayout.addLayout(timeLayout)
+        
         self._toolBoxLayout.setAlignment(Qt.AlignTop)
 
         # == 3 checks for RGB image and activates channel selector
         if self._ve._shape[-1] == 1 or self._ve._shape[-1] == 3: #only show when needed
             self._channelSpin.setVisible(False)
             self._channelSpinLabel.setVisible(False)
+            self._timeSpin.setVisible(False)
+            self._timeSpinLabel.setVisible(False)
             #self.channelEditBtn.setVisible(False)
         self._channelSpin.setRange(0,self._ve._shape[-1] - 1)
+        self._timeSpin.setRange(0,self._ve._shape[0] - 1)
         def setChannel(c):
             self._ve.posModel.channel = c
         self._channelSpin.valueChanged.connect(setChannel)
+        def setTime(c):
+            self._ve.posModel.time = c
+        self._timeSpin.valueChanged.connect(setTime)
 
         # setup the layout for display
         self.splitter = QSplitter()
