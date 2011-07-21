@@ -203,6 +203,12 @@ class NavigationControler(QObject):
                 self._updateSlice(self._model.slicingPos[i], i)
         self._updateSliceIntersection()
     
+    def changeChannel(self, oldChannel, newChannel):
+        print "CHANGE CHANNEL", oldChannel, newChannel
+        if oldChannel != newChannel:
+            for i in range(3):
+                self._sliceSources[i].channel = newChannel
+    
     #private functions ########################################################
     
     def _updateCrossHairCursor(self):

@@ -36,6 +36,7 @@ from PyQt4.QtCore import QObject, pyqtSignal
 #*******************************************************************************
 
 class PositionModel(QObject):
+    channelChanged         = pyqtSignal(int, int)
     cursorPositionChanged  = pyqtSignal(object, object)
     slicingPositionChanged = pyqtSignal(object, object)
     viewActive             = pyqtSignal(int)
@@ -92,9 +93,11 @@ class PositionModel(QObject):
     def channel( self ):
         return self._channel
     @channel.setter
-    def channel( self, value):
+    def channel(self, value):
         print "PositionModel: setting channel to %d" % value
+        oldValue = self._channel
         self._channel = value    
+        self.channelChanged.emit(oldValue, value)
     
     @property
     def cursorPos(self):

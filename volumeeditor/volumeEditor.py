@@ -125,6 +125,7 @@ class VolumeEditor( QObject ):
             v.changeSliceDelta.connect(partial(self.navInterpret.changeSliceRelative, axis=i))
             
         #connect controler
+        self.posModel.channelChanged.connect(self.navCtrl.changeChannel)
         self.posModel.slicingPositionChanged.connect(self.navCtrl.moveSlicingPosition)
         self.posModel.cursorPositionChanged.connect(self.navCtrl.moveCrosshair)
 
