@@ -17,6 +17,7 @@ def is_pure_slicing( slicing ):
     return True
 
 
+
 class ArrayRequest( object ):
     def __init__( self, result ):
         self._result = result

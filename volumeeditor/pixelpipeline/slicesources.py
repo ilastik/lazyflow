@@ -1,5 +1,6 @@
 from PyQt4.QtCore import QObject, pyqtSignal
-import asyncabcs
+from asyncabcs import ArraySourceABC, RequestABC
+import numpy as np
 
 def mkSlicer( abscissa = 1, ordinate = 2, along = [0,3,4] ):
     assert(hasattr(along, "__iter__"))
@@ -18,6 +19,21 @@ YZSlicer5D = mkSlicer(2,3, [0,1,4])
 
 
 
+class SliceRequest( object ):
+    def __init__( self, array_request ):
+        self._arrayreq = array_request
+        
+    def wait( self ):
+        return np.squeeze(self._arrayreq.wait())
+
+    def notify( self, callback, **kwargs ):
+        self._arrayreq.notify(self._onNotify, package = (callback, kwargs))
+
+    def _onNotify( self, result, package ):
+        callback(np.squeeze(result), **kwargs)
+assert issubclass(SliceRequest, RequestABC)
+
+
 class SliceSource( QObject ):
     throughChanged = pyqtSignal( object )
 
@@ -30,7 +46,7 @@ class SliceSource( QObject ):
         self.throughChanged.emit( self._through )
 
     def __init__(self, datasource, slicer = XYSlicer5D):
-        assert isinstance(datasource, asyncabcs.ArraySourceABC)
+        assert isinstance(datasource, ArraySourceABC)
         super(SliceSource, self).__init__()
 
         self._datasource = datasource
@@ -39,9 +55,8 @@ class SliceSource( QObject ):
 
     def request( self, slicing2D ):
         slicing = self._slicer(self._through, slicing2D[0], slicing2D[1])
-        return self._datasource.request(slicing)
-asyncabcs.ArraySourceABC.register(SliceSource)
-assert issubclass(SliceSource, asyncabcs.ArraySourceABC)
+        return SliceRequest(self._datasource.request(slicing))
+assert issubclass(SliceSource, ArraySourceABC)
 
 
 class SpatialSliceSource( SliceSource ):
@@ -74,7 +89,7 @@ class SpatialSliceSource( SliceSource ):
 
         self.along = along
         self._along_axis = {'x': 1, 'y': 2, 'z': 3}[along]
-assert issubclass(SliceSource, asyncabcs.ArraySourceABC)
+assert issubclass(SpatialSliceSource, ArraySourceABC)
 
 
 
