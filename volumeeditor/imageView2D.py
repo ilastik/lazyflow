@@ -221,9 +221,10 @@ class ImageView2D(QGraphicsView):
         After a scene's content changed, it starts to render new tiles. This
         method prepares for these new tiles arriving little by little.
         '''
-        if not self._useGL:
+      #  if not self._useGL:
             #reset the background cache
-            self.resetCachedContent()
+            #self.resetCachedContent()
+            pass
 
     def swapAxes(self):          
         '''Displays this image as if the x and y axes were swapped.
