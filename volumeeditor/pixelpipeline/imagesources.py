@@ -35,8 +35,6 @@ class GrayscaleImageSource( QObject ):
     def request( self, qrect ):
         assert isinstance(qrect, QRect)
         s = (slice(qrect.y(), qrect.y()+qrect.height()), slice(qrect.x(), qrect.x()+qrect.width()))
-        #s = (slice(qrect.x(), qrect.x()+qrect.width()), slice(qrect.y(), qrect.y()+qrect.height())) 
-        print "LOOKLOOK GrayscaleImageSource", s
         req = self._sliceSource.request(s)
         return GrayscaleImageRequest( req )
 

@@ -1,5 +1,3 @@
-import copy
-
 from PyQt4.QtCore import QObject, pyqtSignal
 from asyncabcs import ArraySourceABC, RequestABC
 import copy
@@ -105,10 +103,6 @@ assert issubclass(SliceSource, ArraySourceABC)
 
 
 class SpatialSliceSource( SliceSource ):
-    def request(self, slicing2D):
-        print "XXXXXXXXXXXXXXX [_along_axis=%s] slicing2D = %r" % (self._along_axis, slicing2D)
-        return SliceSource.request(self, slicing2D)
-    
     @property
     def index( self ):
         return self.through[1]
