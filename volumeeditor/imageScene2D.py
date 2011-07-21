@@ -143,7 +143,7 @@ class ImageScene2D(QGraphicsScene):
         del self.imagePatches
         
         self.imagePatches = []
-        patchAccessor = PatchAccessor(*shape2D, blockSize=self.blockSize)
+        patchAccessor = PatchAccessor(shape2D[1], shape2D[0], blockSize=self.blockSize)
         for i in range(patchAccessor.patchCount):
             r = patchAccessor.patchRectF(i, self.overlap)
             patch = ImagePatch(r)

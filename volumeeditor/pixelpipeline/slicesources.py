@@ -64,7 +64,7 @@ assert issubclass(SliceSource, ArraySourceABC)
 class SpatialSliceSource( SliceSource ):
     def request(self, slicing2D):
         print "XXXXXXXXXXXXXXX [_along_axis=%s] slicing2D = %r" % (self._along_axis, slicing2D)
-        SliceSource.request(self, slicing2D)
+        return SliceSource.request(self, slicing2D)
     
     @property
     def index( self ):

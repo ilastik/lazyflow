@@ -9,6 +9,7 @@ class GrayscaleImageRequest( object ):
 
     def wait( self ):
         a = self._arrayreq.wait()
+        a = a.squeeze()
         img = gray2qimage(a)
         return img.convertToFormat(QImage.Format_ARGB32_Premultiplied)        
     def notify( self, callback, **kwargs ):
@@ -32,9 +33,11 @@ class GrayscaleImageSource( QObject ):
         self._sliceSource = sliceSource
         self._sliceSource.throughChanged.connect(self._onThroughChanged)
 
-    def request( self, rect ):
-        s = (slice(rect[1], rect[1] + rect[3]), slice(rect[0], rect[0] + rect[2]))
-        print "GrayscaleImageSource", s
+    def request( self, qrect ):
+        assert isinstance(qrect, QRect)
+        s = (slice(qrect.y(), qrect.y()+qrect.height()), slice(qrect.x(), qrect.x()+qrect.width()))
+        #s = (slice(qrect.x(), qrect.x()+qrect.width()), slice(qrect.y(), qrect.y()+qrect.height())) 
+        print "LOOKLOOK GrayscaleImageSource", s
         req = self._sliceSource.request(s)
         return GrayscaleImageRequest( req )
 

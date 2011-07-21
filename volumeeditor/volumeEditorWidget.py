@@ -342,7 +342,7 @@ if __name__ == "__main__":
             g = Graph()
             fn = os.path.split(os.path.abspath(__file__))[0] +"/_testing/5d-5-213-202-13-2.npy"
             op1 = OpDataProvider5D(g, fn)
-            op2 = OpDelay(g, 0.1)
+            op2 = OpDelay(g, 0.000003)
             op2.inputs["Input"].connect(op1.outputs["Data5D"])
             ds = LazyflowSource( op2, "Output" )
 

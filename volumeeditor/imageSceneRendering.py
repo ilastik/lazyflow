@@ -108,8 +108,7 @@ class ImageSceneRenderThread(QThread):
             p.drawImage(0,0, image0)
         p.end()
         '''
-        rect = patch.rect
-        img = self._imageSource.request((rect.x(), rect.y(), rect.width(), rect.height())).wait()
+        img = self._imageSource.request(patch.rect).wait()
         patch.image = img
         patch.dirty = False
         patch.rendering = False
