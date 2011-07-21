@@ -45,7 +45,7 @@ class LazyflowSource( QObject ):
 
     def request( self, slicing ):
         reqobj = self._op.outputs[self._outslot][slicing].allocate()        
-        return Request( reqobject )
+        return LazyflowRequest( reqobj  )
 ArraySourceABC.register( LazyflowSource )
 assert issubclass(LazyflowSource, ArraySourceABC)
 
