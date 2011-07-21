@@ -8,7 +8,7 @@ def mkSlicer( abscissa = 1, ordinate = 2, along = [0,3,4] ):
         slicing[abscissa] = abscissa_range
         slicing[ordinate] = ordinate_range
         for i,a in enumerate(along):
-            slicing[a] = through[i]
+            slicing[a] = slice(through[i], through[i]+1)
         return slicing
     return slicer
 
