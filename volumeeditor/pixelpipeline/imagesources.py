@@ -20,7 +20,6 @@ class GrayscaleImageRequest( object ):
         callback = package[0]
         kwargs = package[1]
         callback( img, **kwargs )
-asyncabcs.RequestABC.register(GrayscaleImageRequest)
 assert issubclass(GrayscaleImageRequest, asyncabcs.RequestABC)
 
 
@@ -44,8 +43,6 @@ class GrayscaleImageSource( QObject ):
     def _onThroughChanged( self, through):
         print "GrayScaleImageSource dirties everything"
         self.changed.emit(QRect())
-
-asyncabcs.ImageSourceABC.register(GrayscaleImageSource)
 assert issubclass(GrayscaleImageSource, asyncabcs.ImageSourceABC)
 
 
