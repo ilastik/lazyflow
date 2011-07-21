@@ -17,6 +17,7 @@ def is_pure_slicing( slicing ):
     return True
 
 
+
 class ArrayRequest( object ):
     def __init__( self, result ):
         self._result = result
@@ -27,7 +28,6 @@ class ArrayRequest( object ):
     # callback( result = result, **kwargs )
     def notify( self, callback, **kwargs ):
         callback(self._result, **kwargs)
-RequestABC.register(ArrayRequest)
 assert issubclass(ArrayRequest, RequestABC)
 
 class ArraySource( QObject ):
@@ -38,7 +38,6 @@ class ArraySource( QObject ):
         if not is_pure_slicing(slicing):
             raise Exception('ArraySource: slicing is not pure')
         return ArrayRequest(self._array[slicing])
-ArraySourceABC.register( ArraySource )
 assert issubclass(ArraySource, ArraySourceABC)
 
 
@@ -52,7 +51,6 @@ class LazyflowRequest( object ):
 
     def notify( self, callback, **kwargs ):
         self._lazyflow_request.notify( callback, **kwargs)
-RequestABC.register(LazyflowRequest)
 assert issubclass(LazyflowRequest, RequestABC)
 
 class LazyflowSource( QObject ):
@@ -66,7 +64,6 @@ class LazyflowSource( QObject ):
             raise Exception('ArraySource: slicing is not pure')
         reqobj = self._op.outputs[self._outslot][slicing].allocate()        
         return LazyflowRequest( reqobj )
-ArraySourceABC.register( LazyflowSource )
 assert issubclass(LazyflowSource, ArraySourceABC)
 
 
