@@ -46,7 +46,7 @@ from drawManager import DrawManager
 from imageView2D import ImageView2D
 from positionModel import PositionModel
 from navigationControler import NavigationControler, NavigationInterpreter
-from pixelpipeline.slicesources import SpatialSliceSource, XYSlicer5D, XZSlicer5D, YZSlicer5D 
+from pixelpipeline.slicesources import SpatialSliceSource
 from pixelpipeline.imagesources import GrayscaleImageSource
 
 class VolumeEditor( QObject ):
