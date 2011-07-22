@@ -287,4 +287,4 @@ class OverlayItem(object):
             color = OverlayItem.qrgb(numpy.random.randint(255),numpy.random.randint(255),numpy.random.randint(255))
             colorlist.append(color)
             
-        return colorlis
+        return colorlist
