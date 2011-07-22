@@ -20,7 +20,6 @@ class GrayscaleImageRequest( object ):
         callback = package[0]
         kwargs = package[1]
         callback( img, **kwargs )
-asyncabcs.RequestABC.register(GrayscaleImageRequest)
 assert issubclass(GrayscaleImageRequest, asyncabcs.RequestABC)
 
 
@@ -36,16 +35,12 @@ class GrayscaleImageSource( QObject ):
     def request( self, qrect ):
         assert isinstance(qrect, QRect)
         s = (slice(qrect.y(), qrect.y()+qrect.height()), slice(qrect.x(), qrect.x()+qrect.width()))
-        #s = (slice(qrect.x(), qrect.x()+qrect.width()), slice(qrect.y(), qrect.y()+qrect.height())) 
-        print "LOOKLOOK GrayscaleImageSource", s
         req = self._sliceSource.request(s)
         return GrayscaleImageRequest( req )
 
     def _onThroughChanged( self, through):
         print "GrayScaleImageSource dirties everything"
         self.changed.emit(QRect())
-
-asyncabcs.ImageSourceABC.register(GrayscaleImageSource)
 assert issubclass(GrayscaleImageSource, asyncabcs.ImageSourceABC)
 
 
