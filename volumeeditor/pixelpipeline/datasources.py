@@ -31,7 +31,10 @@ class ArrayRequest( object ):
 assert issubclass(ArrayRequest, RequestABC)
 
 class ArraySource( QObject ):
+    isDirty = pyqtSignal( object )
+
     def __init__( self, array ):
+        super(ArraySource, self).__init__()
         self._array = array
 
     def request( self, slicing ):
@@ -40,6 +43,12 @@ class ArraySource( QObject ):
         assert(len(slicing) == len(self._array.shape)), \
             "slicing into an array of shape=%r requested, but the slicing object is %r" % (slicing, self._array.shape)
         return ArrayRequest(self._array[slicing])
+
+    def setDirty( self, slicing ):
+        if not is_pure_slicing(slicing):
+            raise Exception('dirty region: slicing is not pure')
+        self.isDirty.emit( slicing )
+
 assert issubclass(ArraySource, ArraySourceABC)
 
 
@@ -56,6 +65,8 @@ class LazyflowRequest( object ):
 assert issubclass(LazyflowRequest, RequestABC)
 
 class LazyflowSource( QObject ):
+    isDirty = pyqtSignal( object )
+
     def __init__( self, operator, outslot = "Output" ):
         super(LazyflowSource, self).__init__()
         self._op = operator
@@ -66,6 +77,11 @@ class LazyflowSource( QObject ):
             raise Exception('ArraySource: slicing is not pure')
         reqobj = self._op.outputs[self._outslot][slicing].allocate()        
         return LazyflowRequest( reqobj )
+
+    def setDirty( self, slicing ):
+        if not is_pure_slicing(slicing):
+            raise Exception('dirty region: slicing is not pure')
+        self.isDirty.emit( slicing )
 assert issubclass(LazyflowSource, ArraySourceABC)
 
 
@@ -74,16 +90,13 @@ assert issubclass(LazyflowSource, ArraySourceABC)
 
 
 import unittest as ut
-class ArraySourceTest( ut.TestCase ):
-    def setUp( self ):
-        import numpy as np
-        self.np = np
-        from scipy.misc import lena
-        self.lena = lena()
+from abc import ABCMeta, abstractmethod
+class GenericArraySourceTest:
+    __metaclass__ = ABCMeta
 
-        self.raw = np.zeros((1,512,512,1,1))
-        self.raw[0,:,:,0,0] = self.lena
-        self.source = ArraySource( self.raw )
+    @abstractmethod
+    def setUp( self ):
+        self.source = None
 
     def testRequestWait( self ):
         slicing = (slice(0,1),slice(10,20), slice(20,25), slice(0,1), slice(0,1))
@@ -99,7 +112,33 @@ class ArraySourceTest( ut.TestCase ):
             self.assertEqual(codon, "unique")
         request.notify(check, codon="unique")
 
+    def testSetDirty( self ):
+        self.signal_emitted = False
+        self.slicing = (slice(0,1),slice(10,20), slice(20,25), slice(0,1), slice(0,1))
 
+        def slot( sl ):
+            self.signal_emitted = True
+            self.assertTrue( sl == self.slicing )
+
+        self.source.isDirty.connect(slot)
+        self.source.setDirty( self.slicing )
+        self.source.isDirty.disconnect(slot)
+
+        self.assertTrue( self.signal_emitted )
+
+        del self.signal_emitted
+        del self.slicing
+
+class ArraySourceTest( ut.TestCase, GenericArraySourceTest ):
+    def setUp( self ):
+        import numpy as np
+        self.np = np
+        from scipy.misc import lena
+        self.lena = lena()
+
+        self.raw = np.zeros((1,512,512,1,1))
+        self.raw[0,:,:,0,0] = self.lena
+        self.source = ArraySource( self.raw )
 
 try:
     import lazyflow
@@ -111,7 +150,7 @@ if has_lazyflow:
     from lazyflow.graph import Graph
     from _testing import OpDataProvider
 
-    class LazyflowSourceTest( ut.TestCase ):
+    class LazyflowSourceTest( ut.TestCase, GenericArraySourceTest ):
         def setUp( self ):
             import numpy as np
             self.np = np
@@ -123,14 +162,6 @@ if has_lazyflow:
             g = Graph()
             op = OpDataProvider(g, self.raw)
             self.source = LazyflowSource(op, "Data")
-
-        def testRequestWait( self ):
-            slicing = (slice(0,1), slice(10,20), slice(20,25), slice(0,1), slice(0,1))
-            requested = self.source.request(slicing).wait()
-            self.assertTrue(self.np.all(requested == self.raw[0:1,10:20,20:25,0:1,0:1]))
-
-
-
 
 if __name__ == '__main__':
     ut.main()

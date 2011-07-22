@@ -79,6 +79,7 @@ assert issubclass(SliceRequest, RequestABC)
 
 class SliceSource( QObject ):
     throughChanged = pyqtSignal( object )
+    isDirty = pyqtSignal( object )
 
     @property
     def through( self ):
@@ -99,8 +100,12 @@ class SliceSource( QObject ):
     def request( self, slicing2D ):
         slicing = self.sliceProjection.domain(self.through, slicing2D[0], slicing2D[1])
         return SliceRequest(self._datasource.request(slicing), self.sliceProjection)
-assert issubclass(SliceSource, ArraySourceABC)
 
+    def setDirty( self, slicing ):
+        if not is_pure_slicing(slicing):
+            raise Exception('dirty region: slicing is not pure')
+        self.isDirty.emit( slicing )
+assert issubclass(SliceSource, ArraySourceABC)
 
 class SpatialSliceSource( SliceSource ):
     @property

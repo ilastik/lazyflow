@@ -40,7 +40,6 @@ class PositionModel(QObject):
     channelChanged         = pyqtSignal(int)
     cursorPositionChanged  = pyqtSignal(object)
     slicingPositionChanged = pyqtSignal(object)
-    viewActive             = pyqtSignal(int)
     
     def __init__(self, shape5D, parent=None):
         QObject.__init__(self, parent)
@@ -79,7 +78,6 @@ class PositionModel(QObject):
     @activeView.setter
     def activeView(self, view):
         self._activeView = view
-        self.viewActive.emit(view)
         
     @property
     def shape( self ):

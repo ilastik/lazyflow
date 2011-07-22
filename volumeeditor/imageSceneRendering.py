@@ -10,7 +10,7 @@ from collections import deque
 #*******************************************************************************
 
 class ImageSceneRenderThread(QThread):
-    finishedQueue = pyqtSignal()
+
     patchAvailable = pyqtSignal(int)
     
     def __init__(self, imagePatches, imageSource, parent = None):
@@ -129,6 +129,7 @@ def _convertImageUInt8(itemdata, itemcolorTable):
     elif olditemdata.dtype == numpy.int64:
         return numpy.right_shift(numpy.left_shift(olditemdata,56),56)[:]
     elif olditemdata.dtype == numpy.uint16:
+
         return numpy.right_shift(numpy.left_shift(olditemdata,8),8)[:]
     #raise TypeError(str(olditemdata.dtype) + ' <- unsupported image _data type (in the rendering thread, you know) ')
     # TODO: Workaround: tried to fix the problem
