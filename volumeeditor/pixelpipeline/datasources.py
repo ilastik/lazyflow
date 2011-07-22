@@ -48,7 +48,6 @@ class ArraySource( QObject ):
         if not is_pure_slicing(slicing):
             raise Exception('dirty region: slicing is not pure')
         self.isDirty.emit( slicing )
-
 assert issubclass(ArraySource, ArraySourceABC)
 
 
