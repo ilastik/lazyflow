@@ -101,7 +101,7 @@ class VolumeEditor( QObject ):
             self.imageViews[i].customContextMenuRequested.connect(self.onCustomContextMenuRequested)
 
         # navigation control
-        self.posModel     = PositionModel(self._shape[1:4])
+        self.posModel     = PositionModel(self._shape)
         self.navCtrl      = NavigationControler(self.imageViews, self.sliceSources, self.posModel, overlayWidget)
         self.navInterpret = NavigationInterpreter(self.posModel)
 
@@ -327,10 +327,10 @@ class VolumeEditor( QObject ):
         self.repaint()
        
     def nextChannel(self):
-        self._channelSpin.setValue(self._viewManager.channel + 1)
+        self.posModel.channel = self.posModel.channel+1
 
     def previousChannel(self):
-        self._channelSpin.setValue(self._viewManager.channel - 1)
+        self.posModel.channel = self.posModel.channel-1
           
     def nextLabel(self):
         self.labelWidget.nextLabel()

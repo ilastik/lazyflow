@@ -36,20 +36,22 @@ from PyQt4.QtCore import QObject, pyqtSignal
 #*******************************************************************************
 
 class PositionModel(QObject):
-    timeChanged            = pyqtSignal(int, int)
-    channelChanged         = pyqtSignal(int, int)
-    cursorPositionChanged  = pyqtSignal(object, object)
-    slicingPositionChanged = pyqtSignal(object, object)
+    timeChanged            = pyqtSignal(int)
+    channelChanged         = pyqtSignal(int)
+    cursorPositionChanged  = pyqtSignal(object)
+    slicingPositionChanged = pyqtSignal(object)
     
-    def __init__(self, volumeShape, parent=None):
+    def __init__(self, shape5D, parent=None):
         QObject.__init__(self, parent)
+        
+        assert len(shape5D) == 5
         
         #init property fields
         self._cursorPos  = [0,0,0]
         self._slicingPos = [0,0,0]
         self._time       = 0
         self._channel    = 0
-        self._volumeShape= volumeShape
+        self._shape5D    = shape5D
         #call property setters to trigger updates etc. 
         self.cursorPos   = self._cursorPos
         self.slicingPos  = self._slicingPos
@@ -58,7 +60,7 @@ class PositionModel(QObject):
         
     def sliceShape(self, axis):
         """returns the 2D shape of slices perpendicular to axis"""
-        shape = self._volumeShape
+        shape = self._shape5D[1:4]
         if len(shape) == 2:
             return shape
         else:
@@ -68,7 +70,7 @@ class PositionModel(QObject):
     
     def volumeExtent(self, axis):
         """returns the 1D extent of the volume along axis"""
-        return self._volumeShape[axis]
+        return self._shape5D[axis+1]
     
     @property
     def activeView(self):
@@ -79,27 +81,27 @@ class PositionModel(QObject):
         
     @property
     def shape( self ):
-        return self._volumeShape
+        return self._shape5D[1:4]
         
     @property    
     def time( self ):
         return self._time
     @time.setter
     def time( self, value ):
-        print "PositionModel: setting time to %d" % value
-        oldValue = self._time
+        if value < 0 or value >= self._shape5D[0] or value == self._time:
+            return
         self._time = value    
-        self.timeChanged.emit(oldValue, value)
+        self.timeChanged.emit(value)
 
     @property
     def channel( self ):
         return self._channel
     @channel.setter
     def channel(self, value):
-        print "PositionModel: setting channel to %d" % value
-        oldValue = self._channel
+        if value < 0 or value >= self._shape5D[4] or value == self._channel:
+            return
         self._channel = value    
-        self.channelChanged.emit(oldValue, value)
+        self.channelChanged.emit(value)
     
     @property
     def cursorPos(self):
@@ -108,10 +110,8 @@ class PositionModel(QObject):
     def cursorPos(self, coordinates):
         if coordinates == self._cursorPos:
             return
-        oldPos = copy.copy(self._cursorPos)
         self._cursorPos = coordinates
-        print "PositionModel emitting 'cursorPositionChanged(%r, %r)'" % (oldPos, self.slicingPos)
-        self.cursorPositionChanged.emit(oldPos, self.cursorPos)
+        self.cursorPositionChanged.emit(self.cursorPos)
     
     @property
     def slicingPos(self):
@@ -120,8 +120,6 @@ class PositionModel(QObject):
     def slicingPos(self, pos):
         if pos == self._slicingPos:
             return
-        oldPos = copy.copy(self._slicingPos)
         self._slicingPos = pos
-        print "PositionModel emitting 'slicingPositionChanged(%r, %r)'" % (oldPos, self.slicingPos)
-        self.slicingPositionChanged.emit(oldPos, self.slicingPos)
+        self.slicingPositionChanged.emit(self.slicingPos)
         

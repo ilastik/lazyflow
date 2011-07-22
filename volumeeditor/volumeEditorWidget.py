@@ -135,11 +135,23 @@ class VolumeEditorWidget(QWidget):
         self._channelSpin.setRange(0,self._ve._shape[-1] - 1)
         self._timeSpin.setRange(0,self._ve._shape[0] - 1)
         def setChannel(c):
+            print "set channel = %d, posModel has channel = %d" % (c, self._ve.posModel.channel)
+            if c == self._ve.posModel.channel:
+                return
             self._ve.posModel.channel = c
         self._channelSpin.valueChanged.connect(setChannel)
-        def setTime(c):
-            self._ve.posModel.time = c
+        def getChannel(newC):
+            self._channelSpin.setValue(newC)
+        self._ve.posModel.channelChanged.connect(getChannel)
+        def setTime(t):
+            print "set channel = %d, posModel has time = %d" % (t, self._ve.posModel.time)
+            if t == self._ve.posModel.time:
+                return
+            self._ve.posModel.time = t
         self._timeSpin.valueChanged.connect(setTime)
+        def getTime(newT):
+            self._timeSpin.setValue(newT)
+        self._ve.posModel.timeChanged.connect(getTime)
 
         # setup the layout for display
         self.splitter = QSplitter()
@@ -204,9 +216,6 @@ class VolumeEditorWidget(QWidget):
             print "maximize axis=%d = %r" % (axis, m)
             self.quadview.setMaximized(m, axis)
         
-        self.shortcuts.append(self._shortcutHelper("q", "Navigation", "Switch to next channel", self, self._ve.nextChannel))
-        self.shortcuts.append(self._shortcutHelper("a", "Navigation", "Switch to previous channel", self, self._ve.previousChannel))
-        
         maximizeShortcuts = ['x', 'y', 'z']
         maximizeViews     = [1,   2,     0]
         for i, v in enumerate(self._ve.imageViews):
@@ -218,6 +227,9 @@ class VolumeEditorWidget(QWidget):
             self.shortcuts.append(self._shortcutHelper("m", "Labeling", "Decrease brush size", v, self._ve._drawManager.brushBigger, Qt.WidgetShortcut))
             self.shortcuts.append(self._shortcutHelper("+", "Navigation", "Zoom in", v,  v.zoomIn, Qt.WidgetShortcut))
             self.shortcuts.append(self._shortcutHelper("-", "Navigation", "Zoom out", v, v.zoomOut, Qt.WidgetShortcut))
+            
+            self.shortcuts.append(self._shortcutHelper("q", "Navigation", "Switch to next channel",     v, self._ve.nextChannel,     Qt.WidgetShortcut))
+            self.shortcuts.append(self._shortcutHelper("a", "Navigation", "Switch to previous channel", v, self._ve.previousChannel, Qt.WidgetShortcut))
             
             def sliceDelta(axis, delta):
                 newPos = copy.copy(self._ve.posModel.slicingPos)
