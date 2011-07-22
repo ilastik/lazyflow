@@ -21,19 +21,18 @@ def meshgrid2(*arrs):
     return tuple(ans)
 
 def testVolume(N = 40):
-    """generates viewable 3D data"""
+    """generates viewable 3D data embedded in 5D"""
     N2 = N/2
     X,Y,Z = meshgrid2(numpy.arange(N),numpy.arange(N),numpy.arange(N))
-    s = (numpy.random.rand(N,N,N)*255).astype(numpy.uint8)
-    center = numpy.asarray((N2,N2,N2))
-    s[(X-10)**2+(Y-10)**2+(Z-15)**2 < (N2-2)**2] = 0
-    s[(X-30)**2+(Y-30)**2+(Z-30)**2 < (10)**2] = 128
-    s[0:10,0:10,0:10] = 200
+    s = (numpy.random.rand(1,N,N,N,1)*255).astype(numpy.uint8)
+    s[0,(X-10)**2+(Y-10)**2+(Z-15)**2 < (N2-2)**2,0] = 0
+    s[0,(X-30)**2+(Y-30)**2+(Z-30)**2 < (10)**2,0] = 128
+    s[0,0:10,0:10,0:10,0] = 200
     return s
 
 def stripes(X = 8, Y = 8, Z = 8):
     """generates 3D Data with black and white stripes to check cursor positions"""
-    array = numpy.arange(X*Y*Z).reshape(X,Y,Z).astype(numpy.uint8)
+    array = numpy.arange(X*Y*Z).reshape(1,X,Y,Z,1).astype(numpy.uint8)
     
     for x in range(X):
         for y in range(Y):

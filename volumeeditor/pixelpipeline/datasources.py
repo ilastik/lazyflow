@@ -37,6 +37,8 @@ class ArraySource( QObject ):
     def request( self, slicing ):
         if not is_pure_slicing(slicing):
             raise Exception('ArraySource: slicing is not pure')
+        assert(len(slicing) == len(self._array.shape)), \
+            "slicing into an array of shape=%r requested, but the slicing object is %r" % (slicing, self._array.shape)
         return ArrayRequest(self._array[slicing])
 assert issubclass(ArraySource, ArraySourceABC)
 
