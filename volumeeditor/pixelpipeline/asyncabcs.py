@@ -39,10 +39,14 @@ class ArraySourceABC:
     def request( self, slicing ):
         pass
 
+    @abstractmethod
+    def setDirty( slicing ):
+        pass
+
     @classmethod
     def __subclasshook__(cls, C):
         if cls is ArraySourceABC:
-            if _has_attribute(C, 'request'):
+            if _has_attributes(C, ['request', 'setDirty']):
                 return True
             return False
         return NotImplemented
