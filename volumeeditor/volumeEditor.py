@@ -46,6 +46,8 @@ from drawManager import DrawManager
 from imageView2D import ImageView2D
 from positionModel import PositionModel
 from navigationControler import NavigationControler, NavigationInterpreter
+from pixelpipeline.slicesources import SpatialSliceSource
+from pixelpipeline.imagesources import GrayscaleImageSource
 
 class VolumeEditor( QObject ):
     changedSlice      = pyqtSignal(int,int)
@@ -55,7 +57,7 @@ class VolumeEditor( QObject ):
     zoomInFactor  = 1.1
     zoomOutFactor = 0.9
 
-    def __init__( self, shape, useGL = False, overlayWidget=None):
+    def __init__( self, shape, useGL = False, overlayWidget=None, datasource = None):
         super(VolumeEditor, self).__init__()
         assert(len(shape) == 5)
         self._shape = shape
@@ -73,18 +75,34 @@ class VolumeEditor( QObject ):
 
         self._pendingLabels = []
 
+        # three ortho slices
+        self.sliceSources = []
+        self.sliceSources.append(SpatialSliceSource(datasource, 'x'))
+        self.sliceSources.append(SpatialSliceSource(datasource, 'y'))
+        self.sliceSources.append(SpatialSliceSource(datasource, 'z'))
+
+        # ortho image sources
+        self.imageSources = []
+        self.imageSources.append(GrayscaleImageSource(self.sliceSources[0]))
+        self.imageSources.append(GrayscaleImageSource(self.sliceSources[1]))
+        self.imageSources.append(GrayscaleImageSource(self.sliceSources[2]))
+
         # three ortho views
         self.imageViews = []
         self.imageViews.append(ImageView2D(self._drawManager, useGL=useGL))
         self.imageViews.append(ImageView2D(self._drawManager, useGL=useGL))
-        self.imageViews.append(ImageView2D(self._drawManager, useGL=useGL)) 
+        self.imageViews.append(ImageView2D(self._drawManager, useGL=useGL))
+
+        for i in xrange(3):
+            self.imageViews[i].scene().imageSource = self.imageSources[i]
 
         for i in xrange(3):
             self.imageViews[i].drawing.connect(partial(self.updateLabels, axis=i))
             self.imageViews[i].customContextMenuRequested.connect(self.onCustomContextMenuRequested)
 
+        # navigation control
         self.posModel     = PositionModel(self._shape[1:4])
-        self.navCtrl      = NavigationControler(self.imageViews, self.posModel, overlayWidget)
+        self.navCtrl      = NavigationControler(self.imageViews, self.sliceSources, self.posModel, overlayWidget)
         self.navInterpret = NavigationInterpreter(self.posModel)
 
         # Add label widget to toolBoxLayout
@@ -107,6 +125,8 @@ class VolumeEditor( QObject ):
             v.changeSliceDelta.connect(partial(self.navInterpret.changeSliceRelative, axis=i))
             
         #connect controler
+        self.posModel.channelChanged.connect(self.navCtrl.changeChannel)
+        self.posModel.timeChanged.connect(self.navCtrl.changeTime)
         self.posModel.slicingPositionChanged.connect(self.navCtrl.moveSlicingPosition)
         self.posModel.cursorPositionChanged.connect(self.navCtrl.moveCrosshair)
 

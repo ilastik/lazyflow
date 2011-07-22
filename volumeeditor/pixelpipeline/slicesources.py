@@ -1,25 +1,85 @@
 from PyQt4.QtCore import QObject, pyqtSignal
-import asyncabcs
+from asyncabcs import ArraySourceABC, RequestABC
+import copy
+import numpy as np
 
-def mkSlicer( abscissa = 1, ordinate = 2, along = [0,3,4] ):
-    assert(hasattr(along, "__iter__"))
-    def slicer( through = [0,0,0], abscissa_range = slice(None, None), ordinate_range = slice(None,None) ):
-        slicing = range(len(through) + 2)
-        slicing[abscissa] = abscissa_range
-        slicing[ordinate] = ordinate_range
-        for i,a in enumerate(along):
-            slicing[a] = through[i]
-        return slicing
-    return slicer
+class SliceProjection( object ):
+    @property
+    def abscissa( self ):
+        return self._abscissa
+    @property
+    def ordinate( self ):
+        return self._ordinate
+    @property
+    def along( self ):
+        return self._along
+    @property
+    def domainDim( self ):
+        return self._dim
 
-XYSlicer5D = mkSlicer(1,2, [0,3,4])
-XZSlicer5D = mkSlicer(1,3, [0,2,4])
-YZSlicer5D = mkSlicer(2,3, [0,1,4])
+    def __init__( self, abscissa = 1, ordinate = 2, along = [0,3,4] ):
+        assert hasattr(along, "__iter__")
+        
+        self._abscissa = abscissa
+        self._ordinate = ordinate
+        self._along = along
+        self._dim = len(self.along) + 2
+
+        # sanity checks
+        axes_set = set(along)
+        axes_set.add(abscissa)
+        axes_set.add(ordinate)
+        if len(axes_set) != self._dim:
+            raise ValueError("duplicate axes")
+        if axes_set != set(range(self._dim)):
+            raise ValueError("axes not from range(0,dim)")
+    
+    def handednessSwitched( self ):
+        if self.ordinate < self.abscissa:
+            return True
+        return False
+
+    def domain( self, through, abscissa_range = slice(None, None), ordinate_range = slice(None,None) ):
+        assert len(through) == len(self.along)
+        slicing = range(self.domainDim)
+        slicing[self.abscissa] = abscissa_range
+        slicing[self.ordinate] = ordinate_range
+        for i,a in enumerate(self.along):
+            slicing[self.along[i]] = slice(through[i], through[i]+1)
+        return tuple(slicing)
+
+    def __call__( self, domainArray ):
+        assert domainArray.ndim == self.domainDim
+        slice = np.squeeze(domainArray)
+        assert slice.ndim == 2, "dim %d != 2" % slice.ndim
+        if self.handednessSwitched():
+            slice = np.swapaxes(slice,0,1)
+        return slice
+
+projectionAlongTXC = SliceProjection( abscissa = 2, ordinate = 3, along = [0,1,4] )
+projectionAlongTYC = SliceProjection( abscissa = 1, ordinate = 3, along = [0,2,4] )
+projectionAlongTZC = SliceProjection( abscissa = 1, ordinate = 2, along = [0,3,4] )
 
 
+
+class SliceRequest( object ):
+    def __init__( self, domainArrayRequest, sliceProjection ):
+        self._ar = domainArrayRequest
+        self._sp = sliceProjection
+        
+    def wait( self ):
+        return self._sp(self._ar.wait())
+
+    def notify( self, callback, **kwargs ):
+        self._arrayreq.notify(self._onNotify, package = (callback, kwargs))
+
+    def _onNotify( self, result, package ):
+        callback(self._sp(result), **kwargs)
+assert issubclass(SliceRequest, RequestABC)
 
 class SliceSource( QObject ):
     throughChanged = pyqtSignal( object )
+    isDirty = pyqtSignal( object )
 
     @property
     def through( self ):
@@ -29,56 +89,91 @@ class SliceSource( QObject ):
         self._through = value
         self.throughChanged.emit( self._through )
 
-    def __init__(self, datasource, slicer = XYSlicer5D):
-        assert isinstance(datasource, asyncabcs.ArraySourceABC)
+    def __init__(self, datasource, sliceProjection = projectionAlongTZC):
+        assert isinstance(datasource, ArraySourceABC)
         super(SliceSource, self).__init__()
 
+        self.sliceProjection = sliceProjection
         self._datasource = datasource
-        self._through = []
-        self._slicer = slicer
+        self._through = len(sliceProjection.along) * [0]
 
     def request( self, slicing2D ):
-        slicing = self._slicer(self._through, slicing2D[0], slicing2D[1])
-        return self._datasource.request(slicing)
-asyncabcs.ArraySourceABC.register(SliceSource)
-assert issubclass(SliceSource, asyncabcs.ArraySourceABC)
+        slicing = self.sliceProjection.domain(self.through, slicing2D[0], slicing2D[1])
+        return SliceRequest(self._datasource.request(slicing), self.sliceProjection)
 
+    def setDirty( self, slicing ):
+        if not is_pure_slicing(slicing):
+            raise Exception('dirty region: slicing is not pure')
+        self.isDirty.emit( slicing )
+assert issubclass(SliceSource, ArraySourceABC)
 
 class SpatialSliceSource( SliceSource ):
     @property
     def index( self ):
-        return self.through[self._along_axis]
+        return self.through[1]
     @index.setter
     def index( self, value ):
-        self.through[1] = value
+        t = copy.copy(self.through)
+        t[1] = value
+        self.through = t
 
     @property
     def time( self ):
         return self.through[0]
     @time.setter
     def time( self, value ):
-        self.through[0] = value
+        t = copy.copy(self.through)
+        t[0] = value
+        self.through = t
 
     @property
     def channel( self ):
         return self._through[2]
     @channel.setter
     def channel( self, value ):
-        self.through[2] = value
+        t = copy.copy(self.through)
+        t[2] = value
+        self.through = t
 
     def __init__( self, datasource, along = 'z' ):
-        slicers = {'x': YZSlicer5D, 'y': XZSlicer5D, 'z': XYSlicer5D}
-        slicer = slicers[along]
-        super(SpatialSliceSource, self).__init__( datasource, slicer )
+        projections = {'x': projectionAlongTXC, 'y': projectionAlongTYC, 'z': projectionAlongTZC}
+        projection = projections[along]
+        super(SpatialSliceSource, self).__init__( datasource, projection )
         self._through = [0,0,0]
+assert issubclass(SpatialSliceSource, ArraySourceABC)
 
-        self.along = along
-        self._along_axis = {'x': 1, 'y': 2, 'z': 3}[along]
-assert issubclass(SliceSource, asyncabcs.ArraySourceABC)
+
+
 
 
 
 import unittest as ut
+class SliceProjectionTest( ut.TestCase ):
+    def testArgumentCheck( self ):
+        SliceProjection(1,2,[0,3,4])
+        SliceProjection(2,1,[3,0,4])
+        self.assertRaises(ValueError, SliceProjection, 2,1,[3,0,7])
+        self.assertRaises(ValueError, SliceProjection ,2,1,[3,1,4])
+        self.assertRaises(ValueError, SliceProjection ,2,5,[3,1,4])
+
+    def testDomain( self ):
+        sp = SliceProjection(2,1,[3,0,4])
+        unbounded = sp.domain([3,23,1])
+        self.assertEqual(unbounded, (slice(23,24), slice(None), slice(None), slice(3,4), slice(1,2)))
+
+        bounded = sp.domain([3,23,1], slice(5,9), slice(12,None))
+        self.assertEqual(bounded, (slice(23,24), slice(12,None), slice(5,9), slice(3,4), slice(1,2)))
+
+    def testSliceDomain( self ):
+        sp = SliceProjection(2,1,[3,0,4])
+        slicing = sp.domain([3,7,1], slice(1,3), slice(0,None))
+        raw = np.random.randint(0,100,(10,3,3,128,3))
+        domainArray = raw[slicing]
+        sl = sp(domainArray)
+        self.assertTrue(np.all(sl == raw[7,:,1:3,3,1].swapaxes(0,1)))
+
+
+
 class SpatialSliceSourceTest( ut.TestCase ):
     def testRequest( self ):
         import numpy as np

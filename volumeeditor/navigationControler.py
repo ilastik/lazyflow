@@ -176,12 +176,13 @@ class NavigationControler(QObject):
         for v in self._views:
             v._sliceIntersectionMarker.setVisibility(show)
         
-    def __init__(self, imageView2Ds, positionModel, overlaywidget, time = 0, channel = 0):
+    def __init__(self, imageView2Ds, sliceSources, positionModel, overlaywidget, time = 0, channel = 0):
         QObject.__init__(self)
         assert len(imageView2Ds) == 3
 
         # init fields
         self._views = imageView2Ds
+        self._sliceSources = sliceSources
         self._model = positionModel
         self._overlaywidget = overlaywidget
         self._beginStackIndex = 0
@@ -201,6 +202,18 @@ class NavigationControler(QObject):
             if oldPos[i] != newPos[i]:
                 self._updateSlice(self._model.slicingPos[i], i)
         self._updateSliceIntersection()
+    
+    def changeTime(self, oldTime, newTime):
+        print "CHANGE TIME", oldTime, newTime
+        if oldTime != newTime:
+            for i in range(3):
+                self._sliceSources[i].time = newTime
+    
+    def changeChannel(self, oldChannel, newChannel):
+        print "CHANGE CHANNEL", oldChannel, newChannel
+        if oldChannel != newChannel:
+            for i in range(3):
+                self._sliceSources[i].channel = newChannel
     
     #private functions ########################################################
     
@@ -242,23 +255,8 @@ class NavigationControler(QObject):
         if num < 0 or num >= self._model.volumeExtent(axis):
             raise Exception("NavigationControler._setSlice(): invalid slice number")
 
-        # update view
+        #FIXME: Shouldnt the hud listen to the model changes itself?
         self._views[axis].hud.sliceSelector.setValue(num)
 
-        # update model
-        overlays = []
-        for item in reversed(self._overlaywidget.overlays):
-            if item.visible:
-                overlays.append(item.getOverlaySlice(num, axis, 0, item.channel))
-        if len(self._overlaywidget.overlays) == 0 \
-           or self._overlaywidget.getOverlayRef("Raw Data") is None:
-            return
-        
-        rawData = self._overlaywidget.getOverlayRef("Raw Data")._data
-        image = rawData.getSlice(num,\
-                                 axis, 0,\
-                                 self._overlaywidget.getOverlayRef("Raw Data").channel)
-
-        #make sure all tiles are regenerated
-        self._views[axis].scene().markTilesDirty()
-        self._views[axis].scene().setContent(self._views[axis].viewportRect(), image, overlays) 
+        #re-configure the slice source
+        self._sliceSources[axis].index = num

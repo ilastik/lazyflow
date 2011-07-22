@@ -7,17 +7,19 @@ from vtk import vtkRenderer, vtkConeSource, vtkPolyDataMapper, vtkActor, \
                 vtkDiscreteMarchingCubes, vtkWindowedSincPolyDataFilter, \
                 vtkMaskFields, vtkGeometryFilter, vtkThreshold, vtkDataObject, \
                 vtkDataSetAttributes, vtkCutter, vtkPlane, vtkPropAssembly, \
-                vtkGenericOpenGLRenderWindow, QVTKWidget, vtkOBJExporter
+                vtkGenericOpenGLRenderWindow, QVTKWidget, vtkOBJExporter, \
+                vtkPropCollection
 
 from PyQt4.QtGui import QWidget, QVBoxLayout, QHBoxLayout, QPushButton, \
-                        QSizePolicy, QSpacerItem, QIcon, QFileDialog
-from PyQt4.QtCore import SIGNAL
+                        QSizePolicy, QSpacerItem, QIcon, QFileDialog, \
+                        QToolButton
+from PyQt4.QtCore import pyqtSignal, SIGNAL
 
 import qimage2ndarray
 
 from numpy2vtk import toVtkImageData
 
-from GenerateModelsFromLabels_thread import *
+#from GenerateModelsFromLabels_thread import *
 
 import platform #to check whether we are running on a Mac
 import copy

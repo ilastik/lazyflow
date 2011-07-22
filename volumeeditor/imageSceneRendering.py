@@ -13,23 +13,32 @@ class ImageSceneRenderThread(QThread):
     finishedQueue = pyqtSignal()
     patchAvailable = pyqtSignal(int)
     
-    def __init__(self, imagePatches):
-        QThread.__init__(self, None)
+    def __init__(self, imagePatches, imageSource, parent = None):
+        QThread.__init__(self, parent)
         self._imagePatches = imagePatches
 
-        self.queue = deque(maxlen=1)
-        self.outQueue = deque()
-        self.dataPending = threading.Event()
-        self.dataPending.clear()
-        self.newerDataPending = threading.Event()
-        self.newerDataPending.clear()
-        self.freeQueue = threading.Event()
-        self.freeQueue.clear()
-        self.stopped = False
+        self._queue = deque()
         
-        print "initialized ImageSceneRenderThread"
+        self._dataPending = threading.Event()
+        self._dataPending.clear()
+        self._stopped = False
+        
+        # experimental
+        self._imageSource = imageSource
 
-    def callMyFunction(self, itemdata, origitem, origitemColor, itemcolorTable):
+    def requestPatch(self, patchNr):
+        if patchNr not in self._queue:
+            self._queue.append(patchNr)
+            self._dataPending.set()
+
+    def stop(self):
+        self._stopped = True
+        self._dataPending.set()
+        self.wait()
+
+    # private functions
+
+    def _callMyFunction(self, itemdata, origitem, origitemColor, itemcolorTable):
         uint8image = _convertImageUInt8(itemdata, itemcolorTable)
 
         if itemcolorTable != None and _isRGB(uint8image):
@@ -59,49 +68,44 @@ class ImageSceneRenderThread(QThread):
             image0.setAlphaChannel(image1)
             return image0
 
-    def takeJob(self):
-        workPackage = self.queue.pop()
-        if workPackage is None:
-            return
-        patchNumbers, overlays, min, max = workPackage
-        for patchNr in patchNumbers:
-            if self.newerDataPending.isSet():
-                self.newerDataPending.clear()
-                break
-            patch = self._imagePatches[patchNr]
-            p = QPainter(patch.image)
-            r = patch.rectF
+    def _takeJob(self):
+        patchNr = self._queue.pop()
+        
+        patch = self._imagePatches[patchNr]
+        patch.rendering = True
+        '''
+        p = QPainter(patch.image)
+        r = patch.rectF
 
-            #add overlays
-            for index, origitem in enumerate(overlays):
-                # before the first layer is painted, initialize it white to enable sound alpha blending
-                if index == 0:
-                    p.fillRect(0,0,r.width(), r.height(), Qt.white)
-                
-                p.setOpacity(origitem.alpha)
-                itemcolorTable = origitem.colorTable
-                
-                imagedata = origitem._data[r.left():r.right()+1,r.top():r.bottom()+1]
-                image0 = self.callMyFunction(imagedata, origitem, _asQColor(origitem.color), itemcolorTable)
-
-                p.drawImage(0,0, image0)
-            p.end()
-            patch.dirty = False
-            self.patchAvailable.emit(patchNr)
+        #add overlays
+        for index, origitem in enumerate(overlays):
+            # before the first layer is painted, initialize it white to enable sound alpha blending
+            if index == 0:
+                p.fillRect(0,0,r.width(), r.height(), Qt.white)
             
-            self.outQueue.append(patchNr)
+            p.setOpacity(origitem.alpha)
+            itemcolorTable = origitem.colorTable
+            
+            imagedata = origitem._data[r.left():r.right()+1,r.top():r.bottom()+1]
+            image0 = self.callMyFunction(imagedata, origitem, _asQColor(origitem.color), itemcolorTable)
+
+            p.drawImage(0,0, image0)
+        p.end()
+        '''
+        img = self._imageSource.request(patch.rect).wait()
+        patch.image = img
+        patch.dirty = False
+        patch.rendering = False
+        self.patchAvailable.emit(patchNr)
 
     def _runImpl(self):
-        self.finishedQueue.emit()
-        self.dataPending.wait()
-        self.newerDataPending.clear()
-        self.freeQueue.clear()
-        while len(self.queue) > 0:
-            self.takeJob()
-        self.dataPending.clear()
+        self._dataPending.wait()
+        while len(self._queue) > 0:
+            self._takeJob()
+        self._dataPending.clear()
     
     def run(self):
-        while not self.stopped:
+        while not self._stopped:
             self._runImpl()
 
 def _convertImageUInt8(itemdata, itemcolorTable):

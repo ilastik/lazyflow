@@ -48,6 +48,7 @@ from view3d.view3d import OverviewScene
 from sliceSelectorHud import SliceSelectorHud
 from positionModel import PositionModel
 from navigationControler import NavigationControler, NavigationInterpreter
+from pixelpipeline.datasources import ArraySource
 
 from volumeEditor import VolumeEditor
 
@@ -107,29 +108,38 @@ class VolumeEditorWidget(QWidget):
         # Channel Selector QComboBox in right side tool box
         self._channelSpin = QSpinBox()
         self._channelSpin.setEnabled(True)
-        
-        #FIXME: resurrect
-        #self.channelEditBtn = QPushButton('Edit channels')
-        #self.channelEditBtn.clicked.connect(self._ve.on_editChannels)
-        
         channelLayout = QHBoxLayout()
         channelLayout.addWidget(self._channelSpin)
-        #channelLayout.addWidget(self.channelEditBtn) #FIXME: resurrect
-        
         self._channelSpinLabel = QLabel("Channel:")
         self._toolBoxLayout.addWidget(self._channelSpinLabel)
         self._toolBoxLayout.addLayout(channelLayout)
+
+        #time selector
+        self._timeSpin = QSpinBox()
+        self._timeSpin.setEnabled(True)
+        timeLayout = QHBoxLayout()
+        timeLayout.addWidget(self._timeSpin)
+        self._timeSpinLabel = QLabel("Time:")
+        self._toolBoxLayout.addWidget(self._timeSpinLabel)
+        self._toolBoxLayout.addLayout(timeLayout)
+        
         self._toolBoxLayout.setAlignment(Qt.AlignTop)
 
         # == 3 checks for RGB image and activates channel selector
         if self._ve._shape[-1] == 1 or self._ve._shape[-1] == 3: #only show when needed
             self._channelSpin.setVisible(False)
             self._channelSpinLabel.setVisible(False)
+            self._timeSpin.setVisible(False)
+            self._timeSpinLabel.setVisible(False)
             #self.channelEditBtn.setVisible(False)
         self._channelSpin.setRange(0,self._ve._shape[-1] - 1)
+        self._timeSpin.setRange(0,self._ve._shape[0] - 1)
         def setChannel(c):
             self._ve.posModel.channel = c
         self._channelSpin.valueChanged.connect(setChannel)
+        def setTime(c):
+            self._ve.posModel.time = c
+        self._timeSpin.valueChanged.connect(setTime)
 
         # setup the layout for display
         self.splitter = QSplitter()
@@ -244,15 +254,23 @@ class VolumeEditorWidget(QWidget):
 #*******************************************************************************
 
 if __name__ == "__main__":
-    import os, sys
-    from PyQt4.QtCore import QObject, QRectF, QTimer
-
-    from PyQt4.QtGui import QColor
     #make the program quit on Ctrl+C
     import signal
     signal.signal(signal.SIGINT, signal.SIG_DFL)
+    
+    import os, sys
+    
+    from PyQt4.QtCore import QObject, QRectF, QTime
+    from PyQt4.QtGui import QColor
+    
+    from lazyflow.graph import Graph, Operator, InputSlot, OutputSlot
+    from volumeeditor.pixelpipeline.datasources import LazyflowSource
+    from volumeeditor.pixelpipeline._testing import OpDataProvider
+    from volumeeditor._testing.from_lazyflow import OpDataProvider5D, OpDelay
+    
     from overlayItem  import OverlayItem  
     from _testing.volume import DataAccessor
+    from testing import stripes
     
     def img(N):
         def meshgrid2(*arrs):
@@ -295,23 +313,34 @@ if __name__ == "__main__":
         def __init__(self, useGL, argv):
             QObject.__init__(self)
             
-            from testing import stripes
+            source = None
             
             if "hugeslab" in argv:
                 N = 2000
-                self.data = (numpy.random.rand(N,2*N, 10)*255).astype(numpy.uint8)
+                
+                g = Graph()
+                op1 = OpDataProvider(g, (numpy.random.rand(1,N,2*N, 10,1)*255).astype(numpy.uint8))
+                op2 = OpDelay(g, 0.000003)
+                op2.inputs["Input"].connect(op1.outputs["Data"])
+                source = LazyflowSource(op2, "Output")
+
             elif "5d" in argv:
                 file = os.path.split(os.path.abspath(__file__))[0] +"/_testing/5d-5-213-202-13-2.npy"
                 print "loading file '%s'" % file
-                self.data = numpy.load(file)
-                self.data = self.data.astype(numpy.uint16)
+                
+                g = Graph()
+                op1 = OpDataProvider5D(g, file)
+                op2 = OpDelay(g, 0.000003)
+                op2.inputs["Input"].connect(op1.outputs["Data5D"])
+                source = LazyflowSource(op2, "Output")
+                
                 print "...done"
             elif "cuboid" in argv:
                 N = 100
                 from testing import testVolume
-                self.data = testVolume(N)
+                source = ArraySource(testVolume(N))
             elif "stripes" in argv:
-                self.data = stripes(50,35,20)
+                source = ArraySource(stripes(50,35,20))
             else:
                 raise RuntimeError("Invalid testing mode")
             
@@ -323,18 +352,29 @@ if __name__ == "__main__":
                 def getOverlayRef(self, key):
                     return self.overlays[0]            
             overlayWidget = FakeOverlayWidget()
-            self.dataOverlay = OverlayItem(DataAccessor(self.data), alpha=1.0, \
+            
+            arr = None
+            if hasattr(source, '_array'):
+                arr = source._array
+            else:
+                arr = source._op.outputs[source._outslot]
+            
+            self.dataOverlay = OverlayItem(DataAccessor(arr), alpha=1.0, \
                                            color=Qt.black, \
                                            colorTable=OverlayItem.createDefaultColorTable('GRAY', 256), \
                                            autoVisible=True, \
                                            autoAlphaChannel=False)
             overlayWidget.overlays = [self.dataOverlay.getRef()]
 
-            shape = self.data.shape
-            if len(self.data.shape) == 3:
-                shape = (1,)+self.data.shape+(1,)
-            
-            self.editor = VolumeEditor(shape, useGL=useGL, overlayWidget=overlayWidget)
+            shape = None
+            if hasattr(source, '_array'):
+                shape = source._array.shape
+            else:
+                shape = source._op.outputs[source._outslot].shape
+            if len(shape) == 3:
+                shape = (1,)+shape+(1,)
+
+            self.editor = VolumeEditor(shape, useGL=useGL, overlayWidget=overlayWidget, datasource=source)
             self.editor.setDrawingEnabled(True)            
             self.widget = VolumeEditorWidget( self.editor )
             

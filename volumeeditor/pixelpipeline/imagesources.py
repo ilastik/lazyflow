@@ -1,4 +1,4 @@
-from PyQt4.QtCore import QObject, pyqtSignal
+from PyQt4.QtCore import QObject, QRect, pyqtSignal
 from PyQt4.QtGui import QImage
 from qimage2ndarray import gray2qimage
 import asyncabcs
@@ -9,6 +9,7 @@ class GrayscaleImageRequest( object ):
 
     def wait( self ):
         a = self._arrayreq.wait()
+        a = a.squeeze()
         img = gray2qimage(a)
         return img.convertToFormat(QImage.Format_ARGB32_Premultiplied)        
     def notify( self, callback, **kwargs ):
@@ -19,21 +20,30 @@ class GrayscaleImageRequest( object ):
         callback = package[0]
         kwargs = package[1]
         callback( img, **kwargs )
-asyncabcs.RequestABC.register(GrayscaleImageRequest)
 assert issubclass(GrayscaleImageRequest, asyncabcs.RequestABC)
 
 
 class GrayscaleImageSource( QObject ):
+    changed = pyqtSignal(QRect)
+
     def __init__( self, sliceSource ):
         assert isinstance(sliceSource, asyncabcs.ArraySourceABC)
         super(GrayscaleImageSource, self).__init__()
         self._sliceSource = sliceSource
+        self._sliceSource.throughChanged.connect(self._onThroughChanged)
 
-    def request( self, rect ):
-        req = self._sliceSource.request((slice(rect[1], rect[1] + rect[3]), slice(rect[0], rect[0] + rect[2])))
+    def request( self, qrect ):
+        assert isinstance(qrect, QRect)
+        s = (slice(qrect.y(), qrect.y()+qrect.height()), slice(qrect.x(), qrect.x()+qrect.width()))
+        req = self._sliceSource.request(s)
         return GrayscaleImageRequest( req )
-asyncabcs.ImageSourceABC.register(GrayscaleImageSource)
+
+    def _onThroughChanged( self, through):
+        print "GrayScaleImageSource dirties everything"
+        self.changed.emit(QRect())
 assert issubclass(GrayscaleImageSource, asyncabcs.ImageSourceABC)
+
+
 
 
 
