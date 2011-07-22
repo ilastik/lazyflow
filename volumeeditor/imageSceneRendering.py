@@ -10,7 +10,7 @@ from collections import deque
 #*******************************************************************************
 
 class ImageSceneRenderThread(QThread):
-    finishedQueue = pyqtSignal()
+
     patchAvailable = pyqtSignal(int)
     
     def __init__(self, imagePatches, imageSource, parent = None):
