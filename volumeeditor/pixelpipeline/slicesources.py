@@ -108,7 +108,7 @@ class SpatialSliceSource( SliceSource ):
         return self.through[1]
     @index.setter
     def index( self, value ):
-        t = copy.copy(self.through)
+        t = copy.deepcopy(self.through)
         t[1] = value
         self.through = t
 
@@ -117,7 +117,7 @@ class SpatialSliceSource( SliceSource ):
         return self.through[0]
     @time.setter
     def time( self, value ):
-        t = copy.copy(self.through)
+        t = copy.deepcopy(self.through)
         t[0] = value
         self.through = t
 
@@ -126,7 +126,7 @@ class SpatialSliceSource( SliceSource ):
         return self._through[2]
     @channel.setter
     def channel( self, value ):
-        t = copy.copy(self.through)
+        t = self._through
         t[2] = value
         self.through = t
 

@@ -192,28 +192,21 @@ class NavigationControler(QObject):
 
         self.axisColors = [QColor(255,0,0,255), QColor(0,255,0,255), QColor(0,0,255,255)]
     
-    def moveCrosshair(self, oldPos, newPos):
-        print "NavigationControler.moveCrosshair(%r, %r)" % (oldPos, newPos)
+    def moveCrosshair(self, newPos):
         self._updateCrossHairCursor()
     
-    def moveSlicingPosition(self, oldPos, newPos):
-        print "NavigationControler.moveSlicingPosition(%r, %r)" % (oldPos, newPos)
+    def moveSlicingPosition(self, newPos):
         for i in range(3):
-            if oldPos[i] != newPos[i]:
-                self._updateSlice(self._model.slicingPos[i], i)
+            self._updateSlice(self._model.slicingPos[i], i)
         self._updateSliceIntersection()
     
-    def changeTime(self, oldTime, newTime):
-        print "CHANGE TIME", oldTime, newTime
-        if oldTime != newTime:
-            for i in range(3):
-                self._sliceSources[i].time = newTime
+    def changeTime(self, newTime):
+        for i in range(3):
+            self._sliceSources[i].time = newTime
     
-    def changeChannel(self, oldChannel, newChannel):
-        print "CHANGE CHANNEL", oldChannel, newChannel
-        if oldChannel != newChannel:
-            for i in range(3):
-                self._sliceSources[i].channel = newChannel
+    def changeChannel(self, newChannel):
+        for i in range(3):
+            self._sliceSources[i].channel = newChannel
     
     #private functions ########################################################
     
