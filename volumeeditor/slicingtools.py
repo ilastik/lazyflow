@@ -29,6 +29,7 @@ def unbox( slicing, axis=0 ):
     '''Extracts a slice object from a sequence of slices.
 
     No effect in any other case.
+
     '''
     if hasattr( slicing, '__iter__' ):
         if len(slicing) > axis and isinstance(slicing[axis], slice):
@@ -115,3 +116,36 @@ class SliceProjection( object ):
         if self.handednessSwitched():
             slice = np.swapaxes(slice,0,1)
         return slice
+
+
+
+
+
+
+import unittest as ut
+class SliceProjectionTest( ut.TestCase ):
+    def testArgumentCheck( self ):
+        SliceProjection(1,2,[0,3,4])
+        SliceProjection(2,1,[3,0,4])
+        self.assertRaises(ValueError, SliceProjection, 2,1,[3,0,7])
+        self.assertRaises(ValueError, SliceProjection ,2,1,[3,1,4])
+        self.assertRaises(ValueError, SliceProjection ,2,5,[3,1,4])
+
+    def testDomain( self ):
+        sp = SliceProjection(2,1,[3,0,4])
+        unbounded = sp.domain([3,23,1])
+        self.assertEqual(unbounded, (slice(23,24), slice(None), slice(None), slice(3,4), slice(1,2)))
+
+        bounded = sp.domain([3,23,1], slice(5,9), slice(12,None))
+        self.assertEqual(bounded, (slice(23,24), slice(12,None), slice(5,9), slice(3,4), slice(1,2)))
+
+    def testSliceDomain( self ):
+        sp = SliceProjection(2,1,[3,0,4])
+        slicing = sp.domain([3,7,1], slice(1,3), slice(0,None))
+        raw = np.random.randint(0,100,(10,3,3,128,3))
+        domainArray = raw[slicing]
+        sl = sp(domainArray)
+        self.assertTrue(np.all(sl == raw[7,:,1:3,3,1].swapaxes(0,1)))
+
+if __name__ == '__main__':
+    ut.main()
