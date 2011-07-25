@@ -1,22 +1,6 @@
 from PyQt4.QtCore import QObject, pyqtSignal
 from asyncabcs import RequestABC, ArraySourceABC
-
-def is_pure_slicing( slicing ):
-    '''Test if slicing is a single slice or sequence of slices.
-
-    Impure slicings may additionally contain integer indices, 
-    ellipses, booleans, or newaxis.
-    '''
-    if isinstance(slicing, slice):
-        return True
-    if not hasattr(slicing, '__iter__'):
-        return False
-    for thing in slicing:
-        if not isinstance(thing, slice):
-            return False
-    return True
-
-
+from volumeeditor.slicingtools import is_pure_slicing
 
 class ArrayRequest( object ):
     def __init__( self, result ):

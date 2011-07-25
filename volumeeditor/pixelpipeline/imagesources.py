@@ -2,21 +2,7 @@ from PyQt4.QtCore import QObject, QRect, pyqtSignal
 from PyQt4.QtGui import QImage
 from qimage2ndarray import gray2qimage
 import asyncabcs
-from datasources import is_pure_slicing
-
-def _is_bounded( slicing2d ):
-    if slicing2d[0].stop == None:
-        return False
-    if slicing2d[1].stop == None:
-        return False
-    return True
-
-def _slicing2rect( slicing2d ):
-    x = slicing2d[1].start
-    y = slicing2d[0].start
-    width = slicing2d[1].stop - slicing2d[1].start
-    height = slicing2d[0].stop - slicing2d[0].start
-    return QRect(x, y, width, height)
+from volumeeditor.slicingtools import is_bounded, slicing2rect, is_pure_slicing
 
 class GrayscaleImageRequest( object ):
     def __init__( self, arrayrequest ):
@@ -56,10 +42,10 @@ class GrayscaleImageSource( QObject ):
     def setDirty( self, slicing ):
         if not is_pure_slicing(slicing):
             raise Exception('dirty region: slicing is not pure')
-        if not _is_bounded( slicing ):
+        if not is_bounded( slicing ):
             self.isDirty.emit(QRect()) # empty rect == everything is dirty
         else:
-            self.isDirty.emit(_slicing2rect( slicing ))
+            self.isDirty.emit(slicing2rect( slicing ))
 assert issubclass(GrayscaleImageSource, asyncabcs.ImageSourceABC)
 
 
