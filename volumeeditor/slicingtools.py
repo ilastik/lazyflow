@@ -1,3 +1,4 @@
+import numpy as np
 from PyQt4.QtCore import QRect
 
 '''Provide tools to work with collections of slice instances.
@@ -59,3 +60,58 @@ def is_pure_slicing( slicing ):
         if not isinstance(thing, slice):
             return False
     return True
+
+
+
+class SliceProjection( object ):
+    @property
+    def abscissa( self ):
+        return self._abscissa
+    @property
+    def ordinate( self ):
+        return self._ordinate
+    @property
+    def along( self ):
+        return self._along
+    @property
+    def domainDim( self ):
+        return self._dim
+
+    def __init__( self, abscissa = 1, ordinate = 2, along = [0,3,4] ):
+        assert hasattr(along, "__iter__")
+        
+        self._abscissa = abscissa
+        self._ordinate = ordinate
+        self._along = along
+        self._dim = len(self.along) + 2
+
+        # sanity checks
+        axes_set = set(along)
+        axes_set.add(abscissa)
+        axes_set.add(ordinate)
+        if len(axes_set) != self._dim:
+            raise ValueError("duplicate axes")
+        if axes_set != set(range(self._dim)):
+            raise ValueError("axes not from range(0,dim)")
+    
+    def handednessSwitched( self ):
+        if self.ordinate < self.abscissa:
+            return True
+        return False
+
+    def domain( self, through, abscissa_range = slice(None, None), ordinate_range = slice(None,None) ):
+        assert len(through) == len(self.along)
+        slicing = range(self.domainDim)
+        slicing[self.abscissa] = abscissa_range
+        slicing[self.ordinate] = ordinate_range
+        for i,a in enumerate(self.along):
+            slicing[self.along[i]] = slice(through[i], through[i]+1)
+        return tuple(slicing)
+
+    def __call__( self, domainArray ):
+        assert domainArray.ndim == self.domainDim
+        slice = np.squeeze(domainArray)
+        assert slice.ndim == 2, "dim %d != 2" % slice.ndim
+        if self.handednessSwitched():
+            slice = np.swapaxes(slice,0,1)
+        return slice
