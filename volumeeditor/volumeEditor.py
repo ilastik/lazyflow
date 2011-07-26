@@ -49,6 +49,7 @@ from positionModel import PositionModel
 from navigationControler import NavigationControler, NavigationInterpreter
 from pixelpipeline.slicesources import SpatialSliceSource
 from pixelpipeline.imagesources import GrayscaleImageSource
+from imagesourcefactories import createImageSource
 
 class VolumeEditor( QObject ):
     changedSlice      = pyqtSignal(int,int)
@@ -58,7 +59,7 @@ class VolumeEditor( QObject ):
     zoomInFactor  = 1.1
     zoomOutFactor = 0.9
 
-    def __init__( self, shape, useGL = False, overlayWidget=None, datasource = None):
+    def __init__( self, shape, layer, useGL = False, overlayWidget=None):
         super(VolumeEditor, self).__init__()
         assert(len(shape) == 5)
         self._shape = shape
@@ -77,16 +78,16 @@ class VolumeEditor( QObject ):
         self._pendingLabels = []
 
         # three ortho slices
-        self.sliceSources = []
-        self.sliceSources.append(SpatialSliceSource(datasource, 'x'))
-        self.sliceSources.append(SpatialSliceSource(datasource, 'y'))
-        self.sliceSources.append(SpatialSliceSource(datasource, 'z'))
+        self.sliceSources = [[], [], []]
+        for datasrc in layer.datasources:
+            self.sliceSources[0].append(SpatialSliceSource(datasrc, 'x'))
+            self.sliceSources[1].append(SpatialSliceSource(datasrc, 'y'))
+            self.sliceSources[2].append(SpatialSliceSource(datasrc, 'z'))
 
         # ortho image sources
         self.imageSources = []
-        self.imageSources.append(GrayscaleImageSource(self.sliceSources[0]))
-        self.imageSources.append(GrayscaleImageSource(self.sliceSources[1]))
-        self.imageSources.append(GrayscaleImageSource(self.sliceSources[2]))
+        for axis in xrange(3):
+            self.imageSources.append(createImageSource( layer, self.sliceSources[axis] ))
 
         # three ortho image scenes
         self.imageScenes = []
@@ -101,7 +102,7 @@ class VolumeEditor( QObject ):
         self.imageViews = []
         self.imageViews.append(ImageView2D(self._drawManager, self.imageScenes[0], useGL=useGL))
         self.imageViews.append(ImageView2D(self._drawManager, self.imageScenes[1], useGL=useGL))
-        self.imageViews.append(ImageView2D(self._drawManager, self.imageScenes[2],useGL=useGL))
+        self.imageViews.append(ImageView2D(self._drawManager, self.imageScenes[2], useGL=useGL))
 
         for i in xrange(3):
             self.imageViews[i].drawing.connect(partial(self.updateLabels, axis=i))

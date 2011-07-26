@@ -279,6 +279,7 @@ if __name__ == "__main__":
     from volumeeditor.pixelpipeline.datasources import LazyflowSource
     from volumeeditor.pixelpipeline._testing import OpDataProvider
     from volumeeditor._testing.from_lazyflow import OpDataProvider5D, OpDelay
+    from layer import GrayscaleLayer, RGBALayer
     
     from overlayItem  import OverlayItem  
     from _testing.volume import DataAccessor
@@ -345,6 +346,7 @@ if __name__ == "__main__":
                 op2 = OpDelay(g, 0.000003)
                 op2.inputs["Input"].connect(op1.outputs["Data5D"])
                 source = LazyflowSource(op2, "Output")
+                layer = GrayscaleLayer( source )
                 
                 print "...done"
             elif "cuboid" in argv:
@@ -386,7 +388,7 @@ if __name__ == "__main__":
             if len(shape) == 3:
                 shape = (1,)+shape+(1,)
 
-            self.editor = VolumeEditor(shape, useGL=useGL, overlayWidget=overlayWidget, datasource=source)
+            self.editor = VolumeEditor(shape, layer, useGL=useGL, overlayWidget=overlayWidget)
             self.editor.setDrawingEnabled(True)            
             self.widget = VolumeEditorWidget( self.editor )
             
