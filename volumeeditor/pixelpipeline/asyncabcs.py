@@ -32,7 +32,7 @@ class RequestABC:
 
 
 
-class ArraySourceABC:
+class SourceABC:
     __metaclass__ = ABCMeta
 
     @abstractmethod

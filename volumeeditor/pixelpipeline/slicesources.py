@@ -1,5 +1,5 @@
 from PyQt4.QtCore import QObject, pyqtSignal
-from asyncabcs import ArraySourceABC, RequestABC
+from asyncabcs import SourceABC, RequestABC
 import copy
 import numpy as np
 from volumeeditor.slicingtools import SliceProjection
@@ -36,7 +36,7 @@ class SliceSource( QObject ):
         self.throughChanged.emit( self._through )
 
     def __init__(self, datasource, sliceProjection = projectionAlongTZC):
-        assert isinstance(datasource, ArraySourceABC)
+        assert isinstance(datasource, SourceABC)
         super(SliceSource, self).__init__()
 
         self.sliceProjection = sliceProjection
@@ -51,7 +51,7 @@ class SliceSource( QObject ):
         if not is_pure_slicing(slicing):
             raise Exception('dirty region: slicing is not pure')
         self.isDirty.emit( slicing )
-assert issubclass(SliceSource, ArraySourceABC)
+assert issubclass(SliceSource, SourceABC)
 
 class SpatialSliceSource( SliceSource ):
     @property
@@ -86,7 +86,7 @@ class SpatialSliceSource( SliceSource ):
         projection = projections[along]
         super(SpatialSliceSource, self).__init__( datasource, projection )
         self._through = [0,0,0]
-assert issubclass(SpatialSliceSource, ArraySourceABC)
+assert issubclass(SpatialSliceSource, SourceABC)
 
 
 

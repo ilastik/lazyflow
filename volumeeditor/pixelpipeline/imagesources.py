@@ -1,7 +1,7 @@
 from PyQt4.QtCore import QObject, QRect, pyqtSignal
 from PyQt4.QtGui import QImage
 from qimage2ndarray import gray2qimage, array2qimage, alpha_view, rgb_view
-from asyncabcs import ArraySourceABC, ImageSourceABC, RequestABC
+from asyncabcs import SourceABC, RequestABC
 from volumeeditor.slicingtools import is_bounded, slicing2rect, rect2slicing, slicing2shape, is_pure_slicing
 from datasources import ConstantSource
 import numpy as np
@@ -30,7 +30,7 @@ class GrayscaleImageSource( QObject ):
     isDirty = pyqtSignal( QRect )
 
     def __init__( self, arraySource2D ):
-        assert isinstance(arraySource2D, ArraySourceABC)
+        assert isinstance(arraySource2D, SourceABC)
         super(GrayscaleImageSource, self).__init__()
         self._arraySource2D = arraySource2D
         self._arraySource2D.isDirty.connect(self.setDirty)
@@ -94,7 +94,7 @@ class RGBAImageSource( QObject ):
         channels = [red, green, blue, alpha]
         for channel in channels: 
             if channel != None:
-                assert isinstance(channel, ArraySourceABC)
+                assert isinstance(channel, SourceABC)
 
         super(RGBAImageSource, self).__init__()
         self._channels = channels

@@ -1,5 +1,5 @@
 from PyQt4.QtCore import QObject, pyqtSignal
-from asyncabcs import RequestABC, ArraySourceABC
+from asyncabcs import RequestABC, SourceABC
 from volumeeditor.slicingtools import is_pure_slicing, slicing2shape, is_bounded
 import numpy as np
 
@@ -33,7 +33,7 @@ class ArraySource( QObject ):
         if not is_pure_slicing(slicing):
             raise Exception('dirty region: slicing is not pure')
         self.isDirty.emit( slicing )
-assert issubclass(ArraySource, ArraySourceABC)
+assert issubclass(ArraySource, SourceABC)
 
 
 
@@ -66,7 +66,7 @@ class LazyflowSource( QObject ):
         if not is_pure_slicing(slicing):
             raise Exception('dirty region: slicing is not pure')
         self.isDirty.emit( slicing )
-assert issubclass(LazyflowSource, ArraySourceABC)
+assert issubclass(LazyflowSource, SourceABC)
 
 
 
@@ -102,7 +102,7 @@ class ConstantSource( QObject ):
         if not is_pure_slicing(slicing):
             raise Exception('dirty region: slicing is not pure')
         self.isDirty.emit( slicing )
-assert issubclass(ConstantSource, ArraySourceABC)
+assert issubclass(ConstantSource, SourceABC)
 
 
 
