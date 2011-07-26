@@ -104,9 +104,10 @@ class ImageView2D(QGraphicsView):
     def drawingEnabled(self, enable):
         self._drawingEnabled = enable 
 
-    def __init__(self, drawManager, useGL=False):
+    def __init__(self, drawManager, imagescene2d, useGL=False):
         QGraphicsView.__init__(self)
         self._useGL = useGL
+        self.setScene(imagescene2d)
         
         #these attributes are exposed as public properties above
         self._shape  = None #2D shape of this view's shown image
@@ -150,7 +151,6 @@ class ImageView2D(QGraphicsView):
         self.setRenderHint(QPainter.Antialiasing, False)
         
         #Intitialize the scene
-        self.setScene(ImageScene2D())
         if self._useGL:
             self.scene().activateOpenGL( self.openglWidget )
 

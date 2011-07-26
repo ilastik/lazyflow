@@ -91,15 +91,17 @@ class VolumeEditor( QObject ):
         # three ortho image scenes
         self.imageScenes = []
         self.imageScenes.append(ImageScene2D())
+        self.imageScenes.append(ImageScene2D())
+        self.imageScenes.append(ImageScene2D())
+        for i in xrange(3):
+            self.imageScenes[i].imageSource = self.imageSources[i]
+
 
         # three ortho image views
         self.imageViews = []
-        self.imageViews.append(ImageView2D(self._drawManager, useGL=useGL))
-        self.imageViews.append(ImageView2D(self._drawManager, useGL=useGL))
-        self.imageViews.append(ImageView2D(self._drawManager, useGL=useGL))
-
-        for i in xrange(3):
-            self.imageViews[i].scene().imageSource = self.imageSources[i]
+        self.imageViews.append(ImageView2D(self._drawManager, self.imageScenes[0], useGL=useGL))
+        self.imageViews.append(ImageView2D(self._drawManager, self.imageScenes[1], useGL=useGL))
+        self.imageViews.append(ImageView2D(self._drawManager, self.imageScenes[2],useGL=useGL))
 
         for i in xrange(3):
             self.imageViews[i].drawing.connect(partial(self.updateLabels, axis=i))
