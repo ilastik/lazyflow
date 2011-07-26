@@ -23,6 +23,7 @@ class ImageSource( QObject ):
 assert issubclass(ImageSource, SourceABC)
 
 
+
 class GrayscaleImageRequest( object ):
     def __init__( self, arrayrequest ):
         self._arrayreq = arrayrequest

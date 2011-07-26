@@ -108,7 +108,7 @@ class ImageScene2D(QGraphicsScene):
     @imageSource.setter
     def imageSource(self, s):
         self._imageSource = s
-        self._imageSource.changed.connect(self._invalidateRect)
+        self._imageSource.isDirty.connect(self._invalidateRect)
     
     def __init__(self, viewport):
         QGraphicsScene.__init__(self)
