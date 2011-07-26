@@ -1,6 +1,7 @@
 from PyQt4.QtCore import QObject, pyqtSignal
 from asyncabcs import RequestABC, ArraySourceABC
-from volumeeditor.slicingtools import is_pure_slicing
+from volumeeditor.slicingtools import is_pure_slicing, slicing2shape, is_bounded
+import numpy as np
 
 class ArrayRequest( object ):
     def __init__( self, result ):
@@ -66,6 +67,42 @@ class LazyflowSource( QObject ):
             raise Exception('dirty region: slicing is not pure')
         self.isDirty.emit( slicing )
 assert issubclass(LazyflowSource, ArraySourceABC)
+
+
+
+class ConstantRequest( object ):
+    def __init__( self, result ):
+        self._result = result
+
+    def wait( self ):
+        return self._result
+        
+    # callback( result = result, **kwargs )
+    def notify( self, callback, **kwargs ):
+        callback(self._result, **kwargs)
+assert issubclass(ConstantRequest, RequestABC)
+
+class ConstantSource( QObject ):
+    isDirty = pyqtSignal( object )
+
+    def __init__( self, constant = 0, dtype = np.uint8 ):
+        super(ConstantSource, self).__init__()
+        self._constant = constant
+        self._dtype = dtype
+
+    def request( self, slicing ):
+        assert is_pure_slicing(slicing)
+        assert is_bounded(slicing)
+        shape = slicing2shape(slicing)
+        result = np.zeros( shape, dtype = self._dtype )
+        result[:] = self._constant
+        return ConstantRequest( result )
+
+    def setDirty( self, slicing ):
+        if not is_pure_slicing(slicing):
+            raise Exception('dirty region: slicing is not pure')
+        self.isDirty.emit( slicing )
+assert issubclass(ConstantSource, ArraySourceABC)
 
 
 
