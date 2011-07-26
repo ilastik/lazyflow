@@ -2,7 +2,7 @@ from PyQt4.QtCore import QObject, pyqtSignal
 from asyncabcs import SourceABC, RequestABC
 import copy
 import numpy as np
-from volumeeditor.slicingtools import SliceProjection
+from volumeeditor.slicingtools import SliceProjection, is_pure_slicing
 
 projectionAlongTXC = SliceProjection( abscissa = 2, ordinate = 3, along = [0,1,4] )
 projectionAlongTYC = SliceProjection( abscissa = 1, ordinate = 3, along = [0,2,4] )
@@ -24,7 +24,6 @@ class SliceRequest( object ):
 assert issubclass(SliceRequest, RequestABC)
 
 class SliceSource( QObject ):
-    throughChanged = pyqtSignal( object )
     isDirty = pyqtSignal( object )
 
     @property
@@ -33,7 +32,7 @@ class SliceSource( QObject ):
     @through.setter
     def through( self, value ):
         self._through = value
-        self.throughChanged.emit( self._through )
+        self.setDirty((slice(None), slice(None)))
 
     def __init__(self, datasource, sliceProjection = projectionAlongTZC):
         assert isinstance(datasource, SourceABC)

@@ -44,8 +44,6 @@ class GrayscaleImageRequest( object ):
 assert issubclass(GrayscaleImageRequest, RequestABC)
 
 class GrayscaleImageSource( ImageSource ):
-    #isDirty = pyqtSignal( QRect )
-
     def __init__( self, arraySource2D ):
         assert isinstance(arraySource2D, SourceABC)
         super(GrayscaleImageSource, self).__init__()

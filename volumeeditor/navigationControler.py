@@ -247,7 +247,6 @@ class NavigationControler(QObject):
     def _updateSlice(self, num, axis):
         if num < 0 or num >= self._model.volumeExtent(axis):
             raise Exception("NavigationControler._setSlice(): invalid slice number")
-
         #FIXME: Shouldnt the hud listen to the model changes itself?
         self._views[axis].hud.sliceSelector.setValue(num)
 
