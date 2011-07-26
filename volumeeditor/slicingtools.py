@@ -41,13 +41,6 @@ def is_bounded( slicing ):
     slicing = box(slicing)
     return all((sl.stop != None for sl in slicing))
 
-def slicing2rect( slicing, width_axis=1, height_axis = 0 ):
-    x = slicing[width_axis].start
-    y = slicing[height_axis].start
-    width = slicing[width_axis].stop - slicing[width_axis].start
-    height = slicing[height_axis].stop - slicing[height_axis].start
-    return QRect(x, y, width, height)
-
 def is_pure_slicing( slicing ):
     '''Test if slicing is a single slice instance or sequence of instances.
 
@@ -61,6 +54,16 @@ def is_pure_slicing( slicing ):
         if not isinstance(thing, slice):
             return False
     return True
+
+def slicing2rect( slicing, width_axis=1, height_axis = 0 ):
+    x = slicing[width_axis].start
+    y = slicing[height_axis].start
+    width = slicing[width_axis].stop - slicing[width_axis].start
+    height = slicing[height_axis].stop - slicing[height_axis].start
+    return QRect(x, y, width, height)
+
+def rect2slicing( qrect, seq=tuple ):
+    return seq((slice(qrect.y(), qrect.y()+qrect.height()), slice(qrect.x(), qrect.x()+qrect.width())))
 
 
 
