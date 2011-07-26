@@ -153,7 +153,10 @@ class ImageView2D(QGraphicsView):
         self.setRenderHint(QPainter.Antialiasing, False)
         
         #Intitialize the scene
-        self.setScene(ImageScene2D(self.viewport()))
+        self.setScene(ImageScene2D())
+        if self._useGL:
+            self.scene().activateOpenGL( self.openglWidget )
+
         #observe the scene, waiting for changes of the content
         self.scene().contentChanged.connect(self.onContentChange)
         if self._useGL:

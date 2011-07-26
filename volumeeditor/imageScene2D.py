@@ -109,27 +109,6 @@ class ImageScene2D(QGraphicsScene):
     def imageSource(self, s):
         self._imageSource = s
         self._imageSource.isDirty.connect(self._invalidateRect)
-    
-    def __init__(self, viewport):
-        QGraphicsScene.__init__(self)
-        self._glWidget = viewport
-        self._useGL = isinstance(viewport, QGLWidget)
-        self._shape2D = None
-        self._updatableTiles = []
-
-        # tile rendering
-        self.imagePatches = None
-        self._image = None
-        self._overlays = None
-        self._renderThread = None
-
-        # experimental
-        self._imageSource = None
-    
-        def cleanup():
-            print "cleaning up some more"
-            self._renderThread.stop()
-        self.destroyed.connect(cleanup)
 
     @property
     def shape(self):
@@ -151,6 +130,35 @@ class ImageScene2D(QGraphicsScene):
         self._renderThread = ImageSceneRenderThread(self.imagePatches, self.imageSource, parent=self)
         self._renderThread.start()
         self._renderThread.patchAvailable.connect(self._schedulePatchRedraw)
+    
+    def __init__( self ):
+        QGraphicsScene.__init__(self)
+        self._glWidget = None
+        self._useGL = False
+        self._shape2D = None
+        self._updatableTiles = []
+
+        # tile rendering
+        self.imagePatches = None
+        self._image = None
+        self._overlays = None
+        self._renderThread = None
+
+        # experimental
+        self._imageSource = None
+    
+        def cleanup():
+            print "cleaning up some more"
+            self._renderThread.stop()
+        self.destroyed.connect(cleanup)
+
+    def activateOpenGL( self, qglwidget ):
+        self._useGL = True
+        self._glWidget = qglwidget
+
+    def deactivateOpenGL( self ):
+        self._useGL = False
+        self._glWidget = None
         
     def _invalidateRect(self, rect):
         for i,patch in enumerate(self.imagePatches):
