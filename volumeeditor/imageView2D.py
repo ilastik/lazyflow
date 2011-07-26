@@ -79,9 +79,6 @@ class ImageView2D(QGraphicsView):
     @name.setter
     def name(self, n):
         self._name = n
-
-    def _initializeGL(self):
-        self.scene().initializeGL()
            
     @property
     def hud(self):
@@ -157,10 +154,6 @@ class ImageView2D(QGraphicsView):
         if self._useGL:
             self.scene().activateOpenGL( self.openglWidget )
 
-        #observe the scene, waiting for changes of the content
-        self.scene().contentChanged.connect(self.onContentChange)
-        if self._useGL:
-            self._initializeGL()
         self._crossHairCursor = CrossHairCursor()
         self._crossHairCursor.setZValue(99)
         self.scene().addItem(self._crossHairCursor)
@@ -218,17 +211,6 @@ class ImageView2D(QGraphicsView):
 
         self._tempErase = False
         
-    def onContentChange(self):
-        '''Observe the graphics scene, waiting for content changes.
-
-        After a scene's content changed, it starts to render new tiles. This
-        method prepares for these new tiles arriving little by little.
-        '''
-      #  if not self._useGL:
-            #reset the background cache
-            #self.resetCachedContent()
-            #pass
-
     def swapAxes(self):          
         '''Displays this image as if the x and y axes were swapped.
         '''

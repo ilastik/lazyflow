@@ -88,9 +88,6 @@ class ImagePatch(object):
         self.dirty = False
 
 class ImageScene2D(QGraphicsScene):
-    # the data to be displayed was changed
-    contentChanged = pyqtSignal()
-
     # base patch size: blockSize x blockSize
     blockSize = 128
     # overlap between patches 
@@ -135,20 +132,14 @@ class ImageScene2D(QGraphicsScene):
         QGraphicsScene.__init__(self)
         self._glWidget = None
         self._useGL = False
-        self._shape2D = None
         self._updatableTiles = []
 
         # tile rendering
         self.imagePatches = None
-        self._image = None
-        self._overlays = None
         self._renderThread = None
-
-        # experimental
         self._imageSource = None
     
         def cleanup():
-            print "cleaning up some more"
             self._renderThread.stop()
         self.destroyed.connect(cleanup)
 
@@ -156,10 +147,15 @@ class ImageScene2D(QGraphicsScene):
         self._useGL = True
         self._glWidget = qglwidget
 
+        glDisable(GL_DEPTH_TEST)
+        glEnable(GL_TEXTURE_2D)
+        glClearColor(0.0, 0.0, 0.0, 0.0);
+        glClear(GL_COLOR_BUFFER_BIT)
+
     def deactivateOpenGL( self ):
         self._useGL = False
         self._glWidget = None
-        
+    
     def _invalidateRect(self, rect):
         for i,patch in enumerate(self.imagePatches):
             if not rect.isValid() or rect.intersects(patch.rect):
@@ -183,12 +179,6 @@ class ImageScene2D(QGraphicsScene):
             drawnTiles +=1
         #print "ImageView2D.drawBackgroundSoftware: drew %d of %d tiles" % (drawnTiles, len(self.imagePatches)) 
     
-    def initializeGL(self):
-        glDisable(GL_DEPTH_TEST)
-        glEnable(GL_TEXTURE_2D)
-        glClearColor(0.0, 0.0, 0.0, 0.0);
-        glClear(GL_COLOR_BUFFER_BIT)
-
     def drawBackgroundGL(self, painter, rect):
         painter.beginNativePainting()
         
@@ -215,25 +205,6 @@ class ImageScene2D(QGraphicsScene):
             if not patch.rectF.intersect(rect): continue
             patch.drawTexture()
             drawnTiles +=1
-        
-        #  ************************************************
-        #  * rectangle s                                  *
-        #  *                                              *
-        #  *             ***************************      *                   
-        #  *             * rectangle r             *      *
-        #  *             ***************************      *                   
-        #  *                                              *                 
-        #  ************************************************
-        #r = QRectF(0,0,*self._shape2D)
-        #s = rect
-        #glColor4f(1.0,0.0,0.0, 1.0)
-        #glRectf(s.x(), s.y(), r.x(), s.y()+s.height())
-        #glColor4f(0.0,1.0,0.0, 1.0)
-        #glRectf(r.x(), s.y(), r.x()+r.width(), s.y()+(r.y()-s.y()))
-        #glColor4f(0.0,0.0,1.0, 1.0)
-        #glRectf(r.x()+r.width(), s.y(), s.x()+s.width(), s.y()+s.height())
-        #glColor4f(1.0,1.0,0.0, 1.0)
-        #glRectf(r.x(), r.y()+r.height(), r.x()+r.width(), s.y()+s.height())
 
         #print "ImageView2D.drawBackgroundGL: drew %d of %d tiles" % (drawnTiles, len(self.imagePatches))
         painter.endNativePainting()

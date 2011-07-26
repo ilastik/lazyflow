@@ -43,6 +43,7 @@ from functools import partial
 from imageSaveThread import ImageSaveThread
 from historyManager import HistoryManager
 from drawManager import DrawManager
+from imageScene2D import ImageScene2D
 from imageView2D import ImageView2D
 from positionModel import PositionModel
 from navigationControler import NavigationControler, NavigationInterpreter
@@ -87,7 +88,11 @@ class VolumeEditor( QObject ):
         self.imageSources.append(GrayscaleImageSource(self.sliceSources[1]))
         self.imageSources.append(GrayscaleImageSource(self.sliceSources[2]))
 
-        # three ortho views
+        # three ortho image scenes
+        self.imageScenes = []
+        self.imageScenes.append(ImageScene2D())
+
+        # three ortho image views
         self.imageViews = []
         self.imageViews.append(ImageView2D(self._drawManager, useGL=useGL))
         self.imageViews.append(ImageView2D(self._drawManager, useGL=useGL))
