@@ -65,6 +65,14 @@ def slicing2rect( slicing, width_axis=1, height_axis = 0 ):
 def rect2slicing( qrect, seq=tuple ):
     return seq((slice(qrect.y(), qrect.y()+qrect.height()), slice(qrect.x(), qrect.x()+qrect.width())))
 
+def slicing2shape( slicing ):
+    assert is_bounded( slicing )
+    slicing = box(slicing)
+    shape = []
+    for sl in slicing:
+        shape.append(sl.stop - sl.start)
+    return tuple(shape)
+
 
 
 class SliceProjection( object ):
