@@ -6,6 +6,23 @@ from volumeeditor.slicingtools import is_bounded, slicing2rect, rect2slicing, sl
 from datasources import ConstantSource
 import numpy as np
 
+class ImageSource( QObject ):
+    '''Partial implemented base class for image sources'''
+    isDirty = pyqtSignal( QRect )
+
+    def request( self, rect ):
+        raise NotImplementedError
+
+    def setDirty( self, slicing ):
+        if not is_pure_slicing(slicing):
+            raise Exception('dirty region: slicing is not pure')
+        if not is_bounded( slicing ):
+            self.isDirty.emit(QRect()) # empty rect == everything is dirty
+        else:
+            self.isDirty.emit(slicing2rect( slicing ))
+assert issubclass(ImageSource, SourceABC)
+
+
 class GrayscaleImageRequest( object ):
     def __init__( self, arrayrequest ):
         self._arrayreq = arrayrequest
@@ -25,9 +42,8 @@ class GrayscaleImageRequest( object ):
         callback( img, **kwargs )
 assert issubclass(GrayscaleImageRequest, RequestABC)
 
-
-class GrayscaleImageSource( QObject ):
-    isDirty = pyqtSignal( QRect )
+class GrayscaleImageSource( ImageSource ):
+    #isDirty = pyqtSignal( QRect )
 
     def __init__( self, arraySource2D ):
         assert isinstance(arraySource2D, SourceABC)
@@ -40,15 +56,7 @@ class GrayscaleImageSource( QObject ):
         s = rect2slicing(qrect)
         req = self._arraySource2D.request(s)
         return GrayscaleImageRequest( req )
-
-    def setDirty( self, slicing ):
-        if not is_pure_slicing(slicing):
-            raise Exception('dirty region: slicing is not pure')
-        if not is_bounded( slicing ):
-            self.isDirty.emit(QRect()) # empty rect == everything is dirty
-        else:
-            self.isDirty.emit(slicing2rect( slicing ))
-assert issubclass(GrayscaleImageSource, ImageSourceABC)
+assert issubclass(GrayscaleImageSource, SourceABC)
 
 
 
@@ -80,9 +88,7 @@ class RGBAImageRequest( object ):
             callback( img, **kwargs )
 assert issubclass(RGBAImageRequest, RequestABC)
 
-class RGBAImageSource( QObject ):
-    isDirty = pyqtSignal( QRect )
-
+class RGBAImageSource( ImageSource ):
     def __init__( self, red = None, green = None, blue = None, alpha = None ):
         '''
         If a color channel is None, it is set to 0 implicitly.
@@ -120,15 +126,8 @@ class RGBAImageSource( QObject ):
                 shape.append(t)
         assert len(shape) == 2
         return RGBAImageRequest( r, g, b, a, shape )
+assert issubclass(RGBAImageSource, SourceABC)
 
-    def setDirty( self, slicing ):
-        if not is_pure_slicing(slicing):
-            raise Exception('dirty region: slicing is not pure')
-        if not is_bounded( slicing ):
-            self.isDirty.emit(QRect()) # empty rect == everything is dirty
-        else:
-            self.isDirty.emit(slicing2rect( slicing ))
-assert issubclass(RGBAImageSource, ImageSourceABC)
 
 
 

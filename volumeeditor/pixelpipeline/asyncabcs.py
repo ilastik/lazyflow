@@ -45,24 +45,8 @@ class SourceABC:
 
     @classmethod
     def __subclasshook__(cls, C):
-        if cls is ArraySourceABC:
+        if cls is SourceABC:
             if _has_attributes(C, ['request', 'setDirty']):
-                return True
-            return False
-        return NotImplemented
-
-
-class ImageSourceABC:
-    __metaclass__ = ABCMeta
-
-    @abstractmethod
-    def request( self, rect ):
-        pass
-
-    @classmethod
-    def __subclasshook__(cls, C):
-        if cls is ImageSourceABC:
-            if _has_attribute(C, 'request'):
                 return True
             return False
         return NotImplemented
