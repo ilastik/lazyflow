@@ -88,27 +88,21 @@ class RGBAImageRequest( object ):
 assert issubclass(RGBAImageRequest, RequestABC)
 
 class RGBAImageSource( ImageSource ):
-    def __init__( self, red = None, green = None, blue = None, alpha = None ):
+    def __init__( self, red, green, blue, alpha ):
         '''
-        If a color channel is None, it is set to 0 implicitly.
-        A None alpha channel is set to opaque (255).
+        If you don't want to set all the channels,
+        a ConstantSource may be used as a replacement for
+        the missing channels.
 
-        red, green, blue, alpha - 2d array sources or None
+        red, green, blue, alpha - 2d array sources
 
         '''
         channels = [red, green, blue, alpha]
         for channel in channels: 
-            if channel != None:
                 assert isinstance(channel, SourceABC) , 'channel has wrong type: %s' % str(type(channel))
 
         super(RGBAImageSource, self).__init__()
         self._channels = channels
-        for i in xrange(3):
-            if self._channels[i] == None:
-                self._channels[i] = ConstantSource(0)
-        if self._channels[3] == None:
-            self._channels[3] = ConstantSource(255)
-
         for arraySource in self._channels:
             arraySource.isDirty.connect(self.setDirty)
 
