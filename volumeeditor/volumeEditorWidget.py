@@ -377,6 +377,7 @@ if __name__ == "__main__":
 
                 layer1 = GrayscaleLayer( membranesrc )
                 layer2 = RGBALayer( red = nucleisrc )
+                layer2.opacity = 0.5
                 source = nucleisrc
                 layers = [layer1, layer2]
 
