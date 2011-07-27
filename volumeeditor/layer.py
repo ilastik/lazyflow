@@ -1,5 +1,3 @@
-from pixelpipeline.imagesources import GrayscaleImageSource, RGBAImageSource
-
 class Layer( object ):
     def __init__( self ):
         self.visible = True
