@@ -112,8 +112,11 @@ class VolumeEditor( QObject ):
         self.imageScenes.append(ImageScene2D())
         self.imageScenes.append(ImageScene2D())
         for i in xrange(3):
-            stack = zip(( layer.opacity for layer in layers), imageSources[i])
-            self.imageScenes[i].imageSourceStack = [ ImageSourceStackEntry(*e) for e in stack ]
+            stack = []
+            for layeridx in xrange(len(layers)):
+                if layers[layeridx].visible:
+                    stack.append( ImageSourceStackEntry(layers[layeridx].opacity, imageSources[i][layeridx]))
+            self.imageScenes[i].imageSourceStack = stack
 
 
         # three ortho image views
