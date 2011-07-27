@@ -382,6 +382,28 @@ if __name__ == "__main__":
                 layers = [layer1, layer2]
 
                 print "...done"
+            elif "manylayers" in argv:
+                N = 200
+                print "%d Layers!" % N
+                fn = os.path.split(os.path.abspath(__file__))[0] +"/_testing/5d.npy"
+                raw = np.load(fn)
+                print "loading file '%s'" % fn
+
+                g = Graph()
+                op1 = OpDataProvider(g, raw[:,:,:,:,0:1]/10)
+                nucleisrc = LazyflowSource(op1, "Data")
+                op2 = OpDataProvider(g, raw[:,:,:,:,1:2]/5)
+                membranesrc = LazyflowSource(op2, "Data")
+
+                layers = []
+                layers.append(GrayscaleLayer( membranesrc ))
+                for i in xrange(N):
+                    layer = RGBALayer( red = nucleisrc )
+                    layer.opacity = 0.3
+                    layers.append(layer)
+                source = nucleisrc
+
+                print "...done"
             elif "stripes" in argv:
                 source = ArraySource(stripes(50,35,20))
                 layers = [GrayscaleLayer( source )]
@@ -421,11 +443,11 @@ if __name__ == "__main__":
     app = QApplication(sys.argv)
     
     if len(sys.argv) < 2:
-        print "Usage: python volumeeditor.py <testmode> (hugeslab, cuboid, 5d, comp, layers)"
+        print "Usage: python volumeeditor.py <testmode> (hugeslab, cuboid, 5d, comp, layers, manylayers)"
         app.quit()
         sys.exit(0)
     
-    if 'cuboid' in sys.argv or 'hugeslab' in sys.argv or '5d' in sys.argv or 'comp' in sys.argv or 'layers' in sys.argv:
+    if 'cuboid' in sys.argv or 'hugeslab' in sys.argv or '5d' in sys.argv or 'comp' in sys.argv or 'layers' in sys.argv or 'manylayers' in sys.argv:
         s = QSplitter()
         t1 = Test(True, sys.argv)
         t2 = Test(False, sys.argv)
