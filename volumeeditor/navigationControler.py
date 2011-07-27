@@ -87,14 +87,6 @@ class NavigationInterpreter(QObject):
     def sliceIntersectionIndicatorToggle(self, show):
         self.indicateSliceIntersection = show
     
-    def changeChannel(self, channel, axis):
-        print "channel change not implemented"
-        #if len(self.overlayWidget.overlays) > 0:
-        #    ov = self.overlayWidget.getOverlayRef("Raw Data")
-        #     if ov.shape[-1] == self._shape[-1]:
-        #         self.overlayWidget.getOverlayRef("Raw Data").channel = channel
-
-    
     def positionCursor(self, x, y, axis):
         """
         Change position of the crosshair cursor.
@@ -176,7 +168,7 @@ class NavigationControler(QObject):
         for v in self._views:
             v._sliceIntersectionMarker.setVisibility(show)
         
-    def __init__(self, imageView2Ds, sliceSources, positionModel, overlaywidget, time = 0, channel = 0):
+    def __init__(self, imageView2Ds, sliceSources, positionModel, time = 0, channel = 0):
         QObject.__init__(self)
         assert len(imageView2Ds) == 3
 
@@ -184,7 +176,6 @@ class NavigationControler(QObject):
         self._views = imageView2Ds
         self._sliceSources = sliceSources
         self._model = positionModel
-        self._overlaywidget = overlaywidget
         self._beginStackIndex = 0
         self._endStackIndex   = 1
 

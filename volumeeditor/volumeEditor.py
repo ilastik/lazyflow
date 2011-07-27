@@ -59,7 +59,7 @@ class VolumeEditor( QObject ):
     zoomInFactor  = 1.1
     zoomOutFactor = 0.9
 
-    def __init__( self, shape, layer, useGL = False, overlayWidget=None):
+    def __init__( self, shape, layer, useGL = False):
         super(VolumeEditor, self).__init__()
         assert(len(shape) == 5)
         self._shape = shape
@@ -119,14 +119,11 @@ class VolumeEditor( QObject ):
 
         # navigation control
         self.posModel     = PositionModel(self._shape)
-        self.navCtrl      = NavigationControler(self.imageViews, self.sliceSources, self.posModel, overlayWidget)
+        self.navCtrl      = NavigationControler(self.imageViews, self.sliceSources, self.posModel)
         self.navInterpret = NavigationInterpreter(self.posModel)
 
         # Add label widget to toolBoxLayout
         self.labelWidget = None
-
-        #Overlay selector
-        self.overlayWidget = None
         
         # some auxiliary stuff
         self.focusAxis =  0 #the currently focused axis
@@ -238,16 +235,6 @@ class VolumeEditor( QObject ):
         self.labelWidget.itemSelectionChanged.connect(self.onLabelSelected)
         self._toolBoxLayout.insertWidget(0, self.labelWidget)
     
-    def setOverlayWidget(self,  widget):
-        """
-        Public interface function for setting the overlayWidget toolBox
-        """
-        if self.overlayWidget:
-            self.overlayWidget.close()
-            del self.overlayWidget
-        self.overlayWidget = widget
-        self.overlayWidget.selectedOverlay.connect(self.onOverlaySelected)
-        
     def setRgbMode(self, mode): 
         """
         change display mode of 3-channel images to either rgb, or 3-channels
@@ -293,56 +280,9 @@ class VolumeEditor( QObject ):
             self._imageViews[1].doScale(scaleFactor)
             self._imageViews[2].doScale(scaleFactor)
 
-    def setLabels(self, offsets, axis, num, labels, erase):
-        """
-        offsets: labels is a 2D matrix in the image plane perpendicular to axis, which is offset from the origin
-                 of the slice by the 2D offsets vector
-        axis:    the axis (x=0, y=1 or z=2) which is perpendicular to the image plane
-        num:     position of the image plane perpendicular to axis on which the 'labels' were drawn (the slice number)
-        labels   2D matrix of new labels
-        erase    boolean whether we are erasing or not. This changes how we interpret the update defined through
-                 'labels'
-        """
-        
-        if axis == 0:
-            offsets5 = (self._viewManager.time,num,offsets[0],offsets[1],0)
-            sizes5 = (1,1,labels.shape[0], labels.shape[1],1)
-        elif axis == 1:
-            offsets5 = (self._viewManager.time,offsets[0],num,offsets[1],0)
-            sizes5 = (1,labels.shape[0],1, labels.shape[1],1)
-        else:
-            offsets5 = (self._viewManager.time,offsets[0],offsets[1],num,0)
-            sizes5 = (1,labels.shape[0], labels.shape[1],1,1)
-        
-        vu = VolumeUpdate(labels.reshape(sizes5),offsets5, sizes5, erase)
-        vu.applyTo(self.labelWidget.overlayItem)
-        self._pendingLabels.append(vu)
-
-        patches = self._imageViews[axis].patchAccessor.getPatchesForRect(offsets[0], offsets[1],offsets[0]+labels.shape[0], offsets[1]+labels.shape[1])
-
-        tempImage = None
-        tempoverlays = []
-        for item in reversed(self.overlayWidget.overlays):
-            if item.visible:
-                tempoverlays.append(item.getOverlaySlice(self._viewManager.slicePosition[axis],axis, self._viewManager.time, 0))
-
-        if len(self.overlayWidget.overlays) > 0:
-            tempImage = self.overlayWidget.getOverlayRef("Raw Data")._data.getSlice(num, axis, self._viewManager.time, self._viewManager.channel)       
-
-        # FIXME there needs to be abstraction
-        self._imageViews[axis].imageSceneRenderer.updatePatches(patches, tempImage, tempoverlays)
-        self.newLabelsPending.emit() # e.g. retrain
-
     #===========================================================================
     # View & Tools Options
     #===========================================================================
-    def toggleOverlays(self):
-        for index,  item in enumerate(self.overlayWidget.overlays):
-            item.visible = not(item.visible)
-            checkState = Qt.Checked if item.visible else Qt.Unchecked
-            self.overlayWidget.overlayListWidget.item(index).setCheckState(checkState)
-        self.repaint()
-       
     def nextChannel(self):
         self.posModel.channel = self.posModel.channel+1
 
@@ -365,7 +305,7 @@ class VolumeEditor( QObject ):
         return self._viewManager.getVisibleState()
 
     def beginDraw(self, pos, axis):
-        print "VolumeEditorOld.beginDraw FIXME self.labelWidget.ensureLabelOverlayVisible()"
+        print "beginDraw: I'm doing nothing. Fixme or deleteme"
         
     def endDraw(self, pos, axis):
         result = self._drawManager.endDrawing(pos)

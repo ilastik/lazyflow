@@ -200,7 +200,6 @@ class VolumeEditorWidget(QWidget):
         self.shortcuts.append(self._shortcutHelper("Ctrl+Z", "Labeling", "History undo", self, self._ve.historyUndo, Qt.ApplicationShortcut, True))
         self.shortcuts.append(self._shortcutHelper("Ctrl+Shift+Z", "Labeling", "History redo", self, self._ve.historyRedo, Qt.ApplicationShortcut, True))
         self.shortcuts.append(self._shortcutHelper("Ctrl+Y", "Labeling", "History redo", self, self._ve.historyRedo, Qt.ApplicationShortcut, True))
-        self.shortcuts.append(self._shortcutHelper("Space", "Overlays", "Invert overlay visibility", self, self._ve.toggleOverlays, enabled = True))
         self.shortcuts.append(self._shortcutHelper("l", "Labeling", "Go to next label (cyclic, forward)", self, self._ve.nextLabel))
         self.shortcuts.append(self._shortcutHelper("k", "Labeling", "Go to previous label (cyclic, backwards)", self, self._ve.prevLabel))
         
@@ -238,21 +237,19 @@ class VolumeEditorWidget(QWidget):
             self.shortcuts.append(self._shortcutHelper("Ctrl+Shift+Down", "Navigation", "10 slices down", v, partial(sliceDelta, i, -10), Qt.WidgetShortcut))
 
     def _updateInfoLabels(self, pos):
-        for i in range(3):
-            if pos[i] < 0 or pos[i] >= self._ve.posModel.shape[i]:
-                self._ve.posLabel.setText("")
-                return
-                                
-        rawRef = self._ve.overlayWidget.getOverlayRef("Raw Data")
-        colorValues = rawRef._data[0,pos[0], pos[1], pos[2], 0]
-        
-        self.posLabel.setText("<b>x:</b> %03i  <b>y:</b> %03i  <b>z:</b> %03i" % (pos[0], pos[1], pos[2]))
-        
+        print "updateInfoLabels: I'm broken, please fix me."
+        #for i in range(3):
+        #    if pos[i] < 0 or pos[i] >= self._ve.posModel.shape[i]:
+        #        self._ve.posLabel.setText("")
+        #        return
+        #rawRef = self._ve.overlayWidget.getOverlayRef("Raw Data")
+        #colorValues = rawRef._data[0,pos[0], pos[1], pos[2], 0]
+        #self.posLabel.setText("<b>x:</b> %03i  <b>y:</b> %03i  <b>z:</b> %03i" % (pos[0], pos[1], pos[2]))
         #FIXME RGB is a special case only
-        if isinstance(colorValues, numpy.ndarray):
-            self.pixelValuesLabel.setText("<b>R:</b> %03i  <b>G:</b> %03i  <b>B:</b> %03i" % (colorValues[0], colorValues[1], colorValues[2]))
-        else:
-            self.pixelValuesLabel.setText("<b>Gray:</b> %03i" %int(colorValues))
+        #if isinstance(colorValues, numpy.ndarray):
+        #    self.pixelValuesLabel.setText("<b>R:</b> %03i  <b>G:</b> %03i  <b>B:</b> %03i" % (colorValues[0], colorValues[1], colorValues[2]))
+        #else:
+        #    self.pixelValuesLabel.setText("<b>Gray:</b> %03i" %int(colorValues))
             
 #*******************************************************************************
 # i f   _ _ n a m e _ _   = =   " _ _ m a i n _ _ "                            *
@@ -275,7 +272,6 @@ if __name__ == "__main__":
     from volumeeditor._testing.from_lazyflow import OpDataProvider5D, OpDelay
     from layer import GrayscaleLayer, RGBALayer
     
-    from overlayItem  import OverlayItem  
     from _testing.volume import DataAccessor
     from testing import stripes
     
@@ -371,28 +367,12 @@ if __name__ == "__main__":
             else:
                 raise RuntimeError("Invalid testing mode")
             
-            class FakeOverlayWidget(QWidget):
-                selectedOverlay = pyqtSignal(int)
-                def __init__(self):
-                    QWidget.__init__(self)
-                    self.overlays = None
-                def getOverlayRef(self, key):
-                    return self.overlays[0]            
-            overlayWidget = FakeOverlayWidget()
-            
             arr = None
             if hasattr(source, '_array'):
                 arr = source._array
             else:
                 arr = source._op.outputs[source._outslot]
             
-            self.dataOverlay = OverlayItem(DataAccessor(arr), alpha=1.0, \
-                                           color=Qt.black, \
-                                           colorTable=OverlayItem.createDefaultColorTable('GRAY', 256), \
-                                           autoVisible=True, \
-                                           autoAlphaChannel=False)
-            overlayWidget.overlays = [self.dataOverlay.getRef()]
-
             shape = None
             if hasattr(source, '_array'):
                 shape = source._array.shape
@@ -401,13 +381,9 @@ if __name__ == "__main__":
             if len(shape) == 3:
                 shape = (1,)+shape+(1,)
 
-            self.editor = VolumeEditor(shape, layer, useGL=useGL, overlayWidget=overlayWidget)
+            self.editor = VolumeEditor(shape, layer, useGL=useGL)
             self.editor.setDrawingEnabled(True)            
             self.widget = VolumeEditorWidget( self.editor )
-            
-            #FIXME: porting
-            self.editor.setOverlayWidget(overlayWidget)
-            
             self.widget.show()
             
             if not 't' in sys.argv:

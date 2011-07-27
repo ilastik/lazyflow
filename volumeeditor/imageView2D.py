@@ -458,7 +458,6 @@ class ImageView2D(QGraphicsView):
 # i f   _ _ n a m e _ _   = =   " _ _ m a i n _ _ "                            *
 #*******************************************************************************
 if __name__ == '__main__':
-    from overlaySlice import OverlaySlice 
     import sys
     #make the program quit on Ctrl+C
     import signal
@@ -488,6 +487,7 @@ if __name__ == '__main__':
     
     class ImageView2DTest(QMainWindow):    
         def __init__(self, useGL):
+            assert False, "I'm broken. Please fixme."
             QMainWindow.__init__(self)
             
             self.lena = lena().swapaxes(0,1)
@@ -502,9 +502,9 @@ if __name__ == '__main__':
             self.imageView2D.slices = 1
             self.setCentralWidget(self.imageView2D)
 
-            imageSlice = OverlaySlice(self.lena, color = QColor("red"), alpha = 1.0, colorTable = None, min = None, max = None, autoAlphaChannel = False)
-            cbSlice    = OverlaySlice(self.checkerboard, color = QColor("green"), alpha = 0.5, colorTable = None, min = None, max = None, autoAlphaChannel = False)
-            crossSlice = OverlaySlice(self.cross, color = QColor("blue"), alpha = 0.5, colorTable = None, min = None, max = None, autoAlphaChannel = False)
+            #imageSlice = OverlaySlice(self.lena, color = QColor("red"), alpha = 1.0, colorTable = None, min = None, max = None, autoAlphaChannel = False)
+            #cbSlice    = OverlaySlice(self.checkerboard, color = QColor("green"), alpha = 0.5, colorTable = None, min = None, max = None, autoAlphaChannel = False)
+            #crossSlice = OverlaySlice(self.cross, color = QColor("blue"), alpha = 0.5, colorTable = None, min = None, max = None, autoAlphaChannel = False)
             
             self.imageView2D.scene().setContent(self.imageView2D.viewportRect(), None, (imageSlice, cbSlice, crossSlice))
 

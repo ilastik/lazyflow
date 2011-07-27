@@ -44,20 +44,3 @@ def stripes(X = 8, Y = 8, Z = 8):
     
     #array.astype(numpy.uint8)
     return array    
-    
-
-class AnnotatedImageData():
-    """
-    Helper class to encapsulate the overlay slice and its drawing related settings
-    for passing it around, mostly used in the volumeEditor (->move there ?)
-    """
-    def __init__(self, data, color, alpha, colorTable, min = None, max = None, autoAlphaChannel = True):
-        assert(type(data) == numpy.ndarray)
-        self.colorTable = colorTable
-        self.color = color
-        self.alpha = alpha
-        self.alphaChannel = None
-        self.autoAlphaChannel = autoAlphaChannel
-        self._data = data
-        self.min = min
-        self.max = max

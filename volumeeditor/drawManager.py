@@ -64,7 +64,7 @@ class DrawManager(QObject):
         self.pos = None
         self.erasing = False
         
-        #on which OverlayItem do we want to draw when self.drawingEnabled?
+        #on which layer do we want to draw when self.drawingEnabled?
         self.drawOnto = None
         
         #an empty scene, where we add all drawn line segments
