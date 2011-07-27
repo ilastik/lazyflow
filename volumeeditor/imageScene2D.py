@@ -40,6 +40,9 @@ from OpenGL.GL import GL_CLAMP_TO_EDGE, GL_COLOR_BUFFER_BIT, GL_DEPTH_TEST, \
 
 from patchAccessor import PatchAccessor
 from imageSceneRendering import ImageSceneRenderThread
+from collections import namedtuple
+
+ImageSourceStackEntry = namedtuple('ImageSourceStack', 'opacity imageSource')
 
 class ImagePatch(object):    
     def __init__(self, rectF):
@@ -99,14 +102,14 @@ class ImageScene2D(QGraphicsScene):
     glUpdateDelay = 10
     
     @property
-    def imageSourcesStack(self):
+    def imageSourceStack(self):
         return self._imsStack
     
-    @imageSourcesStack.setter
-    def imageSourcesStack(self, s):
+    @imageSourceStack.setter
+    def imageSourceStack(self, s):
         self._imsStack = s
-        for opacity_src in self._imsStack:
-            opacity_src[1].isDirty.connect(self._invalidateRect)
+        for entry in self._imsStack:
+            entry.imageSource.isDirty.connect(self._invalidateRect)
 
     @property
     def shape(self):
@@ -125,7 +128,7 @@ class ImageScene2D(QGraphicsScene):
             r = patchAccessor.patchRectF(i, self.overlap)
             patch = ImagePatch(r)
             self.imagePatches.append(patch)
-        self._renderThread = ImageSceneRenderThread(self.imagePatches, self.imageSourcesStack, parent=self)
+        self._renderThread = ImageSceneRenderThread(self.imagePatches, self.imageSourceStack, parent=self)
         self._renderThread.start()
         self._renderThread.patchAvailable.connect(self._schedulePatchRedraw)
     

@@ -1,15 +1,14 @@
-from PyQt4.QtCore import QThread, pyqtSignal, QPoint, QSize, Qt
-from PyQt4.QtGui import QPainter, QColor, QImage
+from PyQt4.QtCore import QThread, pyqtSignal, Qt
+from PyQt4.QtGui import QPainter
 
-import numpy, qimage2ndarray
 import threading
-from collections import deque
+from collections import deque, namedtuple
 
 class ImageSceneRenderThread(QThread):
     patchAvailable = pyqtSignal(int)
     
-    def __init__(self, imagePatches, imageSourcesStack, parent = None):
-        assert hasattr(imageSourcesStack, '__iter__')
+    def __init__(self, imagePatches, imageSourceStack, parent = None):
+        assert hasattr(imageSourceStack, '__iter__')
         QThread.__init__(self, parent)
         self._imagePatches = imagePatches
 
@@ -19,7 +18,7 @@ class ImageSceneRenderThread(QThread):
         self._dataPending.clear()
         self._stopped = False
 
-        self._imsStack = imageSourcesStack
+        self._imsStack = imageSourceStack
 
     def requestPatch(self, patchNr):
         if patchNr not in self._queue:
@@ -37,18 +36,23 @@ class ImageSceneRenderThread(QThread):
         patch = self._imagePatches[patchNr]
         patch.rendering = True
 
+        #
+        # alpha blending of layers
+        #
+        # request image for every layer to allow parallel background computations 
+        requestStack = [ (entry.opacity, entry.imageSource.request(patch.rect)) for entry in self._imsStack ]
+
+        # before the first layer is painted, initialize it white to enable sound alpha blending
         p = QPainter(patch.image)
         r = patch.rect
+        p.fillRect(0,0,r.width(), r.height(), Qt.white)
 
-        for index, opacity_src in enumerate(self._imsStack):
-            # before the first layer is painted, initialize it white to enable sound alpha blending
-            if index == 0:
-                p.fillRect(0,0,r.width(), r.height(), Qt.white)
-
-            p.setOpacity(opacity_src[0])
-            img = opacity_src[1].request(patch.rect).wait()
+        for entry in requestStack:
+            p.setOpacity(entry[0])
+            img = entry[1].wait()
             p.drawImage(0,0, img)
         p.end()
+        
         patch.dirty = False
         patch.rendering = False
         self.patchAvailable.emit(patchNr)

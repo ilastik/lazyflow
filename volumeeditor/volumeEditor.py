@@ -43,7 +43,7 @@ from functools import partial
 from imageSaveThread import ImageSaveThread
 from historyManager import HistoryManager
 from drawManager import DrawManager
-from imageScene2D import ImageScene2D
+from imageScene2D import ImageScene2D, ImageSourceStackEntry
 from imageView2D import ImageView2D
 from positionModel import PositionModel
 from navigationControler import NavigationControler, NavigationInterpreter
@@ -113,7 +113,7 @@ class VolumeEditor( QObject ):
         self.imageScenes.append(ImageScene2D())
         for i in xrange(3):
             stack = zip(( layer.opacity for layer in layers), imageSources[i])
-            self.imageScenes[i].imageSourcesStack = stack
+            self.imageScenes[i].imageSourceStack = [ ImageSourceStackEntry(*e) for e in stack ]
 
 
         # three ortho image views
