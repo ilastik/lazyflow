@@ -336,6 +336,7 @@ if __name__ == "__main__":
                 op2 = OpDelay(g, 0.000003)
                 op2.inputs["Input"].connect(op1.outputs["Data"])
                 source = LazyflowSource(op2, "Output")
+                layer = GrayscaleLayer( source )
 
             elif "5d" in argv:
                 file = os.path.split(os.path.abspath(__file__))[0] +"/_testing/5d-5-213-202-13-2.npy"
@@ -353,8 +354,10 @@ if __name__ == "__main__":
                 N = 100
                 from testing import testVolume
                 source = ArraySource(testVolume(N))
+                layer = GrayscaleLayer( source )
             elif "stripes" in argv:
                 source = ArraySource(stripes(50,35,20))
+                layer = GrayscaleLayer( source )
             else:
                 raise RuntimeError("Invalid testing mode")
             
@@ -411,7 +414,7 @@ if __name__ == "__main__":
     app = QApplication(sys.argv)
     
     if len(sys.argv) < 2:
-        print "Usage: python volumeeditor.py <testmode> (hugeslab, cuboid, veng)"
+        print "Usage: python volumeeditor.py <testmode> (hugeslab, cuboid, 5d)"
         app.quit()
         sys.exit(0)
     
@@ -434,13 +437,5 @@ if __name__ == "__main__":
         button.clicked.connect(fit)       
     
         s.showMaximized()
-
-    if 'veng' in sys.argv:
-        ve = VolumeEditor()
-        frame = VolumeEditorWidget( ve )
-        frame.showMaximized()
-
-        ve.addVolume( 0 )
-        ve.addVolume( 0 )
 
     app.exec_()

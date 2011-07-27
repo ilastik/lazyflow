@@ -23,6 +23,5 @@ def multimethod(*types):
         if mm is None:
             mm = registry[name] = MultiMethod(name)
         mm.register(types, function)
-        print types, function
         return mm
     return register
