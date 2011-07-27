@@ -59,7 +59,7 @@ class VolumeEditor( QObject ):
     zoomInFactor  = 1.1
     zoomOutFactor = 0.9
 
-    def __init__( self, shape, layer, useGL = False):
+    def __init__( self, shape, layers, useGL = False):
         super(VolumeEditor, self).__init__()
         assert(len(shape) == 5)
         self._shape = shape
@@ -79,24 +79,32 @@ class VolumeEditor( QObject ):
 
         # three ortho slices
         self.sliceSources = [[], [], []]
-        array2dsrcs = [[], [], []]
-        for datasrc in layer.datasources:
-            if datasrc != None:
-                self.sliceSources[0].append(SpatialSliceSource(datasrc, 'x'))
-                self.sliceSources[1].append(SpatialSliceSource(datasrc, 'y'))
-                self.sliceSources[2].append(SpatialSliceSource(datasrc, 'z'))
-                array2dsrcs[0].append(self.sliceSources[0][-1])
-                array2dsrcs[1].append(self.sliceSources[1][-1])
-                array2dsrcs[2].append(self.sliceSources[2][-1])
-            else:
-                array2dsrcs[0].append(None)
-                array2dsrcs[1].append(None)
-                array2dsrcs[2].append(None)
+        array2dsrcs = []
+
+        for layeridx in xrange(len(layers)):
+            array2dsrcs.append([])
+            for datasrc in layers[layeridx].datasources:
+                array2dsrcs[-1].append([])
+                array2dsrcs[-1].append([])
+                array2dsrcs[-1].append([])
+
+                if datasrc != None:
+                    self.sliceSources[0].append(SpatialSliceSource(datasrc, 'x'))
+                    self.sliceSources[1].append(SpatialSliceSource(datasrc, 'y'))
+                    self.sliceSources[2].append(SpatialSliceSource(datasrc, 'z'))
+                    array2dsrcs[layeridx][0].append(self.sliceSources[0][-1])
+                    array2dsrcs[layeridx][1].append(self.sliceSources[1][-1])
+                    array2dsrcs[layeridx][2].append(self.sliceSources[2][-1])
+                else:
+                    array2dsrcs[layeridx][0].append(None)
+                    array2dsrcs[layeridx][1].append(None)
+                    array2dsrcs[layeridx][2].append(None)
 
         # ortho image sources
-        self.imageSources = []
+        imageSources = [[], [], []]
         for axis in xrange(3):
-            self.imageSources.append(createImageSource( layer, array2dsrcs[axis] ))
+            for layeridx in xrange(len(layers)):
+                imageSources[axis].append(createImageSource( layers[layeridx], array2dsrcs[layeridx][axis] ))
 
         # three ortho image scenes
         self.imageScenes = []
@@ -104,7 +112,7 @@ class VolumeEditor( QObject ):
         self.imageScenes.append(ImageScene2D())
         self.imageScenes.append(ImageScene2D())
         for i in xrange(3):
-            self.imageScenes[i].imageSource = self.imageSources[i]
+            self.imageScenes[i].imageSources = imageSources[i]
 
 
         # three ortho image views

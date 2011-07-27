@@ -13,7 +13,8 @@ class ImageSceneRenderThread(QThread):
 
     patchAvailable = pyqtSignal(int)
     
-    def __init__(self, imagePatches, imageSource, parent = None):
+    def __init__(self, imagePatches, imageSources, parent = None):
+        assert hasattr(imageSources, '__iter__'), 'imageSources are not wrapped in a sequence type'
         QThread.__init__(self, parent)
         self._imagePatches = imagePatches
 
@@ -22,9 +23,8 @@ class ImageSceneRenderThread(QThread):
         self._dataPending = threading.Event()
         self._dataPending.clear()
         self._stopped = False
-        
-        # experimental
-        self._imageSource = imageSource
+
+        self._imageSources = imageSources
 
     def requestPatch(self, patchNr):
         if patchNr not in self._queue:
@@ -73,10 +73,10 @@ class ImageSceneRenderThread(QThread):
         
         patch = self._imagePatches[patchNr]
         patch.rendering = True
-        '''
-        p = QPainter(patch.image)
-        r = patch.rectF
 
+        p = QPainter(patch.image)
+        r = patch.rect
+        '''
         #add overlays
         for index, origitem in enumerate(overlays):
             # before the first layer is painted, initialize it white to enable sound alpha blending
@@ -92,8 +92,15 @@ class ImageSceneRenderThread(QThread):
             p.drawImage(0,0, image0)
         p.end()
         '''
-        img = self._imageSource.request(patch.rect).wait()
-        patch.image = img
+        for index, src in enumerate(self._imageSources):
+            # before the first layer is painted, initialize it white to enable sound alpha blending
+            if index == 0:
+                p.fillRect(0,0,r.width(), r.height(), Qt.white)
+            if index == 1:
+                p.setOpacity(0.5)
+            img = src.request(patch.rect).wait()
+            p.drawImage(0,0, img)
+        p.end()
         patch.dirty = False
         patch.rendering = False
         self.patchAvailable.emit(patchNr)

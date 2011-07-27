@@ -322,7 +322,7 @@ if __name__ == "__main__":
                 op2 = OpDelay(g, 0.000003)
                 op2.inputs["Input"].connect(op1.outputs["Data"])
                 source = LazyflowSource(op2, "Output")
-                layer = GrayscaleLayer( source )
+                layers = [GrayscaleLayer( source )]
 
             elif "5d" in argv:
                 file = os.path.split(os.path.abspath(__file__))[0] +"/_testing/5d.npy"
@@ -333,14 +333,14 @@ if __name__ == "__main__":
                 op2 = OpDelay(g, 0.000003)
                 op2.inputs["Input"].connect(op1.outputs["Data5D"])
                 source = LazyflowSource(op2, "Output")
-                layer = GrayscaleLayer( source )
+                layers = [GrayscaleLayer( source )]
                 
                 print "...done"
             elif "cuboid" in argv:
                 N = 100
                 from testing import testVolume
                 source = ArraySource(testVolume(N))
-                layer = GrayscaleLayer( source )
+                layers = [GrayscaleLayer( source )]
             elif "comp" in argv:
                 fn = os.path.split(os.path.abspath(__file__))[0] +"/_testing/5d.npy"
                 raw = np.load(fn)
@@ -348,21 +348,42 @@ if __name__ == "__main__":
 
                 g = Graph()
                 op1 = OpDataProvider(g, raw[:,:,:,:,0:1]/20)
-                op2 = OpDelay(g, 0.000003)
+                op2 = OpDelay(g, 0.00000)
                 op2.inputs["Input"].connect(op1.outputs["Data"])
                 nucleisrc = LazyflowSource(op2, "Output")
                 op3 = OpDataProvider(g, raw[:,:,:,:,1:2]/10)
-                op4 = OpDelay(g, 0.000003)
+                op4 = OpDelay(g, 0.00000)
                 op4.inputs["Input"].connect(op3.outputs["Data"])
                 membranesrc = LazyflowSource(op4, "Output")
 
-                layer = RGBALayer( green = membranesrc, red = nucleisrc )
+                layers = [RGBALayer( green = membranesrc, red = nucleisrc )]
                 source = nucleisrc
+
+                print "...done"
+            elif "layers" in argv:
+                fn = os.path.split(os.path.abspath(__file__))[0] +"/_testing/5d.npy"
+                raw = np.load(fn)
+                print "loading file '%s'" % fn
+
+                g = Graph()
+                op1 = OpDataProvider(g, raw[:,:,:,:,0:1]/10)
+                op2 = OpDelay(g, 0.00000)
+                op2.inputs["Input"].connect(op1.outputs["Data"])
+                nucleisrc = LazyflowSource(op2, "Output")
+                op3 = OpDataProvider(g, raw[:,:,:,:,1:2]/5)
+                op4 = OpDelay(g, 0.00000)
+                op4.inputs["Input"].connect(op3.outputs["Data"])
+                membranesrc = LazyflowSource(op4, "Output")
+
+                layer1 = GrayscaleLayer( membranesrc )
+                layer2 = RGBALayer( red = nucleisrc )
+                source = nucleisrc
+                layers = [layer1, layer2]
 
                 print "...done"
             elif "stripes" in argv:
                 source = ArraySource(stripes(50,35,20))
-                layer = GrayscaleLayer( source )
+                layers = [GrayscaleLayer( source )]
             else:
                 raise RuntimeError("Invalid testing mode")
             
@@ -380,7 +401,7 @@ if __name__ == "__main__":
             if len(shape) == 3:
                 shape = (1,)+shape+(1,)
 
-            self.editor = VolumeEditor(shape, layer, useGL=useGL)
+            self.editor = VolumeEditor(shape, layers, useGL=useGL)
             self.editor.setDrawingEnabled(True)            
             self.widget = VolumeEditorWidget( self.editor )
             self.widget.show()
@@ -399,11 +420,11 @@ if __name__ == "__main__":
     app = QApplication(sys.argv)
     
     if len(sys.argv) < 2:
-        print "Usage: python volumeeditor.py <testmode> (hugeslab, cuboid, 5d, comp)"
+        print "Usage: python volumeeditor.py <testmode> (hugeslab, cuboid, 5d, comp, layers)"
         app.quit()
         sys.exit(0)
     
-    if 'cuboid' in sys.argv or 'hugeslab' in sys.argv or '5d' in sys.argv or 'comp' in sys.argv:
+    if 'cuboid' in sys.argv or 'hugeslab' in sys.argv or '5d' in sys.argv or 'comp' in sys.argv or 'layers' in sys.argv:
         s = QSplitter()
         t1 = Test(True, sys.argv)
         t2 = Test(False, sys.argv)
