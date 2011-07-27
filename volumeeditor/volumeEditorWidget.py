@@ -272,7 +272,6 @@ if __name__ == "__main__":
     from volumeeditor._testing.from_lazyflow import OpDataProvider5D, OpDelay
     from layer import GrayscaleLayer, RGBALayer
     
-    from _testing.volume import DataAccessor
     from testing import stripes
     
     def img(N):
@@ -326,7 +325,7 @@ if __name__ == "__main__":
                 layer = GrayscaleLayer( source )
 
             elif "5d" in argv:
-                file = os.path.split(os.path.abspath(__file__))[0] +"/_testing/5d-5-213-202-13-2.npy"
+                file = os.path.split(os.path.abspath(__file__))[0] +"/_testing/5d.npy"
                 print "loading file '%s'" % file
                 
                 g = Graph()
@@ -343,7 +342,7 @@ if __name__ == "__main__":
                 source = ArraySource(testVolume(N))
                 layer = GrayscaleLayer( source )
             elif "comp" in argv:
-                fn = os.path.split(os.path.abspath(__file__))[0] +"/_testing/5d-5-213-202-13-2.npy"
+                fn = os.path.split(os.path.abspath(__file__))[0] +"/_testing/5d.npy"
                 raw = np.load(fn)
                 print "loading file '%s'" % fn
 
