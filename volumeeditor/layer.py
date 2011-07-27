@@ -11,6 +11,6 @@ class GrayscaleLayer( Layer ):
         self.datasources = [datasource]
 
 class RGBALayer( Layer ):
-    def __init__( self, r = None, g = None, b = None, a = None):
+    def __init__( self, red = None, green = None, blue = None, alpha = None):
         super(RGBALayer, self).__init__()
-        self.datasources = [r,g,b,a]
+        self.datasources = [red,green,blue,alpha]

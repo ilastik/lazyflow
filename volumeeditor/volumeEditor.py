@@ -79,15 +79,24 @@ class VolumeEditor( QObject ):
 
         # three ortho slices
         self.sliceSources = [[], [], []]
+        array2dsrcs = [[], [], []]
         for datasrc in layer.datasources:
-            self.sliceSources[0].append(SpatialSliceSource(datasrc, 'x'))
-            self.sliceSources[1].append(SpatialSliceSource(datasrc, 'y'))
-            self.sliceSources[2].append(SpatialSliceSource(datasrc, 'z'))
+            if datasrc != None:
+                self.sliceSources[0].append(SpatialSliceSource(datasrc, 'x'))
+                self.sliceSources[1].append(SpatialSliceSource(datasrc, 'y'))
+                self.sliceSources[2].append(SpatialSliceSource(datasrc, 'z'))
+                array2dsrcs[0].append(self.sliceSources[0][-1])
+                array2dsrcs[1].append(self.sliceSources[1][-1])
+                array2dsrcs[2].append(self.sliceSources[2][-1])
+            else:
+                array2dsrcs[0].append(None)
+                array2dsrcs[1].append(None)
+                array2dsrcs[2].append(None)
 
         # ortho image sources
         self.imageSources = []
         for axis in xrange(3):
-            self.imageSources.append(createImageSource( layer, self.sliceSources[axis] ))
+            self.imageSources.append(createImageSource( layer, array2dsrcs[axis] ))
 
         # three ortho image scenes
         self.imageScenes = []

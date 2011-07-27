@@ -99,7 +99,7 @@ class RGBAImageSource( ImageSource ):
         channels = [red, green, blue, alpha]
         for channel in channels: 
             if channel != None:
-                assert isinstance(channel, SourceABC)
+                assert isinstance(channel, SourceABC) , 'channel has wrong type: %s' % str(type(channel))
 
         super(RGBAImageSource, self).__init__()
         self._channels = channels

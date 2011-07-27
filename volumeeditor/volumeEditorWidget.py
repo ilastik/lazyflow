@@ -125,13 +125,6 @@ class VolumeEditorWidget(QWidget):
         
         self._toolBoxLayout.setAlignment(Qt.AlignTop)
 
-        # == 3 checks for RGB image and activates channel selector
-        if self._ve._shape[-1] == 1 or self._ve._shape[-1] == 3: #only show when needed
-            self._channelSpin.setVisible(False)
-            self._channelSpinLabel.setVisible(False)
-            self._timeSpin.setVisible(False)
-            self._timeSpinLabel.setVisible(False)
-            #self.channelEditBtn.setVisible(False)
         self._channelSpin.setRange(0,self._ve._shape[-1] - 1)
         self._timeSpin.setRange(0,self._ve._shape[0] - 1)
         def setChannel(c):
@@ -271,7 +264,8 @@ if __name__ == "__main__":
     signal.signal(signal.SIGINT, signal.SIG_DFL)
     
     import os, sys
-    
+
+    import numpy as np
     from PyQt4.QtCore import QObject, QRectF, QTime
     from PyQt4.QtGui import QColor
     
@@ -325,9 +319,6 @@ if __name__ == "__main__":
     class Test(QObject):
         def __init__(self, useGL, argv):
             QObject.__init__(self)
-            
-            source = None
-            
             if "hugeslab" in argv:
                 N = 2000
                 
@@ -355,6 +346,25 @@ if __name__ == "__main__":
                 from testing import testVolume
                 source = ArraySource(testVolume(N))
                 layer = GrayscaleLayer( source )
+            elif "comp" in argv:
+                fn = os.path.split(os.path.abspath(__file__))[0] +"/_testing/5d-5-213-202-13-2.npy"
+                raw = np.load(fn)
+                print "loading file '%s'" % fn
+
+                g = Graph()
+                op1 = OpDataProvider(g, raw[:,:,:,:,0:1]/20)
+                op2 = OpDelay(g, 0.000003)
+                op2.inputs["Input"].connect(op1.outputs["Data"])
+                nucleisrc = LazyflowSource(op2, "Output")
+                op3 = OpDataProvider(g, raw[:,:,:,:,1:2]/10)
+                op4 = OpDelay(g, 0.000003)
+                op4.inputs["Input"].connect(op3.outputs["Data"])
+                membranesrc = LazyflowSource(op4, "Output")
+
+                layer = RGBALayer( green = membranesrc, red = nucleisrc )
+                source = nucleisrc
+
+                print "...done"
             elif "stripes" in argv:
                 source = ArraySource(stripes(50,35,20))
                 layer = GrayscaleLayer( source )
@@ -414,11 +424,11 @@ if __name__ == "__main__":
     app = QApplication(sys.argv)
     
     if len(sys.argv) < 2:
-        print "Usage: python volumeeditor.py <testmode> (hugeslab, cuboid, 5d)"
+        print "Usage: python volumeeditor.py <testmode> (hugeslab, cuboid, 5d, comp)"
         app.quit()
         sys.exit(0)
     
-    if 'cuboid' in sys.argv or 'hugeslab' in sys.argv or '5d' in sys.argv:
+    if 'cuboid' in sys.argv or 'hugeslab' in sys.argv or '5d' in sys.argv or 'comp' in sys.argv:
         s = QSplitter()
         t1 = Test(True, sys.argv)
         t2 = Test(False, sys.argv)
