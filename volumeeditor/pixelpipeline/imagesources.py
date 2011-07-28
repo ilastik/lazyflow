@@ -7,13 +7,28 @@ from datasources import ConstantSource
 import numpy as np
 
 class ImageSource( QObject ):
-    '''Partial implemented base class for image sources'''
+    '''Partial implemented base class for image sources#
+
+    Signals:
+    isDirty -- a rectangular region has changed; transmits
+               an empty QRect if the whole image is dirty
+
+    '''
+
     isDirty = pyqtSignal( QRect )
 
     def request( self, rect ):
         raise NotImplementedError
 
     def setDirty( self, slicing ):
+        '''Mark a region of the image as dirty.
+
+        slicing -- if one ore more slices in the slicing
+                   are unbounded, the whole image is marked dirty;
+                   since an image has two dimensions, only the first
+                   two slices in the slicing are used
+
+        '''
         if not is_pure_slicing(slicing):
             raise Exception('dirty region: slicing is not pure')
         if not is_bounded( slicing ):
