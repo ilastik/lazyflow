@@ -1,4 +1,85 @@
-from PyQt4.QtCore import QAbstractListModel, pyqtSignal, QTimer
+from PyQt4.QtCore import QAbstractListModel, pyqtSignal, QTimer, QSize
+
+class LayerParameters( object ):
+    def __init__(self):
+        self.mode = 'ReadOnly'
+        self.rect = QRect()
+        
+        self.opacity = 1.0;
+        self.name    = "Unnamed Layer"
+        self.visible = True
+        
+        self.fm = QFontMetrics(QFont())
+        
+        self.iconSize = 22
+        self.iconXOffset = 5
+        self.textXOffset = 5
+        self.progressXOffset = 15
+        self.progressYOffset = self.iconSize+5
+        self.progressHeight = 10
+
+    def sizeHint(self):
+        if self.mode == 'ReadOnly':
+            return QSize(1,self.fm.height()+5)
+        elif self.mode == 'Expanded' or self.mode == 'Editable':
+            return QSize(1,self.progressYOffset+self.progressHeight+5)
+        else:
+            raise RuntimeError("Unknown mode")   
+
+    def overEyeIcon(self, x, y):
+        return QPoint(x,y) in QRect(self.iconXOffset,0,self.iconSize,self.iconSize)
+
+    def percentForPosition(self, x, y):
+        if y < self.progressYOffset or y > self.progressYOffset + self.progressHeight:
+            return -1
+        
+        percent = (x-self.progressXOffset)/float(self.rect.width()-2*self.progressXOffset)
+        if percent < 0:
+            return 0.0
+        if percent > 1:
+            return 1.0
+        return percent
+
+    def paint(self, painter, rect, palette, mode):
+        self.rect = rect
+        painter.save()
+        painter.setRenderHint(QPainter.Antialiasing, True)
+        painter.translate(rect.x(), rect.y())
+        painter.setFont(QFont())
+        
+        if self.visible:
+            painter.setPen(QColor(0,0,0))
+        else:
+            painter.setPen(QColor(0,0,0,90))
+        
+        if mode == 'ReadOnly':
+            text = "[%3d%%] %s" % (int(100.0 * self.opacity), self.name)
+            painter.drawText(QPoint(5, self.fm.height()), text)
+        else:
+            if self.visible:
+                painter.drawImage(QRect(self.iconXOffset,0,self.iconSize,self.iconSize), QImage("layer-visible-on.png"))
+            else:
+                painter.drawImage(QRect(self.iconXOffset,0,self.iconSize,self.iconSize), QImage("layer-visible-off.png"))
+            text = "%s" % self.name
+            painter.drawText(QPoint(self.iconXOffset+self.iconSize+self.textXOffset,max(self.fm.height()-self.iconSize,0)/2.0+self.fm.height()), text)
+            
+            
+            w = rect.width()-2*self.progressXOffset
+            
+            painter.drawRoundedRect(QRect(QPoint(self.progressXOffset, self.progressYOffset), \
+                                          QSize(w, self.progressHeight)), self.progressHeight/2, self.progressHeight/2)
+            painter.setBrush(QBrush(QColor(0,0,0)))
+            
+            if not self.visible: painter.setBrush(QBrush(QColor(0,0,0,80)))
+            painter.drawEllipse(QRect(self.progressXOffset+(w-self.progressHeight)*self.opacity, self.progressYOffset, self.progressHeight, self.progressHeight))
+            
+            painter.setPen(Qt.NoPen)
+            if self.visible: painter.setBrush(QBrush(QColor(0,0,255,50)))
+            else: painter.setBrush(QBrush(QColor(0,0,0,20)))
+            painter.drawRoundedRect(QRect(QPoint(self.progressXOffset, self.progressYOffset), \
+                                          QSize(w*self.opacity, self.progressHeight)), self.progressHeight/2, self.progressHeight/2)
+            
+        painter.restore()
 
 class LayerStackModel(QAbstractListModel):
     canMoveSelectedUp = pyqtSignal("bool")
@@ -55,7 +136,7 @@ class LayerStackModel(QAbstractListModel):
         endRow   = min(row+count-1, len(self.layerStack))
         self.beginInsertRows(parent, beginRow, endRow) 
         while(beginRow <= endRow):
-            self.layerStack.insert(row, OverlayParameters())
+            self.layerStack.insert(row, LayerParameters())
             beginRow += 1
         self.endInsertRows()
         assert self.rowCount() == oldRowCount+1
@@ -101,7 +182,7 @@ class LayerStackModel(QAbstractListModel):
     
     def setData(self, index, value, role = Qt.EditRole):
         overlayParameters = value
-        if not isinstance(value, OverlayParameters):
+        if not isinstance(value, LayerParameters):
             overlayParameters = value.toPyObject()
         
         self.layerStack[index.row()] = value
