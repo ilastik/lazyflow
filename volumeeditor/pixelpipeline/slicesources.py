@@ -54,7 +54,7 @@ assert issubclass(SliceSource, SourceABC)
 
 
 
-class SyncedSliceSrcs( object ):
+class SyncedSliceSources( object ):
     isDirty = pyqtSignal( object )
 
     @property
@@ -129,7 +129,7 @@ assert issubclass(SpatialSliceSource, SourceABC)
 
 
 
-class SyncedSpatialSliceSrcs( SyncedSliceSrcs ):
+class SyncedSpatialSliceSources( SyncedSliceSources ):
     @property
     def index( self ):
         return self.through[1]

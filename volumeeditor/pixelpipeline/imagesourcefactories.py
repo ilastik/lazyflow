@@ -1,5 +1,5 @@
 from multimethods import multimethod
-import layer
+import volumeeditor.layer
 from pixelpipeline.imagesources import GrayscaleImageSource, RGBAImageSource
 from pixelpipeline.datasources import ConstantSource
 
