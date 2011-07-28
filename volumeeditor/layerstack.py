@@ -1,19 +1,35 @@
 from PyQt4.QtCore import *
 from PyQt4.QtGui import *
+from layer import Layer
 
 from os import path
 import resources.icons
 _icondir = path.dirname(resources.icons.__file__)
 
 class LayerParameters( object ):
-    def __init__(self):
+    @property
+    def opacity( self ):
+        return self.layer.opacity
+    @opacity.setter
+    def opacity( self, value ):
+        self.layer.opacity = value
+
+    @property
+    def visible( self ):
+        return self.layer.visible
+    @visible.setter
+    def visible( self, value ):
+        self.layer.visible = value
+
+    def __init__(self, layer = Layer()):
         self.mode = 'ReadOnly'
         self.rect = QRect()
-        
+
+        self.layer = layer        
         self.opacity = 1.0;
-        self.name    = "Unnamed Layer"
         self.visible = True
-        
+        self.name    = "Unnamed Layer"
+
         self.fm = QFontMetrics(QFont())
         
         self.iconSize = 22
