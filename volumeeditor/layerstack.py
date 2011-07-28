@@ -1,4 +1,9 @@
-from PyQt4.QtCore import QAbstractListModel, pyqtSignal, QTimer, QSize
+from PyQt4.QtCore import *
+from PyQt4.QtGui import *
+
+from os import path
+import resources.icons
+_icondir = path.dirname(resources.icons.__file__)
 
 class LayerParameters( object ):
     def __init__(self):
@@ -57,9 +62,9 @@ class LayerParameters( object ):
             painter.drawText(QPoint(5, self.fm.height()), text)
         else:
             if self.visible:
-                painter.drawImage(QRect(self.iconXOffset,0,self.iconSize,self.iconSize), QImage("layer-visible-on.png"))
+                painter.drawImage(QRect(self.iconXOffset,0,self.iconSize,self.iconSize), QImage(path.join(_icondir, "layer-visible-on.png")))
             else:
-                painter.drawImage(QRect(self.iconXOffset,0,self.iconSize,self.iconSize), QImage("layer-visible-off.png"))
+                painter.drawImage(QRect(self.iconXOffset,0,self.iconSize,self.iconSize), QImage(path.join(_icondir, "layer-visible-off.png")))
             text = "%s" % self.name
             painter.drawText(QPoint(self.iconXOffset+self.iconSize+self.textXOffset,max(self.fm.height()-self.iconSize,0)/2.0+self.fm.height()), text)
             
