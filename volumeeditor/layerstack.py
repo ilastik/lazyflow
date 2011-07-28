@@ -1,11 +1,13 @@
-class OverlayStackModel(QAbstractListModel):
+from PyQt4.QtCore import QAbstractListModel, pyqtSignal, QTimer
+
+class LayerStackModel(QAbstractListModel):
     canMoveSelectedUp = pyqtSignal("bool")
     canMoveSelectedDown = pyqtSignal("bool")
     canDeleteSelected = pyqtSignal("bool")
     
     def __init__(self, parent = None):
         QAbstractListModel.__init__(self, parent)
-        self.overlayStack = []
+        self.layerStack = []
         self.selectionModel = QItemSelectionModel(self)
         self.selectionModel.selectionChanged.connect(self.onSelectionChanged)
         QTimer.singleShot(0, self.updateGUI)
@@ -35,14 +37,14 @@ class OverlayStackModel(QAbstractListModel):
     
     def onSelectionChanged(self, selected, deselected):
         if len(deselected) > 0:
-            self.overlayStack[deselected[0].indexes()[0].row()].mode = 'ReadOnly'
+            self.layerStack[deselected[0].indexes()[0].row()].mode = 'ReadOnly'
         if len(selected) > 0:
-            self.overlayStack[selected[0].indexes()[0].row()].mode = 'Expanded'
+            self.layerStack[selected[0].indexes()[0].row()].mode = 'Expanded'
         self.updateGUI()
     
     def rowCount(self, parent = QModelIndex()):
         if not parent.isValid():
-            return len(self.overlayStack)
+            return len(self.layerStack)
         return 0
     
     def insertRows(self, row, count, parent = QModelIndex()):
@@ -50,10 +52,10 @@ class OverlayStackModel(QAbstractListModel):
             return False
         oldRowCount = self.rowCount()
         beginRow = max(0,row)
-        endRow   = min(row+count-1, len(self.overlayStack))
+        endRow   = min(row+count-1, len(self.layerStack))
         self.beginInsertRows(parent, beginRow, endRow) 
         while(beginRow <= endRow):
-            self.overlayStack.insert(row, OverlayParameters())
+            self.layerStack.insert(row, OverlayParameters())
             beginRow += 1
         self.endInsertRows()
         assert self.rowCount() == oldRowCount+1
@@ -62,14 +64,14 @@ class OverlayStackModel(QAbstractListModel):
     def removeRows(self, row, count, parent = QModelIndex()):
         if parent.isValid():
             return False
-        if row+count <= 0 or row >= len(self.overlayStack):
+        if row+count <= 0 or row >= len(self.layerStack):
             return False
         oldRowCount = self.rowCount()
         beginRow = max(0,row)
-        endRow   = min(row+count-1, len(self.overlayStack)-1)
+        endRow   = min(row+count-1, len(self.layerStack)-1)
         self.beginRemoveRows(parent, beginRow, endRow)
         while(beginRow <= endRow):
-            del self.overlayStack[row]
+            del self.layerStack[row]
             beginRow += 1
         
         self.endRemoveRows()
@@ -89,11 +91,11 @@ class OverlayStackModel(QAbstractListModel):
     def data(self, index, role):
         if not index.isValid():
             return None
-        if index.row() > len(self.overlayStack):
+        if index.row() > len(self.layerStack):
             return None
         
         if role == Qt.DisplayRole or role == Qt.EditRole:
-            return self.overlayStack[index.row()]
+            return self.layerStack[index.row()]
         
         return None
     
@@ -102,7 +104,7 @@ class OverlayStackModel(QAbstractListModel):
         if not isinstance(value, OverlayParameters):
             overlayParameters = value.toPyObject()
         
-        self.overlayStack[index.row()] = value
+        self.layerStack[index.row()] = value
         self.dataChanged.emit(index, index)
         return True
     
@@ -132,7 +134,7 @@ class OverlayStackModel(QAbstractListModel):
         if row.row() != 0:
             oldRow = row.row()
             newRow = oldRow - 1
-            d = self.overlayStack[oldRow]
+            d = self.layerStack[oldRow]
             self.removeRow(oldRow)
             self.insertRow(newRow)
             self.setData(self.index(newRow), d)
@@ -145,7 +147,7 @@ class OverlayStackModel(QAbstractListModel):
         if row.row() != self.rowCount() - 1:
             oldRow = row.row()
             newRow = oldRow + 1
-            d = self.overlayStack[oldRow]
+            d = self.layerStack[oldRow]
             self.removeRow(oldRow)
             self.insertRow(newRow)
             self.setData(self.index(newRow), d)
