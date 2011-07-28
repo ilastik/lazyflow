@@ -52,6 +52,46 @@ class SliceSource( QObject ):
         self.isDirty.emit( slicing )
 assert issubclass(SliceSource, SourceABC)
 
+
+
+class SyncedSliceSrcs( object ):
+    isDirty = pyqtSignal( object )
+
+    @property
+    def through( self ):
+        return self._through
+    @through.setter
+    def through( self, value ):
+        self._through = value
+        for src in self._srcs:
+            src.through = value
+        self.setDirty((slice(None), slice(None)))
+
+    def __init__(self, slicesrcs = []):
+        super(SyncedSliceSrcs, self).__init__()
+        self._srcs = set(slicesrcs)
+        self._through = None
+
+    def __iter__( self ):
+        return iter(self._srcs)
+
+    def setDirty( self, slicing ):
+        if not is_pure_slicing(slicing):
+            raise Exception('dirty region: slicing is not pure')
+        self.isDirty.emit( slicing )
+
+    def add( self, sliceSrc ):
+        assert issubclass( sliceSrc, SliceSource )
+        self._srcs.add( sliceSrc )
+        self.setDirty( (slice(None), slice(None)) ) 
+
+    def remove( self, sliceSrc ):
+        assert issubclass( sliceSrc, SliceSource )
+        self._srcs.remove( sliceSrc )
+        self.setDirty( slice(None) )         
+
+
+
 class SpatialSliceSource( SliceSource ):
     @property
     def index( self ):
@@ -86,6 +126,36 @@ class SpatialSliceSource( SliceSource ):
         super(SpatialSliceSource, self).__init__( datasource, projection )
         self._through = [0,0,0]
 assert issubclass(SpatialSliceSource, SourceABC)
+
+
+
+class SyncedSpatialSliceSrcs( SyncedSliceSrcs ):
+    @property
+    def index( self ):
+        return self.through[1]
+    @index.setter
+    def index( self, value ):
+        t = self.through
+        t[1] = value
+        self.through = t
+
+    @property
+    def time( self ):
+        return self.through[0]
+    @time.setter
+    def time( self, value ):
+        t = self.through
+        t[0] = value
+        self.through = t
+
+    @property
+    def channel( self ):
+        return self._through[2]
+    @channel.setter
+    def channel( self, value ):
+        t = self._through
+        t[2] = value
+        self.through = t
 
 
 
