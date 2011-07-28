@@ -49,7 +49,7 @@ from positionModel import PositionModel
 from navigationControler import NavigationControler, NavigationInterpreter
 from pixelpipeline.slicesources import SpatialSliceSource
 from pixelpipeline.imagesources import GrayscaleImageSource
-from imagesourcefactories import createImageSource
+from pixelpipeline.imagesourcefactories import createImageSource
 
 class VolumeEditor( QObject ):
     changedSlice      = pyqtSignal(int,int)
@@ -59,7 +59,7 @@ class VolumeEditor( QObject ):
     zoomInFactor  = 1.1
     zoomOutFactor = 0.9
 
-    def __init__( self, shape, layers, useGL = False):
+    def __init__( self, shape, layerStackModel, useGL = False):
         super(VolumeEditor, self).__init__()
         assert(len(shape) == 5)
         self._shape = shape
@@ -81,9 +81,9 @@ class VolumeEditor( QObject ):
         self.sliceSources = [[], [], []]
         array2dsrcs = []
 
-        for layeridx in xrange(len(layers)):
+        for layeridx in xrange(len(layerStackModel.layerStack)):
             array2dsrcs.append([])
-            for datasrc in layers[layeridx].datasources:
+            for datasrc in layerStackModel.layerStack[layeridx].layer.datasources:
                 array2dsrcs[-1].append([])
                 array2dsrcs[-1].append([])
                 array2dsrcs[-1].append([])
@@ -104,8 +104,8 @@ class VolumeEditor( QObject ):
         # ortho image sources
         imageSources = [[], [], []]
         for axis in xrange(3):
-            for layeridx in xrange(len(layers)):
-                imageSources[axis].append(createImageSource( layers[layeridx], array2dsrcs[layeridx][axis] ))
+            for layeridx in xrange(len(layerStackModel.layerStack)):
+                imageSources[axis].append(createImageSource( layerStackModel.layerStack[layeridx].layer, array2dsrcs[layeridx][axis] ))
 
         # three ortho image scenes
         self.imageScenes = []
@@ -114,9 +114,9 @@ class VolumeEditor( QObject ):
         self.imageScenes.append(ImageScene2D())
         for i in xrange(3):
             stack = []
-            for layeridx in xrange(len(layers)):
-                if layers[layeridx].visible:
-                    stack.append( ImageSourceStackEntry(layers[layeridx].opacity, imageSources[i][layeridx]))
+            for layeridx in xrange(len(layerStackModel.layerStack)):
+                if layerStackModel.layerStack[layeridx].visible:
+                    stack.append( (layerStackModel.layerStack[layeridx].opacity, imageSources[i][layeridx]))
             self.imageScenes[i].imageSourceStack = stack
 
 

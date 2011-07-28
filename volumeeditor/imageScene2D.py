@@ -106,7 +106,7 @@ class ImageScene2D(QGraphicsScene):
     def imageSourceStack(self, s):
         self._imsStack = s
         for entry in self._imsStack:
-            entry.imageSource.isDirty.connect(self._invalidateRect)
+            entry[1].isDirty.connect(self._invalidateRect)
 
     @property
     def shape(self):

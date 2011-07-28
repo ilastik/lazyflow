@@ -1,14 +1,14 @@
-from multimethods import multimethod
-import volumeeditor.layer
-from pixelpipeline.imagesources import GrayscaleImageSource, RGBAImageSource
-from pixelpipeline.datasources import ConstantSource
+from volumeeditor.pixelpipeline.multimethods import multimethod
+from volumeeditor.layer import GrayscaleLayer, RGBALayer
+from imagesources import GrayscaleImageSource, RGBAImageSource
+from datasources import ConstantSource
 
-@multimethod(layer.GrayscaleLayer, list)
+@multimethod(GrayscaleLayer, list)
 def createImageSource( layer, datasources2d ):
     assert len(datasources2d) == 1
     return GrayscaleImageSource( datasources2d[0] )
 
-@multimethod(layer.RGBALayer, list)
+@multimethod(RGBALayer, list)
 def createImageSource( layer, datasources2d ):
     assert len(datasources2d) == 4
     ds = datasources2d

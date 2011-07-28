@@ -40,7 +40,7 @@ class ImageSceneRenderThread(QThread):
         # alpha blending of layers
         #
         # request image for every layer to allow parallel background computations 
-        requestStack = [ (entry.opacity, entry.imageSource.request(patch.rect)) for entry in self._imsStack ]
+        requestStack = [ (entry[0], entry[1].request(patch.rect)) for entry in self._imsStack ]
 
         # before the first layer is painted, initialize it white to enable sound alpha blending
         p = QPainter(patch.image)

@@ -270,7 +270,8 @@ if __name__ == "__main__":
     from volumeeditor.pixelpipeline.datasources import LazyflowSource
     from volumeeditor.pixelpipeline._testing import OpDataProvider
     from volumeeditor._testing.from_lazyflow import OpDataProvider5D, OpDelay
-    from layer import GrayscaleLayer, RGBALayer
+    from volumeeditor.layer import GrayscaleLayer, RGBALayer
+    from layerstack import LayerStackModel, LayerParameters
     
     from testing import stripes
     
@@ -423,8 +424,14 @@ if __name__ == "__main__":
                 shape = source._op.outputs[source._outslot].shape
             if len(shape) == 3:
                 shape = (1,)+shape+(1,)
+                
+            # construct layer stack model
+            layerstack = LayerStackModel()
+            for layer in layers:
+                layerstack.append(LayerParameters(layer))
 
-            self.editor = VolumeEditor(shape, layers, useGL=useGL)
+
+            self.editor = VolumeEditor(shape, layerstack, useGL=useGL)
             self.editor.setDrawingEnabled(True)            
             self.widget = VolumeEditorWidget( self.editor )
             self.widget.show()
