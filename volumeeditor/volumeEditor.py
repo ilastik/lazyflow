@@ -43,7 +43,7 @@ from functools import partial
 from imageSaveThread import ImageSaveThread
 from historyManager import HistoryManager
 from drawManager import DrawManager
-from imageScene2D import ImageScene2D, ImageSourceStackEntry
+from imageScene2D import ImageScene2D
 from imageView2D import ImageView2D
 from positionModel import PositionModel
 from navigationControler import NavigationControler, NavigationInterpreter
@@ -97,6 +97,7 @@ class VolumeEditor( QObject ):
                     array2dsrcs[layeridx][2].append(self.sliceSources[2][-1])
                 else:
                     array2dsrcs[layeridx][0].append(None)
+
                     array2dsrcs[layeridx][1].append(None)
                     array2dsrcs[layeridx][2].append(None)
 
