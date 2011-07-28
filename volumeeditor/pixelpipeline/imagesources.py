@@ -3,6 +3,7 @@ from PyQt4.QtGui import QImage
 from qimage2ndarray import gray2qimage, array2qimage, alpha_view, rgb_view
 from asyncabcs import SourceABC, RequestABC
 from volumeeditor.slicingtools import is_bounded, slicing2rect, rect2slicing, slicing2shape, is_pure_slicing
+import numpy as np
 
 class ImageSource( QObject ):
     '''Partial implemented base class for image sources#

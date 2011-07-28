@@ -26,8 +26,6 @@ class LayerParameters( object ):
         self.rect = QRect()
 
         self.layer = layer        
-        self.opacity = 1.0;
-        self.visible = True
         self.name    = "Unnamed Layer"
 
         self.fm = QFontMetrics(QFont())
