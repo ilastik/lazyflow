@@ -40,9 +40,6 @@ from OpenGL.GL import GL_CLAMP_TO_EDGE, GL_COLOR_BUFFER_BIT, GL_DEPTH_TEST, \
 
 from patchAccessor import PatchAccessor
 from imageSceneRendering import ImageSceneRenderThread
-from collections import namedtuple
-
-ImageSourceStackEntry = namedtuple('ImageSourceStack', 'opacity imageSource')
 
 class ImagePatch(object):    
     def __init__(self, rectF):
