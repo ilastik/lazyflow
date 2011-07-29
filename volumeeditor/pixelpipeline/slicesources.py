@@ -104,87 +104,20 @@ class SyncedSliceSources( QObject ):
 
 
 
-class SpatialSliceSource( SliceSource ):
-    @property
-    def index( self ):
-        return self.through[1]
-    @index.setter
-    def index( self, value ):
-        t = copy.deepcopy(self.through)
-        t[1] = value
-        self.through = t
-
-    @property
-    def time( self ):
-        return self.through[0]
-    @time.setter
-    def time( self, value ):
-        t = copy.deepcopy(self.through)
-        t[0] = value
-        self.through = t
-
-    @property
-    def channel( self ):
-        return self._through[2]
-    @channel.setter
-    def channel( self, value ):
-        t = self._through
-        t[2] = value
-        self.through = t
-
-    def __init__( self, datasource, along = 'z' ):
-        projections = {'x': projectionAlongTXC, 'y': projectionAlongTYC, 'z': projectionAlongTZC}
-        projection = projections[along]
-        super(SpatialSliceSource, self).__init__( datasource, projection )
-        self._through = [0,0,0]
-assert issubclass(SpatialSliceSource, SourceABC)
-
-
-
-class SyncedSpatialSliceSources( SyncedSliceSources ):
-    @property
-    def index( self ):
-        return self.through[1]
-    @index.setter
-    def index( self, value ):
-        t = self.through
-        t[1] = value
-        self.through = t
-
-    @property
-    def time( self ):
-        return self.through[0]
-    @time.setter
-    def time( self, value ):
-        t = self.through
-        t[0] = value
-        self.through = t
-
-    @property
-    def channel( self ):
-        return self._through[2]
-    @channel.setter
-    def channel( self, value ):
-        t = self._through
-        t[2] = value
-        self.through = t
-
-
-
 
 
 
 import unittest as ut
-class SpatialSliceSourceTest( ut.TestCase ):
+class SliceSourceTest( ut.TestCase ):
     def testRequest( self ):
         import numpy as np
         from datasources import ArraySource
         raw = np.random.randint(0,100,(10,3,3,128,3))
         a = ArraySource(raw)
-        ss = SpatialSliceSource( a, 'z' )
-        ss.time = 1
-        ss.channel = 2
-        ss.index = 127
+        ss = SliceSource( a, projectionAlongTZC )
+        ss.setThrough(0, 1)
+        ss.setThrough(2, 2)
+        ss.setThrough(1, 127)
 
         sl = ss.request((slice(None), slice(None))).wait()
         self.assertTrue(np.all(sl == raw[1,:,:,127,2]))

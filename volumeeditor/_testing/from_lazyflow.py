@@ -1,5 +1,4 @@
 from volumeeditor.pixelpipeline.datasources import LazyflowSource
-from volumeeditor.pixelpipeline.slicesources import SpatialSliceSource
 
 from lazyflow.graph import Graph, Operator, InputSlot, OutputSlot
 from lazyflow import operators
@@ -62,6 +61,7 @@ class OpDataProvider5D(Operator):
         self._data[key] = value
         self.outputs["Output"].setDirty(key)
 
+'''
 if __name__ == "__main__":
     import sys
     fn = sys.argv[1]
@@ -131,3 +131,4 @@ if __name__ == "__main__":
     qapp.exec_()
     
     g.finalize()
+'''

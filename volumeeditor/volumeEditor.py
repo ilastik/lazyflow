@@ -47,7 +47,6 @@ from imageScene2D import ImageScene2D
 from imageView2D import ImageView2D
 from positionModel import PositionModel
 from navigationControler import NavigationControler, NavigationInterpreter
-from pixelpipeline.slicesources import SpatialSliceSource
 from pixelpipeline.imagesources import GrayscaleImageSource
 from pixelpipeline.imagesourcefactories import createImageSource
 from pixelpipeline.imagepump import ImagePump
