@@ -1,17 +1,44 @@
 class Layer( object ):
+    '''Represents the visual properties and the associated raw data of a n-dimensional layer.
+
+    properties:
+    datasources -- list of ArraySourceABC; read-only
+    visible -- boolean
+    opacity -- float; range 0.0 - 1.0
+
+    '''
+
+    @property
+    def datasources( self ):
+        return self._datasources
+
     def __init__( self ):
         self.visible = True
         self.opacity = 1.0
 
+        self._datasources = []
+
+
+
 class GrayscaleLayer( Layer ):
     def __init__( self, datasource ):
         super(GrayscaleLayer, self).__init__()
-        self.datasources = [datasource]
+        self._datasources = [datasource]
+
+
 
 class RGBALayer( Layer ):
-    def __init__( self, red = None, green = None, blue = None, alpha = None):
+    @property
+    def color_missing_value( self ):
+        return self._color_missing_value
+
+    @property
+    def alpha_missing_value( self ):
+        return self._alpha_missing_value
+
+    def __init__( self, red = None, green = None, blue = None, alpha = None, color_missing_value = 0, alpha_missing_value = 255):
         super(RGBALayer, self).__init__()
-        self.datasources = [red,green,blue,alpha]
-        self.color_missing_value = 0
-        self.alpha_missing_value = 255
+        self._datasources = [red,green,blue,alpha]
+        self._color_missing_value = color_missing_value
+        self._alpha_missing_value = alpha_missing_value
 
