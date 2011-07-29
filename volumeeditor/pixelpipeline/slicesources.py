@@ -33,14 +33,20 @@ class SliceSource( QObject ):
     def through( self, value ):
         self._through = value
         self.setDirty((slice(None), slice(None)))
-
+    
     def __init__(self, datasource, sliceProjection = projectionAlongTZC):
-        assert isinstance(datasource, SourceABC)
+        assert isinstance(datasource, SourceABC) , 'wrong type: %s' % str(type(datasource)) 
         super(SliceSource, self).__init__()
 
         self.sliceProjection = sliceProjection
         self._datasource = datasource
         self._through = len(sliceProjection.along) * [0]
+
+    def setThrough( self, index, value ):
+        assert index < len(self.through)
+        through = self.through
+        through[index] = value
+        self.through = through
 
     def request( self, slicing2D ):
         slicing = self.sliceProjection.domain(self.through, slicing2D[0], slicing2D[1])
@@ -54,7 +60,7 @@ assert issubclass(SliceSource, SourceABC)
 
 
 
-class SyncedSliceSources( object ):
+class SyncedSliceSources( QObject ):
     isDirty = pyqtSignal( object )
 
     @property
@@ -68,12 +74,18 @@ class SyncedSliceSources( object ):
         self.setDirty((slice(None), slice(None)))
 
     def __init__(self, slicesrcs = []):
-        super(SyncedSliceSrcs, self).__init__()
+        super(SyncedSliceSources, self).__init__()
         self._srcs = set(slicesrcs)
         self._through = None
 
     def __iter__( self ):
         return iter(self._srcs)
+
+    def setThrough( self, index, value ):
+        assert index < len(self.through)
+        through = self.through
+        through[index] = value
+        self.through = through
 
     def setDirty( self, slicing ):
         if not is_pure_slicing(slicing):
@@ -81,7 +93,7 @@ class SyncedSliceSources( object ):
         self.isDirty.emit( slicing )
 
     def add( self, sliceSrc ):
-        assert issubclass( sliceSrc, SliceSource )
+        assert isinstance( sliceSrc, SliceSource ), 'wrong type: %s' % str(type(sliceSrc))
         self._srcs.add( sliceSrc )
         self.setDirty( (slice(None), slice(None)) ) 
 
