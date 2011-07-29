@@ -59,7 +59,7 @@ assert issubclass(GrayscaleImageRequest, RequestABC)
 
 class GrayscaleImageSource( ImageSource ):
     def __init__( self, arraySource2D ):
-        assert isinstance(arraySource2D, SourceABC)
+        assert isinstance(arraySource2D, SourceABC), 'wrong type: %s' % str(type(arraySource2D))
         super(GrayscaleImageSource, self).__init__()
         self._arraySource2D = arraySource2D
         self._arraySource2D.isDirty.connect(self.setDirty)

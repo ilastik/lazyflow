@@ -12,7 +12,7 @@ class ImagePump( QObject ):
     def __init__( self, layerStackModel, sliceProjection ):
         self._imsStack = []
         self._syncedSliceSources = SyncedSliceSources()
-        self._layerStack = layerStackModel
+        self._layerModel = layerStackModel
         self._projection = sliceProjection
         self._update()
 
@@ -22,14 +22,20 @@ class ImagePump( QObject ):
     def _update( self ):
         self._imsStack = []
         self._syncedSliceSources = SyncedSliceSources()
-        for layer in self._layerStack.layers:
-            self._appendLayer( layer )
+        for layerWrapper in self._layerModel.layerStack:
+            self._appendLayer( layerWrapper.layer )
 
     def _appendLayer( self, layer ):
-        slicesrcs = [ SliceSource( src, self._projection ) for src in layer.datasources ]
+        def sliceSrcOrNone( datasrc ):
+            if datasrc:
+                return SliceSource( datasrc, self._projection )
+            return None
+
+        slicesrcs = map( sliceSrcOrNone, layer.datasources )
         ims = createImageSource( layer, slicesrcs )
         self._imsStack.append(( layer.opacity, ims ))
-        for src in slicesrc:
-            self._syncedSliceSources.add( src )
+        for src in slicesrcs:
+            if src:
+                self._syncedSliceSources.add( src )
 
             
