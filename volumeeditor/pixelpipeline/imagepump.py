@@ -1,31 +1,31 @@
-from PyQt4.QtCore import pyqtSignal, QRect, QObject
 from slicesources import SliceSource, SyncedSliceSources
 from imagesourcefactories import createImageSource
+from imsstack import ImsStack
 
-class ImagePump( QObject ):
-    #isDirty = pyqtSignal( QRect )
-    
+class ImagePump( object ):
     @property
     def syncedSliceSources( self ):
         return self._syncedSliceSources
 
-    def __init__( self, layerStackModel, sliceProjection ):
-        self._imsStack = []
-        self._syncedSliceSources = SyncedSliceSources()
-        self._layerModel = layerStackModel
-        self._projection = sliceProjection
-        self._update()
-
-    def __call__( self ):
+    @property
+    def imsStack( self ):
         return self._imsStack
 
-    def _update( self ):
-        self._imsStack = []
-        self._syncedSliceSources = SyncedSliceSources()
+    def __init__( self, layerStackModel, sliceProjection ):
+        self._layerModel = layerStackModel
+        self._projection = sliceProjection
+    
+        ## setup image source stack and slice sources
+        slicesrcs = []
+        stack_entries = []
         for layerWrapper in self._layerModel.layerStack:
-            self._appendLayer( layerWrapper.layer )
+            srcs, entry = self._parseLayer(layerWrapper.layer)
+            slicesrcs.extend(srcs)
+            stack_entries.append(entry)
+        self._syncedSliceSources = SyncedSliceSources( slicesrcs )
+        self._imsStack = ImsStack( stack_entries )
 
-    def _appendLayer( self, layer ):
+    def _parseLayer( self, layer ):
         def sliceSrcOrNone( datasrc ):
             if datasrc:
                 return SliceSource( datasrc, self._projection )
@@ -33,9 +33,8 @@ class ImagePump( QObject ):
 
         slicesrcs = map( sliceSrcOrNone, layer.datasources )
         ims = createImageSource( layer, slicesrcs )
-        self._imsStack.append(( layer.opacity, ims ))
-        for src in slicesrcs:
-            if src:
-                self._syncedSliceSources.add( src )
+        stack_entry = ( layer.opacity, ims )
+        # remove Nones
+        slicesrcs = [ src for src in slicesrcs if src != None]
+        return slicesrcs, stack_entry
 
-            
