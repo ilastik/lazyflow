@@ -50,6 +50,8 @@ from navigationControler import NavigationControler, NavigationInterpreter
 from pixelpipeline.slicesources import SpatialSliceSource
 from pixelpipeline.imagesources import GrayscaleImageSource
 from pixelpipeline.imagesourcefactories import createImageSource
+from pixelpipeline.imagepump import ImagePump
+from slicingtools import SliceProjection
 
 class VolumeEditor( QObject ):
     changedSlice      = pyqtSignal(int,int)
@@ -77,35 +79,20 @@ class VolumeEditor( QObject ):
 
         self._pendingLabels = []
 
-        # three ortho slices
-        self.sliceSources = [[], [], []]
-        array2dsrcs = []
+        # three ortho image pumps
+        alongTXC = SliceProjection( abscissa = 2, ordinate = 3, along = [0,1,4] )
+        alongTYC = SliceProjection( abscissa = 1, ordinate = 3, along = [0,2,4] )
+        alongTZC = SliceProjection( abscissa = 1, ordinate = 2, along = [0,3,4] )
 
-        for layeridx in xrange(len(layerStackModel.layerStack)):
-            array2dsrcs.append([])
-            for datasrc in layerStackModel.layerStack[layeridx].layer.datasources:
-                array2dsrcs[-1].append([])
-                array2dsrcs[-1].append([])
-                array2dsrcs[-1].append([])
+        imagepumps = []
+        imagepumps.append(ImagePump( layerStackModel, alongTXC ))
+        imagepumps.append(ImagePump( layerStackModel, alongTYC ))
+        imagepumps.append(ImagePump( layerStackModel, alongTZC ))
 
-                if datasrc != None:
-                    self.sliceSources[0].append(SpatialSliceSource(datasrc, 'x'))
-                    self.sliceSources[1].append(SpatialSliceSource(datasrc, 'y'))
-                    self.sliceSources[2].append(SpatialSliceSource(datasrc, 'z'))
-                    array2dsrcs[layeridx][0].append(self.sliceSources[0][-1])
-                    array2dsrcs[layeridx][1].append(self.sliceSources[1][-1])
-                    array2dsrcs[layeridx][2].append(self.sliceSources[2][-1])
-                else:
-                    array2dsrcs[layeridx][0].append(None)
-
-                    array2dsrcs[layeridx][1].append(None)
-                    array2dsrcs[layeridx][2].append(None)
-
-        # ortho image sources
-        imageSources = [[], [], []]
-        for axis in xrange(3):
-            for layeridx in xrange(len(layerStackModel.layerStack)):
-                imageSources[axis].append(createImageSource( layerStackModel.layerStack[layeridx].layer, array2dsrcs[layeridx][axis] ))
+        # synced slicesource collections
+        syncedSliceSources = []
+        for i in xrange(3):
+            syncedSliceSources.append(imagepumps[i].syncedSliceSources)
 
         # three ortho image scenes
         self.imageScenes = []
@@ -113,12 +100,7 @@ class VolumeEditor( QObject ):
         self.imageScenes.append(ImageScene2D())
         self.imageScenes.append(ImageScene2D())
         for i in xrange(3):
-            stack = []
-            for layeridx in xrange(len(layerStackModel.layerStack)):
-                if layerStackModel.layerStack[layeridx].visible:
-                    stack.append( (layerStackModel.layerStack[layeridx].opacity, imageSources[i][layeridx]))
-            self.imageScenes[i].imageSourceStack = stack
-
+            self.imageScenes[i].imageSourceStack = imagepumps[i]()
 
         # three ortho image views
         self.imageViews = []
@@ -132,7 +114,7 @@ class VolumeEditor( QObject ):
 
         # navigation control
         self.posModel     = PositionModel(self._shape)
-        self.navCtrl      = NavigationControler(self.imageViews, self.sliceSources, self.posModel)
+        self.navCtrl      = NavigationControler(self.imageViews, syncedSliceSources, self.posModel)
         self.navInterpret = NavigationInterpreter(self.posModel)
 
         # Add label widget to toolBoxLayout

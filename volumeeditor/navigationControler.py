@@ -194,12 +194,12 @@ class NavigationControler(QObject):
     def changeTime(self, newTime):
         for i in range(3):
             for src in self._sliceSources[i]:
-                src.time = newTime
+                src.setTrough(0, newTime)
     
     def changeChannel(self, newChannel):
         for i in range(3):
             for src in self._sliceSources[i]:
-                src.channel = newChannel
+                src.setTrough(2, newChannel)
     
     #private functions ########################################################
     
@@ -245,4 +245,4 @@ class NavigationControler(QObject):
 
         #re-configure the slice source
         for src in self._sliceSources[axis]:
-            src.index = num
+            src.setThrough(1, num)
