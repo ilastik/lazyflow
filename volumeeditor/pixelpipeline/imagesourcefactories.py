@@ -1,3 +1,4 @@
+import copy
 from volumeeditor.pixelpipeline.multimethods import multimethod
 from volumeeditor.layer import GrayscaleLayer, RGBALayer
 from imagesources import GrayscaleImageSource, RGBAImageSource
@@ -11,7 +12,7 @@ def createImageSource( layer, datasources2d ):
 @multimethod(RGBALayer, list)
 def createImageSource( layer, datasources2d ):
     assert len(datasources2d) == 4
-    ds = datasources2d
+    ds = copy.copy(datasources2d)
     for i in xrange(3):
         if datasources2d[i] == None:
             ds[i] = ConstantSource(layer.color_missing_value)
