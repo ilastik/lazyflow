@@ -13,7 +13,7 @@ from vtk import vtkRenderer, vtkConeSource, vtkPolyDataMapper, vtkActor, \
 from PyQt4.QtGui import QWidget, QVBoxLayout, QHBoxLayout, QPushButton, \
                         QSizePolicy, QSpacerItem, QIcon, QFileDialog, \
                         QToolButton
-from PyQt4.QtCore import pyqtSignal, SIGNAL
+from PyQt4.QtCore import pyqtSignal, SIGNAL, QEvent
 
 import qimage2ndarray
 
