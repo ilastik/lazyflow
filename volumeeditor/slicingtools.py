@@ -36,6 +36,17 @@ def unbox( slicing, axis=0 ):
             return slicing[axis]
     return slicing
         
+class Sl( object ):
+    '''Helper to create slicings using nice subsprict syntax.
+
+    sl = Sl()
+    slicing = sl[1:2,:]
+
+    '''
+    def __getitem__( self, slicing ):
+        return slicing
+sl = Sl()
+
 def is_bounded( slicing ):
     '''For all dimensions: stop value of slice is not None '''
     slicing = box(slicing)
@@ -134,6 +145,10 @@ class SliceProjection( object ):
 
 
 import unittest as ut
+class SlTest( ut.TestCase ):
+    def runTest( self ):
+        self.assertEqual(sl[1,:34,:], (1, slice(34), slice(None)))
+
 class SliceProjectionTest( ut.TestCase ):
     def testArgumentCheck( self ):
         SliceProjection(1,2,[0,3,4])
