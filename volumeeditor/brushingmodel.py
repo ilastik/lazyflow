@@ -28,7 +28,7 @@
 #    or implied, of their employers.
 
 from PyQt4.QtCore import pyqtSignal, QObject, QThread, Qt, QSize, QPointF, QRectF, \
-                         QRect, QPoint
+                         QRect, QPoint, QSizeF
 from PyQt4.QtGui  import QWidget, QPen, QGraphicsScene, QColor, QGraphicsLineItem, \
                          QImage, QPainter, QGraphicsLineItem
 
@@ -68,12 +68,6 @@ class BrushingModel(QObject):
         #a QGraphicsLineItem, and which we can use to then
         #render to an image
         self.scene = QGraphicsScene()
-
-    def growBoundingBox(self):
-        self.bb.setLeft(  max(0, self.bb.left()-self.brushSize-1))
-        self.bb.setTop(   max(0, self.bb.top()-self.brushSize-1 ))
-        self.bb.setRight( min(self.shape[0], self.bb.right()+self.brushSize+1))
-        self.bb.setBottom(min(self.shape[1], self.bb.bottom()+self.brushSize+1))
 
     def toggleErase(self):
         self.erasing = not(self.erasing)
@@ -117,8 +111,8 @@ class BrushingModel(QObject):
     def beginDrawing(self, pos, shape):
         print "BrushingModel.beginDrawing(pos=%r, shape=%r)" % (pos, shape)
         self.shape = shape
-        self.bb = QRectF(0, 0, self.shape[0], self.shape[1])
         self.scene.clear()
+        self.bb = QRect()
         if self.erasing:
             self.penVis.setColor(self.erasingColor)
         else:
@@ -128,18 +122,17 @@ class BrushingModel(QObject):
         return line
 
     def endDrawing(self, pos):
-        print "BrushingModel.beginDrawing(pos=%r)" % (pos)
+        print "BrushingModel.endDrawing(pos=%r)" % (pos)
         
         self.moveTo(pos)
-        self.growBoundingBox()
 
         tempi = QImage(QSize(self.bb.width(), self.bb.height()), QImage.Format_ARGB32_Premultiplied) #TODO: format
         tempi.fill(0)
         painter = QPainter(tempi)
-        self.scene.render(painter, QRectF(QPointF(0,0), self.bb.size()), self.bb)
+        self.scene.render(painter, target=QRectF(), source=QRectF(QPointF(self.bb.x(), self.bb.y()), QSizeF(self.bb.width(), self.bb.height())))
         painter.end()
         
-        self.brushStrokeAvailable.emit(self.bb.bottomLeft(), tempi)
+        self.brushStrokeAvailable.emit(QPointF(self.bb.x(), self.bb.y()), tempi)
 
     def dumpDraw(self, pos):
         res = self.endDrawing(pos)
@@ -147,24 +140,22 @@ class BrushingModel(QObject):
         return res
 
     def moveTo(self, pos):
-        #print "BrushingModel.moveTo(pos=%r)" % (pos) 
-        lineVis = QGraphicsLineItem(self.pos.x(), self.pos.y(), pos.x(), pos.y())
-        lineVis.setPen(self.penVis)
+        oldX, oldY = self.pos.x(), self.pos.y()
+        x,y = pos.x(), pos.y()
         
-        line = QGraphicsLineItem(self.pos.x(), self.pos.y(), pos.x(), pos.y())
+        #print "BrushingModel.moveTo(pos=%r)" % (pos) 
+        line = QGraphicsLineItem(oldX, oldY, x, y)
         line.setPen(self.penDraw)
         self.scene.addItem(line)
-
+        
+        #update bounding Box 
+        if not self.bb.isValid():
+            self.bb = QRect(QPoint(x,y), QSize(1,1))
+        #grow bounding box
+        self.bb.setLeft(  min(self.bb.left(),   max(0,             x-self.brushSize/2-1) ) )
+        self.bb.setRight( max(self.bb.right(),  min(self.shape[0], x+self.brushSize/2+1) ) )
+        self.bb.setTop(   min(self.bb.top(),    max(0,             y-self.brushSize/2-1) ) )
+        self.bb.setBottom(max(self.bb.bottom(), min(self.shape[1], y+self.brushSize/2+1) ) )
+        
+        #update/move position
         self.pos = pos
-        x = pos.x()
-        y = pos.y()
-        #update bounding Box :
-        if x > self.bb.right():
-            self.bb.setRight(x)
-        if x < self.bb.left():
-            self.bb.setLeft(x)
-        if y > self.bb.bottom():
-            self.bb.setBottom(y)
-        if y < self.bb.top():
-            self.bb.setTop(y)
-        return lineVis

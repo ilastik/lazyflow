@@ -179,7 +179,8 @@ class NavigationControler(QObject):
         self._beginStackIndex = 0
         self._endStackIndex   = 1
 
-        self._views[0].swapAxes()
+        #FIXME
+        #self._views[0].swapAxes()
 
         self.axisColors = [QColor(255,0,0,255), QColor(0,255,0,255), QColor(0,0,255,255)]
     
