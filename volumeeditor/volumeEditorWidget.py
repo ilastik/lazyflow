@@ -162,8 +162,6 @@ class VolumeEditorWidget(QWidget):
         # drawing
         axisLabels = ["X:", "Y:", "Z:"]
         for i, v in enumerate(self._ve.imageViews):
-            v.beginDraw.connect(partial(self._ve.beginDraw, axis=i))
-            v.endDraw.connect(partial(self._ve.endDraw, axis=i))
             v.hud = SliceSelectorHud()
             #connect interpreter
             v.hud.sliceSelector.valueChanged.connect(partial(self._ve.navInterpret.changeSliceAbsolute, axis=i))
@@ -215,8 +213,8 @@ class VolumeEditorWidget(QWidget):
                                   "Enlarge slice view %s to full size" % maximizeShortcuts[i], \
                                   self, partial(fullscreenView, maximizeViews[i]), Qt.WidgetShortcut))
             
-            self.shortcuts.append(self._shortcutHelper("n", "Labeling", "Increase brush size", v,self._ve._drawManager.brushSmaller, Qt.WidgetShortcut))
-            self.shortcuts.append(self._shortcutHelper("m", "Labeling", "Decrease brush size", v, self._ve._drawManager.brushBigger, Qt.WidgetShortcut))
+            #self.shortcuts.append(self._shortcutHelper("n", "Labeling", "Increase brush size", v,self._ve._drawManager.brushSmaller, Qt.WidgetShortcut))
+            #self.shortcuts.append(self._shortcutHelper("m", "Labeling", "Decrease brush size", v, self._ve._drawManager.brushBigger, Qt.WidgetShortcut))
             self.shortcuts.append(self._shortcutHelper("+", "Navigation", "Zoom in", v,  v.zoomIn, Qt.WidgetShortcut))
             self.shortcuts.append(self._shortcutHelper("-", "Navigation", "Zoom out", v, v.zoomOut, Qt.WidgetShortcut))
             
@@ -237,7 +235,9 @@ class VolumeEditorWidget(QWidget):
             self.shortcuts.append(self._shortcutHelper("Ctrl+Shift+Down", "Navigation", "10 slices down", v, partial(sliceDelta, i, -10), Qt.WidgetShortcut))
 
     def _updateInfoLabels(self, pos):
-        print "updateInfoLabels: I'm broken, please fix me."
+        #FIXME
+        pass
+        #print "updateInfoLabels: I'm broken, please fix me."
         #for i in range(3):
         #    if pos[i] < 0 or pos[i] >= self._ve.posModel.shape[i]:
         #        self._ve.posLabel.setText("")

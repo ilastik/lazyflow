@@ -36,13 +36,10 @@ import numpy
 import threading
 import time
 
-#*******************************************************************************
-# D r a w M a n a g e r                                                        *
-#*******************************************************************************
-
-class DrawManager(QObject):
-    brushSizeChanged  = pyqtSignal(int)
-    brushColorChanged = pyqtSignal(QColor)
+class BrushingModel(QObject):
+    brushSizeChanged     = pyqtSignal(int)
+    brushColorChanged    = pyqtSignal(QColor)
+    brushStrokeAvailable = pyqtSignal(QPointF, QImage)
     
     minBrushSize       = 1
     maxBrushSize       = 61
@@ -118,6 +115,7 @@ class DrawManager(QObject):
         self.emit.brushColorChanged(self.drawColor)
         
     def beginDrawing(self, pos, shape):
+        print "BrushingModel.beginDrawing(pos=%r, shape=%r)" % (pos, shape)
         self.shape = shape
         self.bb = QRectF(0, 0, self.shape[0], self.shape[1])
         self.scene.clear()
@@ -130,23 +128,26 @@ class DrawManager(QObject):
         return line
 
     def endDrawing(self, pos):
+        print "BrushingModel.beginDrawing(pos=%r)" % (pos)
+        
         self.moveTo(pos)
         self.growBoundingBox()
 
         tempi = QImage(QSize(self.bb.width(), self.bb.height()), QImage.Format_ARGB32_Premultiplied) #TODO: format
         tempi.fill(0)
         painter = QPainter(tempi)
-        
         self.scene.render(painter, QRectF(QPointF(0,0), self.bb.size()), self.bb)
+        painter.end()
         
-        return (self.bb.left(), self.bb.top(), tempi) #TODO: hackish, probably return a class ??
+        self.brushStrokeAvailable.emit(self.bb.bottomLeft(), tempi)
 
     def dumpDraw(self, pos):
         res = self.endDrawing(pos)
         self.beginDrawing(pos, self.shape)
         return res
 
-    def moveTo(self, pos):    
+    def moveTo(self, pos):
+        #print "BrushingModel.moveTo(pos=%r)" % (pos) 
         lineVis = QGraphicsLineItem(self.pos.x(), self.pos.y(), pos.x(), pos.y())
         lineVis.setPen(self.penVis)
         

@@ -5,4 +5,4 @@
 .project
 .pydevproject
 .settings/
-
+*.kate-swp

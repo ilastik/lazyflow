@@ -42,11 +42,12 @@ from functools import partial
 
 from imageSaveThread import ImageSaveThread
 from historyManager import HistoryManager
-from drawManager import DrawManager
 from imageScene2D import ImageScene2D
 from imageView2D import ImageView2D
 from positionModel import PositionModel
 from navigationControler import NavigationControler, NavigationInterpreter
+from brushingcontroler import BrushingInterpreter, BrushingControler, CrosshairControler
+from brushingmodel import BrushingModel
 from pixelpipeline.imagesources import GrayscaleImageSource
 from pixelpipeline.imagesourcefactories import createImageSource
 from pixelpipeline.imagepump import ImagePump
@@ -74,7 +75,6 @@ class VolumeEditor( QObject ):
 
         self._saveThread = ImageSaveThread(self)
         self._history = HistoryManager(self)
-        self._drawManager = DrawManager()
 
         self._pendingLabels = []
 
@@ -103,12 +103,11 @@ class VolumeEditor( QObject ):
 
         # three ortho image views
         self.imageViews = []
-        self.imageViews.append(ImageView2D(self._drawManager, self.imageScenes[0], useGL=useGL))
-        self.imageViews.append(ImageView2D(self._drawManager, self.imageScenes[1], useGL=useGL))
-        self.imageViews.append(ImageView2D(self._drawManager, self.imageScenes[2], useGL=useGL))
+        self.imageViews.append(ImageView2D(self.imageScenes[0], useGL=useGL))
+        self.imageViews.append(ImageView2D(self.imageScenes[1], useGL=useGL))
+        self.imageViews.append(ImageView2D(self.imageScenes[2], useGL=useGL))
 
         for i in xrange(3):
-            self.imageViews[i].drawing.connect(partial(self.updateLabels, axis=i))
             self.imageViews[i].customContextMenuRequested.connect(self.onCustomContextMenuRequested)
 
         # navigation control
@@ -121,6 +120,11 @@ class VolumeEditor( QObject ):
         
         # some auxiliary stuff
         self.focusAxis =  0 #the currently focused axis
+        
+        self.brushingModel = BrushingModel()
+        #self.crosshairControler = CrosshairControler() 
+        self.brushingInterpreter = BrushingInterpreter(self.brushingModel, self.imageViews)
+        self.brushingControler = BrushingControler(self.brushingModel, None)
         
         self._initConnects()
 
@@ -298,38 +302,10 @@ class VolumeEditor( QObject ):
     def getVisibleState(self):
         return self._viewManager.getVisibleState()
 
-    def beginDraw(self, pos, axis):
-        print "beginDraw: I'm doing nothing. Fixme or deleteme"
-        
-    def endDraw(self, pos, axis):
-        result = self._drawManager.endDrawing(pos)
-        print "endDraw: result =", result
-        self.updateLabels(pos, axis)
-        #FIXME
-        #self.pushLabelsToLabelWidget()
-
     def pushLabelsToLabelWidget(self):
         #FIXME
         newLabels = self.getPendingLabels()
         self.labelWidget.labelMgr.newLabels(newLabels)
-        
-    def updateLabels(self, mousePos, axis):
-        print "Volumeeditor.updateLabels"
-        result = self._drawManager.dumpDraw(mousePos)
-        image = result[2]
-        ndarr = qimage2ndarray.rgb_view(image)
-        labels = ndarr[:,:,0]
-        labels = labels.swapaxes(0,1)
-        number = self._drawManager.drawnNumber
-        labels = numpy.where(labels > 0, number, 0)
-        import time, vigra
-        vigra.impex.writeImage(labels, str(time.time()) + ".png")
-#FIXME: resurrect
-#        ls = LabelState('drawing', axis, self._viewManager.slicePosition[axis], \
-#                        result[0:2], labels.shape, self._viewManager.time, self, \
-#                        self._drawManager.erasing, labels, number)
-#        self._history.append(ls)        
-#        self.setLabels(result[0:2], axis, self._viewManager.slicePosition[axis], labels, self._drawManager.erasing)
         
     def getPendingLabels(self):
         temp = self._pendingLabels

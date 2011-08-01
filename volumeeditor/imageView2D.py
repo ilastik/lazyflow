@@ -36,7 +36,6 @@ from PyQt4.QtOpenGL import QGLWidget
 import numpy
 import time
 
-from drawManager import DrawManager
 from crossHairCursor import CrossHairCursor
 from sliceIntersectionMarker import SliceIntersectionMarker
 from imageScene2D import ImageScene2D
@@ -53,8 +52,10 @@ class ImageView2D(QGraphicsView):
     changeSliceDelta   = pyqtSignal(int)
     
     drawing            = pyqtSignal(QPointF)
-    beginDraw          = pyqtSignal(QPointF)
+    beginDraw          = pyqtSignal(QPointF, object)
     endDraw            = pyqtSignal(QPointF)
+    
+    erasingToggled     = pyqtSignal(bool)            
     
     #notifies that the mouse has moved to 2D coordinate x,y
     mouseMoved         = pyqtSignal(int, int)
@@ -104,7 +105,7 @@ class ImageView2D(QGraphicsView):
     def drawingEnabled(self, enable):
         self._drawingEnabled = enable 
 
-    def __init__(self, drawManager, imagescene2d, useGL=False):
+    def __init__(self, imagescene2d, useGL=False):
         QGraphicsView.__init__(self)
         self._useGL = useGL
         self.setScene(imagescene2d)
@@ -164,9 +165,6 @@ class ImageView2D(QGraphicsView):
         #FIXME: Use a QAction here so that we do not have to synchronize
         #between this initial state and the toggle button's initial state
         self._sliceIntersectionMarker.setVisibility(True)
-        
-        #FIXME: MVC refactor 
-        self._drawManager = drawManager
  
         #FIXME: this should be private, but is currently used from
         #       within the image scene renderer
@@ -199,15 +197,6 @@ class ImageView2D(QGraphicsView):
         self._hiddenCursor = QCursor(Qt.BlankCursor)
         # For screen recording BlankCursor doesn't work
         #self.hiddenCursor = QCursor(Qt.ArrowCursor)
-        
-
-#FIXME: do we want to have these connects here or somewhere else?
-#FIXME: resurrect
-#        self._drawManager.brushSizeChanged.connect(self._crossHairCursor.setBrushSize)
-#        self._drawManager.brushColorChanged.connect(self._crossHairCursor.setColor)
-#        
-#        self._crossHairCursor.setBrushSize(self._drawManager.brushSize)
-#        self._crossHairCursor.setColor(self._drawManager.drawColor)
 
         self._tempErase = False
         
@@ -252,16 +241,9 @@ class ImageView2D(QGraphicsView):
         self.drawing.emit(self.mousePos)
     
     def beginDrawing(self, pos):
-        InteractionLogger.log("%f: beginDrawing`()" % (time.clock()))   
         self.mousePos = pos
         self._isDrawing  = True
-        line = self._drawManager.beginDrawing(pos, self.shape)
-        line.setZValue(99)
-        self.tempImageItems.append(line)
-        self.scene().addItem(line)
-        if self.drawUpdateInterval > 0:
-            self._drawTimer.start(self.drawUpdateInterval) #update labels every some ms 
-        self.beginDraw.emit(pos)
+        self.beginDraw.emit(pos, self.shape)
         
     def endDrawing(self, pos):
         InteractionLogger.log("%f: endDrawing()" % (time.clock()))     
@@ -325,7 +307,7 @@ class ImageView2D(QGraphicsView):
             if self._ticker.isActive():
                 return
             if QApplication.keyboardModifiers() == Qt.ShiftModifier:
-                self._drawManager.setErasing()
+                self.erasingToggled.emit(True)
                 self._tempErase = True
             mousePos = self.mapToScene(event.pos())
             self.beginDrawing(mousePos)
@@ -341,7 +323,7 @@ class ImageView2D(QGraphicsView):
             mousePos = self.mapToScene(event.pos())
             self.endDrawing(mousePos)
         if self._tempErase:
-            self._drawManager.disableErasing()
+            self.erasingToggled.emit(False)
             self._tempErase = False
 
     def _panning(self):
@@ -416,14 +398,11 @@ class ImageView2D(QGraphicsView):
         self.mousePos = mousePos = self.mapToScene(event.pos())
         x = self.x = mousePos.x()
         y = self.y = mousePos.y()
-             
-        self.mouseMoved.emit(x, y)
-                
+
+        self.mouseMoved.emit(x,y)
+
         if self._isDrawing:
-            line = self._drawManager.moveTo(mousePos)
-            line.setZValue(99)
-            self.tempImageItems.append(line)
-            self.scene().addItem(line)
+            self.drawing.emit(mousePos)
 
     def mouseDoubleClickEvent(self, event):
         mousePos = self.mapToScene(event.pos())
@@ -433,7 +412,9 @@ class ImageView2D(QGraphicsView):
         if self._isDrawing:
             self.endDrawing(self.mousePos)
             self._isDrawing = True
-            self._drawManager.beginDrawing(self.mousePos, self.self.shape2D)
+            
+            #FIXME:
+            #self._drawManager.beginDrawing(self.mousePos, self.self.shape2D)
         
         self.changeSliceDelta.emit(delta)
         
@@ -494,8 +475,7 @@ if __name__ == '__main__':
             self.checkerboard = checkerboard(self.lena.shape, 20)
             self.cross = cross(self.lena.shape, 30)
 
-            drawManager = DrawManager()
-            self.imageView2D = ImageView2D(drawManager, useGL=useGL)
+            self.imageView2D = ImageView2D(useGL=useGL)
             self.imageView2D.drawingEnabled = True
             self.imageView2D.name = 'ImageView2D:'
             self.imageView2D.shape = self.lena.shape
