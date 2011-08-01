@@ -51,6 +51,7 @@ from pixelpipeline.imagesources import GrayscaleImageSource
 from pixelpipeline.imagesourcefactories import createImageSource
 from pixelpipeline.imagepump import ImagePump
 from slicingtools import SliceProjection
+from eventswitch import EventSwitch
 
 class VolumeEditor( QObject ):
     changedSlice      = pyqtSignal(int,int)
@@ -110,6 +111,8 @@ class VolumeEditor( QObject ):
         for i in xrange(3):
             self.imageViews[i].drawing.connect(partial(self.updateLabels, axis=i))
             self.imageViews[i].customContextMenuRequested.connect(self.onCustomContextMenuRequested)
+
+        es = EventSwitch(self.imageViews)
 
         # navigation control
         self.posModel     = PositionModel(self._shape)

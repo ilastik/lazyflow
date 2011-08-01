@@ -399,7 +399,7 @@ class ImageView2D(QGraphicsView):
         else:
             self._deltaPan = self._deaccelerate(self._deltaPan)
             self._panning()
-    
+    '''
     def mouseMoveEvent(self,event):
         if self._dragMode == True:
             #the mouse was moved because the user wants to change
@@ -424,7 +424,7 @@ class ImageView2D(QGraphicsView):
             line.setZValue(99)
             self.tempImageItems.append(line)
             self.scene().addItem(line)
-
+    '''
     def mouseDoubleClickEvent(self, event):
         mousePos = self.mapToScene(event.pos())
         self.mouseDoubleClicked.emit(mousePos.x(), mousePos.y())
