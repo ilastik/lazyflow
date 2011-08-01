@@ -416,7 +416,7 @@ class ImageView2D(QGraphicsView):
         else:
             self._deltaPan = self._deaccelerate(self._deltaPan)
             self._panning()
-    
+
     def mouseDoubleClickEvent(self, event):
         self.mousePos = self.mapScene2Data(self.mapToScene(event.pos()))
         self.mouseDoubleClicked.emit(self.mousePos.x(), self.mousePos.y())

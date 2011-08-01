@@ -41,6 +41,7 @@ from brushingcontroler import BrushingInterpreter, BrushingControler
 from brushingmodel import BrushingModel
 from pixelpipeline.imagepump import ImagePump
 from slicingtools import SliceProjection
+from eventswitch import EventSwitch
 
 useVTK = True
 try:
@@ -128,6 +129,8 @@ class VolumeEditor( QObject ):
 
         for i in xrange(3):
             self.imageViews[i].customContextMenuRequested.connect(self.onCustomContextMenuRequested)
+
+        es = EventSwitch(self.imageViews)
 
         # navigation control
         self.posModel     = PositionModel(self._shape)
