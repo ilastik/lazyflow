@@ -1,5 +1,7 @@
 from PyQt4.QtCore import QObject
 
+import qimage2ndarray
+
 class CrosshairControler(QObject):
     def __init__(self, brushingModel, imageViews):
         QObject.__init__(self, parent=None)
@@ -24,7 +26,18 @@ class BrushingControler(QObject):
     def _writeIntoSink(self, brushStrokeOffset, brushStrokeImage):
         print "BrushingControler._writeIntoSink(%r, %r)" % (brushStrokeOffset, brushStrokeImage)
         import time
-        brushStrokeImage.save("%d.png" % time.time())
+        t = time.time()
+        
+        brushStrokeImage.save("%d.png" % t)
+        
+        #this code shows how to convert the QImage back to a numpy array
+        ndarr = qimage2ndarray.rgb_view(brushStrokeImage)
+        labels = ndarr[:,:,0]
+        labels = labels.swapaxes(0,1)
+        import vigra
+        vigra.impex.writeImage(labels, "%d_vigra.png" % t)
+        
+        #TODO:
         #ndarray = brushStroke.toNDarray()
         #self._dataSink.put([offset+shape(ndarray)]) = ndarray
         
