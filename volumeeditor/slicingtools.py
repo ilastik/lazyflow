@@ -93,13 +93,19 @@ def intersection( lhs, rhs ):
     '''
     assert len(lhs) == len(rhs)
     assert is_pure_slicing(lhs) and is_pure_slicing(rhs)
+    def _min_stop( stop1, stop2 ):
+        if stop1 == None:
+            return stop2
+        return min(stop1, stop2)
     dim = len(lhs)
     inter = [None] * dim 
     for d in xrange(dim):
         start = max(lhs[d].start, rhs[d].start)
-        stop = min(lhs[d].stop, rhs[d].stop)
-        if( (stop - start) <= 0):
-            return None
+        stop = _min_stop(lhs[d].stop, rhs[d].stop)
+            
+        if start and stop:
+            if( (stop - start) <= 0):
+                return None            
         inter[d] = slice(start, stop)
     return tuple(inter)
 
@@ -144,6 +150,11 @@ class SliceProjection( object ):
         return False
 
     def domain( self, through, abscissa_range = slice(None, None), ordinate_range = slice(None,None) ):
+        '''Slicing describing the embedding of the 2d slice in the n-dim domain space.
+
+        Use this slicing to cut out a n-dim subspace containing the desired slice.
+
+        '''
         assert len(through) == len(self.along)
         slicing = range(self.domainDim)
         slicing[self.abscissa] = abscissa_range

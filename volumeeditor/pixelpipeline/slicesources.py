@@ -2,7 +2,7 @@ from PyQt4.QtCore import QObject, pyqtSignal
 from asyncabcs import SourceABC, RequestABC
 import copy
 import numpy as np
-from volumeeditor.slicingtools import SliceProjection, is_pure_slicing
+from volumeeditor.slicingtools import SliceProjection, is_pure_slicing, intersection, sl
 
 projectionAlongTXC = SliceProjection( abscissa = 2, ordinate = 3, along = [0,1,4] )
 projectionAlongTYC = SliceProjection( abscissa = 1, ordinate = 3, along = [0,2,4] )
@@ -40,6 +40,7 @@ class SliceSource( QObject ):
 
         self.sliceProjection = sliceProjection
         self._datasource = datasource
+        self._datasource.isDirty.connect(self._onDatasourceDirty)
         self._through = len(sliceProjection.along) * [0]
 
     def setThrough( self, index, value ):
@@ -53,9 +54,21 @@ class SliceSource( QObject ):
         return SliceRequest(self._datasource.request(slicing), self.sliceProjection)
 
     def setDirty( self, slicing ):
+        assert isinstance(slicing, tuple)
         if not is_pure_slicing(slicing):
             raise Exception('dirty region: slicing is not pure')
         self.isDirty.emit( slicing )
+
+    def _onDatasourceDirty( self, ds_slicing ):
+        # embedding of slice in datasource space
+        embedding = self.sliceProjection.domain(self.through)
+        inter = intersection(embedding, ds_slicing)
+
+        if inter: # there is an intersection
+            dirty_area = [None] * 2
+            dirty_area[0] = inter[self.sliceProjection.abscissa]
+            dirty_area[1] = inter[self.sliceProjection.ordinate]
+            self.setDirty(tuple(dirty_area))            
 assert issubclass(SliceSource, SourceABC)
 
 
@@ -109,21 +122,44 @@ class SyncedSliceSources( QObject ):
 
 import unittest as ut
 class SliceSourceTest( ut.TestCase ):
-    def testRequest( self ):
+    def setUp( self ):
         import numpy as np
         from datasources import ArraySource
-        raw = np.random.randint(0,100,(10,3,3,128,3))
-        a = ArraySource(raw)
-        ss = SliceSource( a, projectionAlongTZC )
-        ss.setThrough(0, 1)
-        ss.setThrough(2, 2)
-        ss.setThrough(1, 127)
+        self.raw = np.random.randint(0,100,(10,3,3,128,3))
+        self.a = ArraySource(self.raw)
+        self.ss = SliceSource( self.a, projectionAlongTZC )
+        
+    def testRequest( self ):
+        self.ss.setThrough(0, 1)
+        self.ss.setThrough(2, 2)
+        self.ss.setThrough(1, 127)
 
-        sl = ss.request((slice(None), slice(None))).wait()
-        self.assertTrue(np.all(sl == raw[1,:,:,127,2]))
+        sl = self.ss.request((slice(None), slice(None))).wait()
+        self.assertTrue(np.all(sl == self.raw[1,:,:,127,2]))
 
-        sl_bounded = ss.request((slice(0, 3), slice(1, None))).wait()
-        self.assertTrue(np.all(sl_bounded == raw[1,0:3,1:,127,2]))
+        sl_bounded = self.ss.request((slice(0, 3), slice(1, None))).wait()
+        self.assertTrue(np.all(sl_bounded == self.raw[1,0:3,1:,127,2]))
+
+    def testDirtynessPropagation( self ):
+        self.ss.setThrough(0, 1)
+        self.ss.setThrough(2, 2)
+        self.ss.setThrough(1, 127)
+
+        self.triggered = False
+        def check1( dirty_area ):
+            self.triggered = True
+            self.assertEqual(dirty_area, sl[:,1:2])
+        self.ss.isDirty.connect(check1)
+        self.a.setDirty(sl[1:2,:,1:2,127:128,2:3])
+        self.ss.isDirty.disconnect(check1)
+        self.assertTrue(self.triggered)
+        del self.triggered
+
+        def check2( dirty_area ):
+            assert False
+        self.ss.isDirty.connect(check2)
+        self.a.setDirty(sl[1:2,:,1:2,127:128,3:4])
+        self.ss.isDirty.disconnect(check2)
 
 if __name__ == '__main__':
     ut.main()
