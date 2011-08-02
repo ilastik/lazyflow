@@ -52,7 +52,14 @@ class ArraySinkSource( ArraySource ):
         self._array[slicing] = array
         self.setDirty(slicing)
 
+class LazyflowSink( object ):
+    def __init__( inputslot ):
+        self._slot = inputslot
 
+    def put( slicing, array ):
+        _op.InputSlots[name].setValue(array)
+
+        inputslot[slicing] = array
 
 #*******************************************************************************
 # L a z y f l o w R e q u e s t                                                *
