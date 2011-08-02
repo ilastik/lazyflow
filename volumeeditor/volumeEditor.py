@@ -126,7 +126,7 @@ class VolumeEditor( QObject ):
         self.brushingModel = BrushingModel()
         #self.crosshairControler = CrosshairControler() 
         self.brushingInterpreter = BrushingInterpreter(self.brushingModel, self.imageViews)
-        self.brushingControler = BrushingControler(self.brushingModel, labelsink)
+        self.brushingControler = BrushingControler(self.brushingModel, self.posModel, labelsink)
         
         self._initConnects()
 

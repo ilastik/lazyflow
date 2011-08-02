@@ -1,5 +1,7 @@
 from PyQt4.QtCore import QObject
 
+from volumeeditor.positionModel import PositionModel
+
 import qimage2ndarray
 
 class CrosshairControler(QObject):
@@ -16,12 +18,13 @@ class CrosshairControler(QObject):
         pass
         
 class BrushingControler(QObject):
-    def __init__(self, brushingModel, dataSink):
+    def __init__(self, brushingModel, positionModel, dataSink):
         QObject.__init__(self, parent=None)
         self._dataSink = dataSink
-        self._brushingModel = brushingModel
         
+        self._brushingModel = brushingModel
         self._brushingModel.brushStrokeAvailable.connect(self._writeIntoSink)
+        self._positionModel = positionModel
         
     def _writeIntoSink(self, brushStrokeOffset, brushStrokeImage):
         print "BrushingControler._writeIntoSink(%r, %r)" % (brushStrokeOffset, brushStrokeImage)
@@ -34,12 +37,21 @@ class BrushingControler(QObject):
         ndarr = qimage2ndarray.rgb_view(brushStrokeImage)
         labels = ndarr[:,:,0]
         labels = labels.swapaxes(0,1)
-        import vigra
-        vigra.impex.writeImage(labels, "%d_vigra.png" % t)
+#        import vigra
+#        vigra.impex.writeImage(labels, "%d_vigra.png" % t)
         
-        #TODO:
-        #ndarray = brushStroke.toNDarray()
-        #self._dataSink.put([offset+shape(ndarray)]) = ndarray
+        activeView = self._positionModel.activeView
+        slicingPos = self._positionModel.slicingPos
+        t, c       = self._positionModel.time, self._positionModel.channel
+        
+        slicing = [slice(brushStrokeOffset.x(), brushStrokeOffset.x()+brushStrokeImage.width()), \
+                     slice(brushStrokeOffset.y(), brushStrokeOffset.y()+brushStrokeImage.height())]
+        slicing.insert(activeView, slicingPos[activeView])
+        
+        slicing = (t,) + tuple(slicing) + (c,)
+        print "_writeIntoSink", slicing, labels.shape
+        
+        self._dataSink.put(slicing, labels)
         
 class BrushingInterpreter(QObject):
     def __init__(self, brushingModel, imageViews):
