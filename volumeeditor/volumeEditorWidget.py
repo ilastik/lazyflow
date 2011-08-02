@@ -271,7 +271,8 @@ if __name__ == "__main__":
     from volumeeditor.pixelpipeline._testing import OpDataProvider
     from volumeeditor._testing.from_lazyflow import OpDataProvider5D, OpDelay
     from volumeeditor.layer import GrayscaleLayer, RGBALayer
-    from layerstack import LayerStackModel, LayerParameters
+    from volumeeditor.layerwidget.layerwidget import LayerWidget
+    from volumeeditor.layerstack import LayerStackModel, LayerParameters
     
     from testing import stripes
     
@@ -315,6 +316,9 @@ if __name__ == "__main__":
     class Test(QObject):
         def __init__(self, useGL, argv):
             QObject.__init__(self)
+            
+            layerstack = None
+            
             if "hugeslab" in argv:
                 N = 2000
                 
@@ -380,7 +384,14 @@ if __name__ == "__main__":
                 layer2 = RGBALayer( red = nucleisrc )
                 layer2.opacity = 0.5
                 source = nucleisrc
-                layers = [layer1, layer2]
+                
+                layerstack = LayerStackModel()
+                l1 = LayerParameters(layer1)
+                l1.name = "Membranes"
+                l2 = LayerParameters(layer2)
+                l2.name = "Nuclei"
+                layerstack.append(l1)
+                layerstack.append(l2)
 
                 print "...done"
             elif "manylayers" in argv:
@@ -426,9 +437,10 @@ if __name__ == "__main__":
                 shape = (1,)+shape+(1,)
                 
             # construct layer stack model
-            layerstack = LayerStackModel()
-            for layer in layers:
-                layerstack.append(LayerParameters(layer))
+            if layerstack is None:
+                layerstack = LayerStackModel()
+                for layer in layers:
+                    layerstack.append(LayerParameters(layer))
 
 
             self.editor = VolumeEditor(shape, layerstack, useGL=useGL)
@@ -449,29 +461,76 @@ if __name__ == "__main__":
 
     app = QApplication(sys.argv)
     
-    if len(sys.argv) < 2:
-        print "Usage: python volumeeditor.py <testmode> (hugeslab, cuboid, 5d, comp, layers, manylayers)"
+    args = ['hugeslab', 'cuboid', '5d', 'comp', 'layers', 'manylayers', 't']
+    
+    if len(sys.argv) < 2 or not any(x in sys.argv for x in args) :
+        print "Usage: python volumeeditor.py <testmode> %r" % args 
         app.quit()
         sys.exit(0)
     
-    if 'cuboid' in sys.argv or 'hugeslab' in sys.argv or '5d' in sys.argv or 'comp' in sys.argv or 'layers' in sys.argv or 'manylayers' in sys.argv:
-        s = QSplitter()
-        t1 = Test(True, sys.argv)
-        t2 = Test(False, sys.argv)
-        s.addWidget(t1.widget)
-        s.addWidget(t2.widget)
+    s = QSplitter()
+    t1 = Test(True, sys.argv)
+    t2 = Test(False, sys.argv)
+    s.addWidget(t1.widget)
+    s.addWidget(t2.widget)
 
-        button=QPushButton("fitToView");
+    fitToViewButton   = QPushButton("fitToView")
+    layerWidgetButton = QPushButton("Layers")
+    layerWidgetButton.setCheckable(True)
     
-        s.addWidget(button)
+    l = QVBoxLayout()
+    w = QWidget()
+    w.setLayout(l)
+    s.addWidget(w)
     
-        def fit():
-            for i in range(3):
-                t1.editor.imageViews[i].changeViewPort(QRectF(0,0,30,30))
-                t2.editor.imageViews[i].changeViewPort(QRectF(0,0,30,30))
-            
-        button.clicked.connect(fit)       
+    l.addWidget(fitToViewButton)
+    l.addWidget(layerWidgetButton)
     
-        s.showMaximized()
+    l.addStretch()
+
+    def fit():
+        for i in range(3):
+            t1.editor.imageViews[i].changeViewPort(QRectF(0,0,30,30))
+            t2.editor.imageViews[i].changeViewPort(QRectF(0,0,30,30))
+    fitToViewButton.toggled.connect(fit)       
+
+    #show rudimentary layer widget
+    model = t2.editor.layerStack
+    ######################################################################
+    view = LayerWidget(model)
+
+    w = QWidget()
+    lh = QHBoxLayout(w)
+    lh.addWidget(view)
+    
+    up   = QPushButton('Up')
+    down = QPushButton('Down')
+    delete = QPushButton('Delete')
+    lv  = QVBoxLayout()
+    lh.addLayout(lv)
+    
+    lv.addWidget(up)
+    lv.addWidget(down)
+    lv.addWidget(delete)
+    
+    w.setGeometry(100, 100, 800,600)
+    
+    up.clicked.connect(model.moveSelectedUp)
+    model.canMoveSelectedUp.connect(up.setEnabled)
+    down.clicked.connect(model.moveSelectedDown)
+    model.canMoveSelectedDown.connect(down.setEnabled)
+    delete.clicked.connect(model.deleteSelected)
+    model.canDeleteSelected.connect(delete.setEnabled)
+    ######################################################################
+    
+    def layers(toggled):
+        if toggled:
+            w.show()
+            w.raise_()
+        else:
+            w.hide()
+    layerWidgetButton.toggled.connect(layers)
+
+    s.showMaximized()
 
     app.exec_()

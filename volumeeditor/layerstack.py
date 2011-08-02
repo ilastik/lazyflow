@@ -105,12 +105,17 @@ class LayerStackModel(QAbstractListModel):
     canMoveSelectedDown = pyqtSignal("bool")
     canDeleteSelected = pyqtSignal("bool")
     
+    orderChanged = pyqtSignal()
+    
     def __init__(self, parent = None):
         QAbstractListModel.__init__(self, parent)
         self.layerStack = []
         self.selectionModel = QItemSelectionModel(self)
         self.selectionModel.selectionChanged.connect(self.onSelectionChanged)
         QTimer.singleShot(0, self.updateGUI)
+        
+    def __repr__(self):
+        return "<LayerStackModel: layerStack='%r'>" % (self.layerStack,)
         
     def updateGUI(self):
         self.canMoveSelectedUp.emit(self.selectedRow()>0)
@@ -239,6 +244,7 @@ class LayerStackModel(QAbstractListModel):
             self.insertRow(newRow)
             self.setData(self.index(newRow), d)
             self.selectionModel.select(self.index(newRow), QItemSelectionModel.Select)
+            self.orderChanged.emit()
             self.updateGUI()
     
     def moveSelectedDown(self):
@@ -252,4 +258,5 @@ class LayerStackModel(QAbstractListModel):
             self.insertRow(newRow)
             self.setData(self.index(newRow), d)
             self.selectionModel.select(self.index(newRow), QItemSelectionModel.Select)
+            self.orderChanged.emit()
             self.updateGUI()

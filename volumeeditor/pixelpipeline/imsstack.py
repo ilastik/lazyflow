@@ -53,3 +53,6 @@ class ImsStack( QObject ):
             ims = entry[1]
             ims.isDirty.connect( self.isDirty )
         self.changed.emit()
+
+    def setDirty( self ):
+        self.changed.emit()
