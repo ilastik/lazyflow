@@ -76,7 +76,6 @@ class VolumeEditor( QObject ):
         self._saveThread = ImageSaveThread(self)
         self._history = HistoryManager(self)
 
-        self._drawManager = DrawManager()
         self.layerStack = layerStackModel
 
         self._pendingLabels = []
