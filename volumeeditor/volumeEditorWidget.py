@@ -34,7 +34,7 @@
 #    1f810747c21380eda916c2c5b7b5d1893f92663e
 #    e65f5bad2cd9fdaefbe7ceaafa0cce0e071b56e4
 
-from PyQt4.QtCore import Qt, pyqtSignal
+from PyQt4.QtCore import Qt, pyqtSignal, QTimer
 from PyQt4.QtGui import QApplication, QWidget, QLabel, QSpinBox, \
                         QShortcut, QKeySequence, QSplitter, \
                         QVBoxLayout, QHBoxLayout, QPushButton, QToolButton
@@ -486,75 +486,76 @@ if __name__ == "__main__":
 
     app = QApplication(sys.argv)
     
-    if len(sys.argv) < 2:
-        print "Usage: python volumeeditor.py <testmode> (hugeslab, cuboid, 5d, comp, layers, manylayers, label)"
+    args = ['hugeslab', 'cuboid', '5d', 'comp', 'layers', 'manylayers', 't', 'label']
+    
+    if len(sys.argv) < 2 or not any(x in sys.argv for x in args) :
+        print "Usage: python volumeeditor.py <testmode> %r" % args 
         app.quit()
         sys.exit(0)
     
-    if 'cuboid' in sys.argv or 'hugeslab' in sys.argv or '5d' in sys.argv or 'comp' in sys.argv or 'layers' in sys.argv or 'manylayers' in sys.argv or 'label' in sys.argv:
-        s = QSplitter()
-        t1 = Test(True, sys.argv)
-        t2 = Test(False, sys.argv)
-        s.addWidget(t1.widget)
-        s.addWidget(t2.widget)
+    s = QSplitter()
+    t1 = Test(True, sys.argv)
+    t2 = Test(False, sys.argv)
+    s.addWidget(t1.widget)
+    s.addWidget(t2.widget)
 
-        fitToViewButton   = QPushButton("fitToView")
-        layerWidgetButton = QPushButton("Layers")
-        layerWidgetButton.setCheckable(True)
-        
-        l = QVBoxLayout()
-        w = QWidget()
-        w.setLayout(l)
-        s.addWidget(w)
-        
-        l.addWidget(fitToViewButton)
-        l.addWidget(layerWidgetButton)
-        
-        l.addStretch()
+    fitToViewButton   = QPushButton("fitToView")
+    layerWidgetButton = QPushButton("Layers")
+    layerWidgetButton.setCheckable(True)
     
-        def fit():
-            for i in range(3):
-                t1.editor.imageViews[i].changeViewPort(QRectF(0,0,30,30))
-                t2.editor.imageViews[i].changeViewPort(QRectF(0,0,30,30))
-        fitToViewButton.toggled.connect(fit)       
+    l = QVBoxLayout()
+    w = QWidget()
+    w.setLayout(l)
+    s.addWidget(w)
     
-        #show rudimentary layer widget
-        model = t2.editor.layerStack
-        ######################################################################
-        view = LayerWidget(model)
+    l.addWidget(fitToViewButton)
+    l.addWidget(layerWidgetButton)
     
-        w = QWidget()
-        lh = QHBoxLayout(w)
-        lh.addWidget(view)
-        
-        up   = QPushButton('Up')
-        down = QPushButton('Down')
-        delete = QPushButton('Delete')
-        lv  = QVBoxLayout()
-        lh.addLayout(lv)
-        
-        lv.addWidget(up)
-        lv.addWidget(down)
-        lv.addWidget(delete)
-        
-        w.setGeometry(100, 100, 800,600)
-        
-        up.clicked.connect(model.moveSelectedUp)
-        model.canMoveSelectedUp.connect(up.setEnabled)
-        down.clicked.connect(model.moveSelectedDown)
-        model.canMoveSelectedDown.connect(down.setEnabled)
-        delete.clicked.connect(model.deleteSelected)
-        model.canDeleteSelected.connect(delete.setEnabled)
-        ######################################################################
-        
-        def layers(toggled):
-            if toggled:
-                w.show()
-                w.raise_()
-            else:
-                w.hide()
-        layerWidgetButton.toggled.connect(layers)
+    l.addStretch()
+
+    def fit():
+        for i in range(3):
+            t1.editor.imageViews[i].changeViewPort(QRectF(0,0,30,30))
+            t2.editor.imageViews[i].changeViewPort(QRectF(0,0,30,30))
+    fitToViewButton.toggled.connect(fit)       
+
+    #show rudimentary layer widget
+    model = t2.editor.layerStack
+    ######################################################################
+    view = LayerWidget(model)
+
+    w = QWidget()
+    lh = QHBoxLayout(w)
+    lh.addWidget(view)
     
-        s.showMaximized()
+    up   = QPushButton('Up')
+    down = QPushButton('Down')
+    delete = QPushButton('Delete')
+    lv  = QVBoxLayout()
+    lh.addLayout(lv)
+    
+    lv.addWidget(up)
+    lv.addWidget(down)
+    lv.addWidget(delete)
+    
+    w.setGeometry(100, 100, 800,600)
+    
+    up.clicked.connect(model.moveSelectedUp)
+    model.canMoveSelectedUp.connect(up.setEnabled)
+    down.clicked.connect(model.moveSelectedDown)
+    model.canMoveSelectedDown.connect(down.setEnabled)
+    delete.clicked.connect(model.deleteSelected)
+    model.canDeleteSelected.connect(delete.setEnabled)
+    ######################################################################
+    
+    def layers(toggled):
+        if toggled:
+            w.show()
+            w.raise_()
+        else:
+            w.hide()
+    layerWidgetButton.toggled.connect(layers)
+
+    s.showMaximized()
 
     app.exec_()
