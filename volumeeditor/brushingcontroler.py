@@ -27,25 +27,16 @@ class BrushingControler(QObject):
         self._positionModel = positionModel
         
     def _writeIntoSink(self, brushStrokeOffset, brushStrokeImage):
-        print "BrushingControler._writeIntoSink(%r, %r)" % (brushStrokeOffset, brushStrokeImage)
-        import time
-        t = time.time()
-        
-        brushStrokeImage.save("%d.png" % t)
-        
-        #this code shows how to convert the QImage back to a numpy array
+        #print "BrushingControler._writeIntoSink(%r, %r)" % (brushStrokeOffset, brushStrokeImage)
         ndarr = qimage2ndarray.rgb_view(brushStrokeImage)
         labels = ndarr[:,:,0]
-        labels = labels.swapaxes(0,1)
-#        import vigra
-#        vigra.impex.writeImage(labels, "%d_vigra.png" % t)
         
         activeView = self._positionModel.activeView
         slicingPos = self._positionModel.slicingPos
         t, c       = self._positionModel.time, self._positionModel.channel
         
-        slicing = [slice(brushStrokeOffset.x(), brushStrokeOffset.x()+brushStrokeImage.width()), \
-                     slice(brushStrokeOffset.y(), brushStrokeOffset.y()+brushStrokeImage.height())]
+        slicing = [slice(brushStrokeOffset.y(), brushStrokeOffset.y()+brushStrokeImage.height()), \
+                     slice(brushStrokeOffset.x(), brushStrokeOffset.x()+brushStrokeImage.width())]
         slicing.insert(activeView, slicingPos[activeView])
         
         slicing = (t,) + tuple(slicing) + (c,)
