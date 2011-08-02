@@ -1,6 +1,6 @@
 from PyQt4.QtCore import QObject, pyqtSignal
 from asyncabcs import RequestABC, SourceABC
-from volumeeditor.slicingtools import is_pure_slicing, slicing2shape, is_bounded
+from volumeeditor.slicingtools import is_pure_slicing, slicing2shape, is_bounded, index2slice
 import numpy as np
 
 #*******************************************************************************
@@ -50,7 +50,8 @@ assert issubclass(ArraySource, SourceABC)
 class ArraySinkSource( ArraySource ):
     def put( self, slicing, array ):
         self._array[slicing] = array
-        self.setDirty(slicing)
+        pure = index2slice(slicing)
+        self.setDirty(pure)
 
 class LazyflowSink( object ):
     def __init__( inputslot ):
