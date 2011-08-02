@@ -48,11 +48,19 @@ assert issubclass(ArraySource, SourceABC)
 #*******************************************************************************
 
 class ArraySinkSource( ArraySource ):
-    def put( self, slicing, array ):
-        self._array[slicing] = np.where(array!=0, array, self._array[slicing])
+    def put( self, slicing, subarray, neutral = 0 ):
+        '''Make an update of the wrapped arrays content.
+
+        Elements with neutral value in the subarray are not written into the
+        wrapped array, but the original values are kept.
+
+        '''
+        self._array[slicing] = np.where(subarray!=neutral, subarray, self._array[slicing])
         pure = index2slice(slicing)
         self.setDirty(pure)
 
+
+'''
 class LazyflowSink( object ):
     def __init__( inputslot ):
         self._slot = inputslot
@@ -61,6 +69,9 @@ class LazyflowSink( object ):
         _op.InputSlots[name].setValue(array)
 
         inputslot[slicing] = array
+'''
+
+
 
 #*******************************************************************************
 # L a z y f l o w R e q u e s t                                                *
