@@ -49,7 +49,7 @@ assert issubclass(ArraySource, SourceABC)
 
 class ArraySinkSource( ArraySource ):
     def put( self, slicing, array ):
-        self._array[slicing] = array
+        self._array[slicing] = np.where(array!=0, array, self._array[slicing])
         pure = index2slice(slicing)
         self.setDirty(pure)
 
