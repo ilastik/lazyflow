@@ -48,7 +48,7 @@ assert issubclass(ArraySource, SourceABC)
 #*******************************************************************************
 
 class ArraySinkSource( ArraySource ):
-    def put( slicing, array ):
+    def put( self, slicing, array ):
         self._array[slicing] = array
         self.setDirty(slicing)
 
@@ -140,13 +140,12 @@ assert issubclass(ConstantSource, SourceABC)
 
 
 
-
+#*******************************************************************************
+#  T e s t                                                                     *
+#*******************************************************************************
 
 import unittest as ut
 from abc import ABCMeta, abstractmethod
-#*******************************************************************************
-# G e n e r i c A r r a y S o u r c e T e s t                                  *
-#*******************************************************************************
 
 class GenericArraySourceTest:
     __metaclass__ = ABCMeta
@@ -186,9 +185,6 @@ class GenericArraySourceTest:
         del self.signal_emitted
         del self.slicing
 
-#*******************************************************************************
-# A r r a y S o u r c e T e s t                                                *
-#*******************************************************************************
 
 class ArraySourceTest( ut.TestCase, GenericArraySourceTest ):
     def setUp( self ):
@@ -211,10 +207,6 @@ if has_lazyflow:
     from lazyflow.graph import Graph
     from _testing import OpDataProvider
 
-#*******************************************************************************
-# L a z y f l o w S o u r c e T e s t                                          *
-#*******************************************************************************
-
     class LazyflowSourceTest( ut.TestCase, GenericArraySourceTest ):
         def setUp( self ):
             import numpy as np
@@ -227,10 +219,6 @@ if has_lazyflow:
             g = Graph()
             op = OpDataProvider(g, self.raw)
             self.source = LazyflowSource(op, "Data")
-
-#*******************************************************************************
-# i f   _ _ n a m e _ _   = =   " _ _ m a i n _ _ "                            *
-#*******************************************************************************
 
 if __name__ == '__main__':
     ut.main()
