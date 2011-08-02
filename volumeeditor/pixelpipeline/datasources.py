@@ -35,6 +35,11 @@ class ArraySource( QObject ):
         self.isDirty.emit( slicing )
 assert issubclass(ArraySource, SourceABC)
 
+class ArraySinkSource( ArraySource ):
+    def put( slicing, array ):
+        self._array[slicing] = array
+        self.setDirty(slicing)
+
 
 
 class LazyflowRequest( object ):

@@ -48,7 +48,7 @@ from view3d.view3d import OverviewScene
 from sliceSelectorHud import SliceSelectorHud
 from positionModel import PositionModel
 from navigationControler import NavigationControler, NavigationInterpreter
-from pixelpipeline.datasources import ArraySource
+from pixelpipeline.datasources import ArraySource, ArraySinkSource
 
 from volumeEditor import VolumeEditor
 
@@ -405,6 +405,28 @@ if __name__ == "__main__":
                 source = nucleisrc
 
                 print "...done"
+            elif "label" in argv:
+                fn = os.path.split(os.path.abspath(__file__))[0] +"/_testing/5d.npy"
+                raw = np.load(fn)
+
+                g = Graph()
+                op1 = OpDataProvider(g, raw[:,:,:,:,0:1]/20)
+                op2 = OpDelay(g, 0.00000)
+                op2.inputs["Input"].connect(op1.outputs["Data"])
+                nucleisrc = LazyflowSource(op2, "Output")
+                op3 = OpDataProvider(g, raw[:,:,:,:,1:2]/10)
+                op4 = OpDelay(g, 0.00000)
+                op4.inputs["Input"].connect(op3.outputs["Data"])
+                membranesrc = LazyflowSource(op4, "Output")
+
+                labelraw = np.zeros(shape=raw.shape, dtype=np.uint8)
+                labelsrc = ArraySinkSource(raw)
+                labellyr = RGBALayer( alpha=labelsrc )
+                #labellyr.opacity = 0.25
+                layers = [RGBALayer( green = membranesrc, red = nucleisrc ), labellyr]
+                source = nucleisrc
+
+
             elif "stripes" in argv:
                 source = ArraySource(stripes(50,35,20))
                 layers = [GrayscaleLayer( source )]
@@ -430,9 +452,12 @@ if __name__ == "__main__":
             for layer in layers:
                 layerstack.append(LayerParameters(layer))
 
+            if "label" in argv:
+                self.editor = VolumeEditor(shape, layerstack, labelsink=labelsrc, useGL=useGL)
+                self.editor.setDrawingEnabled(True)
+            else:
+                self.editor = VolumeEditor(shape, layerstack, useGL=useGL)
 
-            self.editor = VolumeEditor(shape, layerstack, useGL=useGL)
-            self.editor.setDrawingEnabled(True)            
             self.widget = VolumeEditorWidget( self.editor )
             self.widget.show()
             
@@ -450,11 +475,11 @@ if __name__ == "__main__":
     app = QApplication(sys.argv)
     
     if len(sys.argv) < 2:
-        print "Usage: python volumeeditor.py <testmode> (hugeslab, cuboid, 5d, comp, layers, manylayers)"
+        print "Usage: python volumeeditor.py <testmode> (hugeslab, cuboid, 5d, comp, layers, manylayers, label)"
         app.quit()
         sys.exit(0)
     
-    if 'cuboid' in sys.argv or 'hugeslab' in sys.argv or '5d' in sys.argv or 'comp' in sys.argv or 'layers' in sys.argv or 'manylayers' in sys.argv:
+    if 'cuboid' in sys.argv or 'hugeslab' in sys.argv or '5d' in sys.argv or 'comp' in sys.argv or 'layers' in sys.argv or 'manylayers' in sys.argv or 'label' in sys.argv:
         s = QSplitter()
         t1 = Test(True, sys.argv)
         t2 = Test(False, sys.argv)

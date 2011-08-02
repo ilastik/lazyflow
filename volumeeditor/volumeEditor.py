@@ -61,7 +61,7 @@ class VolumeEditor( QObject ):
     zoomInFactor  = 1.1
     zoomOutFactor = 0.9
 
-    def __init__( self, shape, layerStackModel, useGL = False):
+    def __init__( self, shape, layerStackModel, labelsink=None, useGL = False):
         super(VolumeEditor, self).__init__()
         assert(len(shape) == 5)
         self._shape = shape
@@ -124,7 +124,7 @@ class VolumeEditor( QObject ):
         self.brushingModel = BrushingModel()
         #self.crosshairControler = CrosshairControler() 
         self.brushingInterpreter = BrushingInterpreter(self.brushingModel, self.imageViews)
-        self.brushingControler = BrushingControler(self.brushingModel, None)
+        self.brushingControler = BrushingControler(self.brushingModel, labelsink)
         
         self._initConnects()
 
