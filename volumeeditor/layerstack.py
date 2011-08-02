@@ -112,6 +112,9 @@ class LayerStackModel(QAbstractListModel):
         self.selectionModel.selectionChanged.connect(self.onSelectionChanged)
         QTimer.singleShot(0, self.updateGUI)
         
+    def __repr__(self):
+        return "<LayerStackModel: layerStack='%r'>" % (self.layerStack,)
+        
     def updateGUI(self):
         self.canMoveSelectedUp.emit(self.selectedRow()>0)
         self.canMoveSelectedDown.emit(self.selectedRow()<self.rowCount()-1)

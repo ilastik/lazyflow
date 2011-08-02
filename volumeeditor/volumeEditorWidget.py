@@ -271,6 +271,7 @@ if __name__ == "__main__":
     from volumeeditor.pixelpipeline._testing import OpDataProvider
     from volumeeditor._testing.from_lazyflow import OpDataProvider5D, OpDelay
     from volumeeditor.layer import GrayscaleLayer, RGBALayer
+    from volumeeditor.layerwidget.layerwidget import LayerWidget
     from layerstack import LayerStackModel, LayerParameters
     
     from testing import stripes
@@ -461,16 +462,67 @@ if __name__ == "__main__":
         s.addWidget(t1.widget)
         s.addWidget(t2.widget)
 
-        button=QPushButton("fitToView");
-    
-        s.addWidget(button)
+        fitToViewButton   = QPushButton("fitToView")
+        layerWidgetButton = QPushButton("Layers")
+        layerWidgetButton.setCheckable(True)
+        
+        l = QVBoxLayout()
+        w = QWidget()
+        w.setLayout(l)
+        s.addWidget(w)
+        
+        l.addWidget(fitToViewButton)
+        l.addWidget(layerWidgetButton)
+        
+        l.addStretch()
     
         def fit():
             for i in range(3):
                 t1.editor.imageViews[i].changeViewPort(QRectF(0,0,30,30))
                 t2.editor.imageViews[i].changeViewPort(QRectF(0,0,30,30))
-            
-        button.clicked.connect(fit)       
+        fitToViewButton.toggled.connect(fit)       
+    
+        #show rudimentary layer widget
+        model = t2.editor.layerStack
+        print "THE MODEL IS:", model
+        
+        ######################################################################
+        view = LayerWidget(model)
+        view.show()
+        view.updateGeometry()
+    
+        w = QWidget()
+        lh = QHBoxLayout(w)
+        lh.addWidget(view)
+        
+        up   = QPushButton('Up')
+        down = QPushButton('Down')
+        delete = QPushButton('Delete')
+        lv  = QVBoxLayout()
+        lh.addLayout(lv)
+        
+        lv.addWidget(up)
+        lv.addWidget(down)
+        lv.addWidget(delete)
+        
+        w.setGeometry(100, 100, 800,600)
+        w.show()
+        
+        up.clicked.connect(model.moveSelectedUp)
+        model.canMoveSelectedUp.connect(up.setEnabled)
+        down.clicked.connect(model.moveSelectedDown)
+        model.canMoveSelectedDown.connect(down.setEnabled)
+        delete.clicked.connect(model.deleteSelected)
+        model.canDeleteSelected.connect(delete.setEnabled)
+        ######################################################################
+        
+        def layers(toggled):
+            if toggled:
+                w.show()
+                view.updateGUI()
+            else:
+                w.hide()
+        layerWidgetButton.toggled.connect(layers)
     
         s.showMaximized()
 

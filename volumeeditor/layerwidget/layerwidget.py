@@ -1,9 +1,13 @@
-from PyQt4.QtGui import *
-from PyQt4.QtCore import *
+from PyQt4.QtGui import QStyledItemDelegate, QWidget, QListView, QStyle, \
+                        QAbstractItemView, QPainter, QItemSelectionModel, \
+                        QColor
+from PyQt4.QtCore import pyqtSignal, Qt, QTimer, QEvent
+
 from volumeeditor.layerstack import LayerParameters
 
 class LayerParametersDelegate(QStyledItemDelegate):
     def __init__(self, parent = None):
+        print "LayerParametersDelegate.init()"
         QStyledItemDelegate.__init__(self, parent)
         self.currentIndex = -1
     
@@ -57,9 +61,9 @@ class LayerParametersDelegate(QStyledItemDelegate):
             QStyledItemDelegate.setModelData(self, editor, model, index)
 
     def commitAndCloseEditor(self):
-       editor = sender()
-       self.commitData.emit(editor)
-       self.closeEditor.emit(editor)
+        editor = sender()
+        self.commitData.emit(editor)
+        self.closeEditor.emit(editor)
 
 
 
@@ -109,11 +113,11 @@ class LayerParametersEditor(QWidget):
 
 
 
-class ListView(QListView):
-    def __init__(self, listModel, delegate, parent = None):
+class LayerWidget(QListView):
+    def __init__(self, listModel, parent = None):
         QListView.__init__(self, parent)
         self.setModel(listModel)
-        self.setItemDelegate(delegate)
+        self.setItemDelegate(LayerParametersDelegate())
         self.setSelectionModel(listModel.selectionModel)
         #self.setDragDropMode(self.InternalMove)
         self.installEventFilter(self)
@@ -169,6 +173,8 @@ if __name__ == "__main__":
     import sys
     from volumeeditor.layerstack import LayerStackModel, LayerParameters
 
+    from PyQt4.QtGui import QApplication, QPushButton, QHBoxLayout, QVBoxLayout
+
     app = QApplication(sys.argv)
             
     model = LayerStackModel()
@@ -199,7 +205,7 @@ if __name__ == "__main__":
     o5.opacity = 0.65
     model.append(o5)
 
-    view = ListView(model, LayerParametersDelegate())
+    view = LayerWidget(model)
     view.show()
     view.updateGeometry()
 
