@@ -84,6 +84,19 @@ def slicing2shape( slicing ):
         shape.append(sl.stop - sl.start)
     return tuple(shape)
 
+def index2slice( slicing ):
+    '''Convert integer indices to proper slice instances.
+
+    For example: (2, slice(4,8)) => (slice(2,3), slice(4,8))
+
+    '''
+    pure_sl = list(slicing)
+    for i in xrange(len(pure_sl)):
+        if isinstance(pure_sl[i], int):
+            index = pure_sl[i]
+            pure_sl[i] = slice(index, index + 1)
+    return tuple(pure_sl)
+
 def intersection( lhs, rhs ):
     '''Calculate intersection between two slicings of same dimensions.
 
@@ -187,6 +200,10 @@ class toolsTest( ut.TestCase ):
         self.assertEqual(i, sl[5:8, 3:7, 4:5])
         ni = intersection(sl[5:8, 3:7, 2:9],sl[0:50, 0:50,9:10])
         self.assertEqual(ni, None)
+
+    def testIndex2slice( self ):
+        pure = index2slice(sl[3:4,5,:,10])
+        self.assertEqual(pure, sl[3:4,5:6,:,10:11])
 
 class SliceProjectionTest( ut.TestCase ):
     def testArgumentCheck( self ):
