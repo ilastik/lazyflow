@@ -311,6 +311,27 @@ class ImageView2D(QGraphicsView):
                 self._tempErase = True
             mousePos = self.mapToScene(event.pos())
             self.beginDrawing(mousePos)
+    def mouseMoveEvent(self,event):
+        if self._dragMode == True:
+            #the mouse was moved because the user wants to change
+            #the viewport
+            self._deltaPan = QPointF(event.pos() - self._lastPanPoint)
+            self._panning()
+            self._lastPanPoint = event.pos()
+            return
+        if self._ticker.isActive():
+            #the view is still scrolling
+            #do nothing until it comes to a complete stop
+            return
+        
+        self.mousePos = mousePos = self.mapToScene(event.pos())
+        x = self.x = mousePos.x()
+        y = self.y = mousePos.y()
+
+        self.mouseMoved.emit(x,y)
+
+        if self._isDrawing:
+            self.drawing.emit(mousePos)
 
     def mouseReleaseEvent(self, event):
         if event.button() == Qt.MidButton:
@@ -382,28 +403,6 @@ class ImageView2D(QGraphicsView):
             self._deltaPan = self._deaccelerate(self._deltaPan)
             self._panning()
     
-    def mouseMoveEvent(self,event):
-        if self._dragMode == True:
-            #the mouse was moved because the user wants to change
-            #the viewport
-            self._deltaPan = QPointF(event.pos() - self._lastPanPoint)
-            self._panning()
-            self._lastPanPoint = event.pos()
-            return
-        if self._ticker.isActive():
-            #the view is still scrolling
-            #do nothing until it comes to a complete stop
-            return
-        
-        self.mousePos = mousePos = self.mapToScene(event.pos())
-        x = self.x = mousePos.x()
-        y = self.y = mousePos.y()
-
-        self.mouseMoved.emit(x,y)
-
-        if self._isDrawing:
-            self.drawing.emit(mousePos)
-
     def mouseDoubleClickEvent(self, event):
         mousePos = self.mapToScene(event.pos())
         self.mouseDoubleClicked.emit(mousePos.x(), mousePos.y())
