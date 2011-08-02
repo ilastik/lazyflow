@@ -8,6 +8,10 @@ projectionAlongTXC = SliceProjection( abscissa = 2, ordinate = 3, along = [0,1,4
 projectionAlongTYC = SliceProjection( abscissa = 1, ordinate = 3, along = [0,2,4] )
 projectionAlongTZC = SliceProjection( abscissa = 1, ordinate = 2, along = [0,3,4] )
 
+#*******************************************************************************
+# S l i c e R e q u e s t                                                      *
+#*******************************************************************************
+
 class SliceRequest( object ):
     def __init__( self, domainArrayRequest, sliceProjection ):
         self._ar = domainArrayRequest
@@ -22,6 +26,10 @@ class SliceRequest( object ):
     def _onNotify( self, result, package ):
         callback(self._sp(result), **kwargs)
 assert issubclass(SliceRequest, RequestABC)
+
+#*******************************************************************************
+# S l i c e S o u r c e                                                        *
+#*******************************************************************************
 
 class SliceSource( QObject ):
     isDirty = pyqtSignal( object )
@@ -73,6 +81,10 @@ assert issubclass(SliceSource, SourceABC)
 
 
 
+#*******************************************************************************
+# S y n c e d S l i c e S o u r c e s                                          *
+#*******************************************************************************
+
 class SyncedSliceSources( QObject ):
     isDirty = pyqtSignal( object )
 
@@ -121,6 +133,10 @@ class SyncedSliceSources( QObject ):
 
 
 import unittest as ut
+#*******************************************************************************
+# S l i c e S o u r c e T e s t                                                *
+#*******************************************************************************
+
 class SliceSourceTest( ut.TestCase ):
     def setUp( self ):
         import numpy as np
@@ -160,6 +176,10 @@ class SliceSourceTest( ut.TestCase ):
         self.ss.isDirty.connect(check2)
         self.a.setDirty(sl[1:2,:,1:2,127:128,3:4])
         self.ss.isDirty.disconnect(check2)
+
+#*******************************************************************************
+# i f   _ _ n a m e _ _   = =   " _ _ m a i n _ _ "                            *
+#*******************************************************************************
 
 if __name__ == '__main__':
     ut.main()

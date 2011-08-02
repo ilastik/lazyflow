@@ -2,6 +2,10 @@ from slicesources import SliceSource, SyncedSliceSources
 from imagesourcefactories import createImageSource
 from imsstack import ImsStack
 
+#*******************************************************************************
+# I m a g e P u m p                                                            *
+#*******************************************************************************
+
 class ImagePump( object ):
     @property
     def syncedSliceSources( self ):

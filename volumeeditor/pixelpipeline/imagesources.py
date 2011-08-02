@@ -5,8 +5,12 @@ from asyncabcs import SourceABC, RequestABC
 from volumeeditor.slicingtools import is_bounded, slicing2rect, rect2slicing, slicing2shape, is_pure_slicing
 import numpy as np
 
+#*******************************************************************************
+# I m a g e S o u r c e                                                        *
+#*******************************************************************************
+
 class ImageSource( QObject ):
-    '''Partial implemented base class for image sources#
+    '''Partial implemented base class for image sources
 
     Signals:
     isDirty -- a rectangular region has changed; transmits
@@ -38,6 +42,10 @@ assert issubclass(ImageSource, SourceABC)
 
 
 
+#*******************************************************************************
+# G r a y s c a l e I m a g e R e q u e s t                                    *
+#*******************************************************************************
+
 class GrayscaleImageRequest( object ):
     def __init__( self, arrayrequest ):
         self._arrayreq = arrayrequest
@@ -57,6 +65,10 @@ class GrayscaleImageRequest( object ):
         callback( img, **kwargs )
 assert issubclass(GrayscaleImageRequest, RequestABC)
 
+#*******************************************************************************
+# G r a y s c a l e I m a g e S o u r c e                                      *
+#*******************************************************************************
+
 class GrayscaleImageSource( ImageSource ):
     def __init__( self, arraySource2D ):
         assert isinstance(arraySource2D, SourceABC), 'wrong type: %s' % str(type(arraySource2D))
@@ -72,6 +84,10 @@ class GrayscaleImageSource( ImageSource ):
 assert issubclass(GrayscaleImageSource, SourceABC)
 
 
+
+#*******************************************************************************
+# R G B A I m a g e R e q u e s t                                              *
+#*******************************************************************************
 
 class RGBAImageRequest( object ):
     def __init__( self, r, g, b, a, shape ):
@@ -100,6 +116,10 @@ class RGBAImageRequest( object ):
             kwargs = package[2]
             callback( img, **kwargs )
 assert issubclass(RGBAImageRequest, RequestABC)
+
+#*******************************************************************************
+# R G B A I m a g e S o u r c e                                                *
+#*******************************************************************************
 
 class RGBAImageSource( ImageSource ):
     def __init__( self, red, green, blue, alpha ):
@@ -141,6 +161,10 @@ assert issubclass(RGBAImageSource, SourceABC)
 
 
 import unittest as ut
+#*******************************************************************************
+# G r a y s c a l e I m a g e S o u r c e T e s t                              *
+#*******************************************************************************
+
 class GrayscaleImageSourceTest( ut.TestCase ):
     def setUp( self ):
         from scipy.misc import lena
@@ -178,6 +202,10 @@ class GrayscaleImageSourceTest( ut.TestCase ):
         self.ims.isDirty.disconnect( checkDirtyRect )
 
 
+
+#*******************************************************************************
+# R G B A I m a g e S o u r c e T e s t                                        *
+#*******************************************************************************
 
 class RGBAImageSourceTest( ut.TestCase ):
     def setUp( self ):
@@ -222,6 +250,10 @@ class RGBAImageSourceTest( ut.TestCase ):
     def testNone( self ):
         img = self.ims_none.request(QRect(0,0,129,104)).wait()
         #img.save('none.tif')
+
+#*******************************************************************************
+# i f   _ _ n a m e _ _   = =   " _ _ m a i n _ _ "                            *
+#*******************************************************************************
 
 if __name__ == '__main__':
     ut.main()

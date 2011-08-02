@@ -8,6 +8,10 @@ if has_lazyflow:
     from lazyflow.graph import Graph, Operator, InputSlot, OutputSlot
     from lazyflow import operators
 
+#*******************************************************************************
+# O p D e l a y                                                                *
+#*******************************************************************************
+
     class OpDelay(operators.OpArrayPiper):
         def __init__( self, g, delay_factor = 0.000001 ):
             super(OpDelay, self).__init__(g)
@@ -19,6 +23,10 @@ if has_lazyflow:
             t = self._delay_factor*resultArea.nbytes
             print "Delay: " + str(t) + " secs."
             time.sleep(t)    
+
+#*******************************************************************************
+# O p D a t a P r o v i d e r                                                  *
+#*******************************************************************************
 
     class OpDataProvider(Operator):
         name = "Data Provider"

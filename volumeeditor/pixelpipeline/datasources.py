@@ -3,6 +3,10 @@ from asyncabcs import RequestABC, SourceABC
 from volumeeditor.slicingtools import is_pure_slicing, slicing2shape, is_bounded
 import numpy as np
 
+#*******************************************************************************
+# A r r a y R e q u e s t                                                      *
+#*******************************************************************************
+
 class ArrayRequest( object ):
     def __init__( self, result ):
         self._result = result
@@ -14,6 +18,10 @@ class ArrayRequest( object ):
     def notify( self, callback, **kwargs ):
         callback(self._result, **kwargs)
 assert issubclass(ArrayRequest, RequestABC)
+
+#*******************************************************************************
+# A r r a y S o u r c e                                                        *
+#*******************************************************************************
 
 class ArraySource( QObject ):
     isDirty = pyqtSignal( object )
@@ -35,12 +43,20 @@ class ArraySource( QObject ):
         self.isDirty.emit( slicing )
 assert issubclass(ArraySource, SourceABC)
 
+#*******************************************************************************
+# A r r a y S i n k S o u r c e                                                *
+#*******************************************************************************
+
 class ArraySinkSource( ArraySource ):
     def put( slicing, array ):
         self._array[slicing] = array
         self.setDirty(slicing)
 
 
+
+#*******************************************************************************
+# L a z y f l o w R e q u e s t                                                *
+#*******************************************************************************
 
 class LazyflowRequest( object ):
     def __init__(self, lazyflow_request ):
@@ -52,6 +68,10 @@ class LazyflowRequest( object ):
     def notify( self, callback, **kwargs ):
         self._lazyflow_request.notify( callback, **kwargs)
 assert issubclass(LazyflowRequest, RequestABC)
+
+#*******************************************************************************
+# L a z y f l o w S o u r c e                                                  *
+#*******************************************************************************
 
 class LazyflowSource( QObject ):
     isDirty = pyqtSignal( object )
@@ -75,6 +95,10 @@ assert issubclass(LazyflowSource, SourceABC)
 
 
 
+#*******************************************************************************
+# C o n s t a n t R e q u e s t                                                *
+#*******************************************************************************
+
 class ConstantRequest( object ):
     def __init__( self, result ):
         self._result = result
@@ -86,6 +110,10 @@ class ConstantRequest( object ):
     def notify( self, callback, **kwargs ):
         callback(self._result, **kwargs)
 assert issubclass(ConstantRequest, RequestABC)
+
+#*******************************************************************************
+# C o n s t a n t S o u r c e                                                  *
+#*******************************************************************************
 
 class ConstantSource( QObject ):
     isDirty = pyqtSignal( object )
@@ -116,6 +144,10 @@ assert issubclass(ConstantSource, SourceABC)
 
 import unittest as ut
 from abc import ABCMeta, abstractmethod
+#*******************************************************************************
+# G e n e r i c A r r a y S o u r c e T e s t                                  *
+#*******************************************************************************
+
 class GenericArraySourceTest:
     __metaclass__ = ABCMeta
 
@@ -154,6 +186,10 @@ class GenericArraySourceTest:
         del self.signal_emitted
         del self.slicing
 
+#*******************************************************************************
+# A r r a y S o u r c e T e s t                                                *
+#*******************************************************************************
+
 class ArraySourceTest( ut.TestCase, GenericArraySourceTest ):
     def setUp( self ):
         import numpy as np
@@ -175,6 +211,10 @@ if has_lazyflow:
     from lazyflow.graph import Graph
     from _testing import OpDataProvider
 
+#*******************************************************************************
+# L a z y f l o w S o u r c e T e s t                                          *
+#*******************************************************************************
+
     class LazyflowSourceTest( ut.TestCase, GenericArraySourceTest ):
         def setUp( self ):
             import numpy as np
@@ -187,6 +227,10 @@ if has_lazyflow:
             g = Graph()
             op = OpDataProvider(g, self.raw)
             self.source = LazyflowSource(op, "Data")
+
+#*******************************************************************************
+# i f   _ _ n a m e _ _   = =   " _ _ m a i n _ _ "                            *
+#*******************************************************************************
 
 if __name__ == '__main__':
     ut.main()

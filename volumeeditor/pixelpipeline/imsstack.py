@@ -1,4 +1,8 @@
 from PyQt4.QtCore import QObject, pyqtSignal, QRect
+#*******************************************************************************
+# I m s S t a c k                                                              *
+#*******************************************************************************
+
 class ImsStack( QObject ):
     ''' Stack of image sources with associated opacity values.
 
@@ -55,4 +59,5 @@ class ImsStack( QObject ):
         self.changed.emit()
 
     def setDirty( self ):
+        print "ImsStack.setDirty()"
         self.changed.emit()
