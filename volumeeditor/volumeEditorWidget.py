@@ -272,7 +272,7 @@ if __name__ == "__main__":
     from volumeeditor._testing.from_lazyflow import OpDataProvider5D, OpDelay
     from volumeeditor.layer import GrayscaleLayer, RGBALayer
     from volumeeditor.layerwidget.layerwidget import LayerWidget
-    from layerstack import LayerStackModel, LayerParameters
+    from volumeeditor.layerstack import LayerStackModel, LayerParameters
     
     from testing import stripes
     
@@ -316,6 +316,9 @@ if __name__ == "__main__":
     class Test(QObject):
         def __init__(self, useGL, argv):
             QObject.__init__(self)
+            
+            layerstack = None
+            
             if "hugeslab" in argv:
                 N = 2000
                 
@@ -381,7 +384,14 @@ if __name__ == "__main__":
                 layer2 = RGBALayer( red = nucleisrc )
                 layer2.opacity = 0.5
                 source = nucleisrc
-                layers = [layer1, layer2]
+                
+                layerstack = LayerStackModel()
+                l1 = LayerParameters(layer1)
+                l1.name = "Membranes"
+                l2 = LayerParameters(layer2)
+                l2.name = "Nuclei"
+                layerstack.append(l1)
+                layerstack.append(l2)
 
                 print "...done"
             elif "manylayers" in argv:
@@ -427,9 +437,10 @@ if __name__ == "__main__":
                 shape = (1,)+shape+(1,)
                 
             # construct layer stack model
-            layerstack = LayerStackModel()
-            for layer in layers:
-                layerstack.append(LayerParameters(layer))
+            if layerstack is None:
+                layerstack = LayerStackModel()
+                for layer in layers:
+                    layerstack.append(LayerParameters(layer))
 
 
             self.editor = VolumeEditor(shape, layerstack, useGL=useGL)
@@ -484,12 +495,8 @@ if __name__ == "__main__":
     
         #show rudimentary layer widget
         model = t2.editor.layerStack
-        print "THE MODEL IS:", model
-        
         ######################################################################
         view = LayerWidget(model)
-        view.show()
-        view.updateGeometry()
     
         w = QWidget()
         lh = QHBoxLayout(w)
@@ -506,7 +513,6 @@ if __name__ == "__main__":
         lv.addWidget(delete)
         
         w.setGeometry(100, 100, 800,600)
-        w.show()
         
         up.clicked.connect(model.moveSelectedUp)
         model.canMoveSelectedUp.connect(up.setEnabled)
@@ -519,7 +525,7 @@ if __name__ == "__main__":
         def layers(toggled):
             if toggled:
                 w.show()
-                view.updateGUI()
+                w.raise_()
             else:
                 w.hide()
         layerWidgetButton.toggled.connect(layers)

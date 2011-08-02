@@ -1,13 +1,12 @@
 from PyQt4.QtGui import QStyledItemDelegate, QWidget, QListView, QStyle, \
                         QAbstractItemView, QPainter, QItemSelectionModel, \
-                        QColor
+                        QColor, QMenu, QAction
 from PyQt4.QtCore import pyqtSignal, Qt, QTimer, QEvent
 
 from volumeeditor.layerstack import LayerParameters
 
 class LayerParametersDelegate(QStyledItemDelegate):
     def __init__(self, parent = None):
-        print "LayerParametersDelegate.init()"
         QStyledItemDelegate.__init__(self, parent)
         self.currentIndex = -1
     
