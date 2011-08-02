@@ -29,11 +29,6 @@ class ImagePump( object ):
         self._syncedSliceSources = SyncedSliceSources( slicesrcs )
         self._imsStack = ImsStack( stack_entries )
         
-        def dirty():
-            print "ImagePump: setting image stack dirty"
-            self._imsStack.setDirty()
-        self._layerModel.orderChanged.connect(dirty)
-
     def _parseLayer( self, layer ):
         def sliceSrcOrNone( datasrc ):
             if datasrc:

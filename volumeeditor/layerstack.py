@@ -6,7 +6,7 @@ from os import path
 import resources.icons
 _icondir = path.dirname(resources.icons.__file__)
 
-class LayerParameters( object ):
+class LayerStackEntry( object ):
     @property
     def opacity( self ):
         return self.layer.opacity
@@ -160,7 +160,7 @@ class LayerStackModel(QAbstractListModel):
         endRow   = min(row+count-1, len(self.layerStack))
         self.beginInsertRows(parent, beginRow, endRow) 
         while(beginRow <= endRow):
-            self.layerStack.insert(row, LayerParameters())
+            self.layerStack.insert(row, LayerStackEntry())
             beginRow += 1
         self.endInsertRows()
         assert self.rowCount() == oldRowCount+1
@@ -205,10 +205,7 @@ class LayerStackModel(QAbstractListModel):
         return None
     
     def setData(self, index, value, role = Qt.EditRole):
-        overlayParameters = value
-        if not isinstance(value, LayerParameters):
-            overlayParameters = value.toPyObject()
-        
+        assert isinstance(value, LayerStackEntry)        
         self.layerStack[index.row()] = value
         self.dataChanged.emit(index, index)
         return True

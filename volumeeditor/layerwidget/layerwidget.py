@@ -3,9 +3,9 @@ from PyQt4.QtGui import QStyledItemDelegate, QWidget, QListView, QStyle, \
                         QColor, QMenu, QAction
 from PyQt4.QtCore import pyqtSignal, Qt, QTimer, QEvent
 
-from volumeeditor.layerstack import LayerParameters
+from volumeeditor.layerstack import LayerStackEntry
 
-class LayerParametersDelegate(QStyledItemDelegate):
+class LayerStackEntryDelegate(QStyledItemDelegate):
     def __init__(self, parent = None):
         QStyledItemDelegate.__init__(self, parent)
         self.currentIndex = -1
@@ -21,41 +21,41 @@ class LayerParametersDelegate(QStyledItemDelegate):
                 self.currentIndex = modelIndex
                 model.wantsUpdate()
         
-        layerParameters = index.data().toPyObject()
-        if isinstance(layerParameters, LayerParameters):
+        layerStackEntry = index.data().toPyObject()
+        if isinstance(layerStackEntry, LayerStackEntry):
             if option.state & QStyle.State_Selected:
                 painter.fillRect(option.rect, QColor(0,255,0,10))
-                layerParameters.paint(painter, option.rect, option.palette, 'Expanded')
+                layerStackEntry.paint(painter, option.rect, option.palette, 'Expanded')
             else:
-                layerParameters.paint(painter, option.rect, option.palette, 'ReadOnly')
+                layerStackEntry.paint(painter, option.rect, option.palette, 'ReadOnly')
         else:
             QStyledItemDelegate.paint(self, painter, option, index)
 
     def sizeHint(self, option, index):
-        layerParameters = index.data().toPyObject()
-        if isinstance(layerParameters, LayerParameters):
-            return layerParameters.sizeHint()
+        layerStackEntry = index.data().toPyObject()
+        if isinstance(layerStackEntry, LayerStackEntry):
+            return layerStackEntry.sizeHint()
         else:
             return QStyledItemDelegate.sizeHint(self, option, index)
     
     def createEditor(self, parent, option, index):
-        layerParameters = index.data().toPyObject()
-        if isinstance(layerParameters, LayerParameters):
-            return LayerParametersEditor(parent)
+        layerStackEntry = index.data().toPyObject()
+        if isinstance(layerStackEntry, LayerStackEntry):
+            return LayerStackEntryEditor(parent)
         else:
             QStyledItemDelegate.createEditor(self, parent, option, index)
         
     def setEditorData(self, editor, index):
-        layerParameters = index.data().toPyObject()
-        if isinstance(layerParameters, LayerParameters):
-            editor.layerParameters = layerParameters
+        layerStackEntry = index.data().toPyObject()
+        if isinstance(layerStackEntry, LayerStackEntry):
+            editor.layerStackEntry = layerStackEntry
         else:
             QStyledItemDelegate.setEditorData(self, editor, index)
 
     def setModelData(self, editor, model, index):
-        layerParameters = index.data().toPyObject()
-        if isinstance(layerParameters, LayerParameters):
-            model.setData(index, editor.layerParameters)
+        layerStackEntry = index.data().toPyObject()
+        if isinstance(layerStackEntry, LayerStackEntry):
+            model.setData(index, editor.layerStackEntry)
         else:
             QStyledItemDelegate.setModelData(self, editor, model, index)
 
@@ -66,7 +66,7 @@ class LayerParametersDelegate(QStyledItemDelegate):
 
 
 
-class LayerParametersEditor(QWidget):
+class LayerStackEntryEditor(QWidget):
     editingFinished = pyqtSignal()
     
     def __init__(self, parent = None):
@@ -83,13 +83,13 @@ class LayerParametersEditor(QWidget):
         
     def paintEvent(self, e):
         painter = QPainter(self)
-        self.layerParameters.paint(painter, self.rect(), self.palette(), 'Editable')
+        self.layerStackEntry.paint(painter, self.rect(), self.palette(), 'Editable')
         
     def mouseMoveEvent(self, event):
         if self.lmbDown:
-            opacity = self.layerParameters.percentForPosition(event.x(), event.y())
+            opacity = self.layerStackEntry.percentForPosition(event.x(), event.y())
             if opacity >= 0:
-                self.layerParameters.opacity = opacity
+                self.layerStackEntry.opacity = opacity
                 self.update()
 
     def mousePressEvent(self, event):
@@ -98,13 +98,13 @@ class LayerParametersEditor(QWidget):
         
         self.lmbDown = True
         
-        if self.layerParameters.overEyeIcon(event.x(), event.y()):
-            self.layerParameters.visible = not self.layerParameters.visible
+        if self.layerStackEntry.overEyeIcon(event.x(), event.y()):
+            self.layerStackEntry.visible = not self.layerStackEntry.visible
             self.update()
         
-        opacity = self.layerParameters.percentForPosition(event.x(), event.y())
+        opacity = self.layerStackEntry.percentForPosition(event.x(), event.y())
         if opacity >= 0:
-            self.layerParameters.opacity = opacity
+            self.layerStackEntry.opacity = opacity
             self.update()
 
     def mouseReleaseEvent(self, event):
@@ -116,7 +116,7 @@ class LayerWidget(QListView):
     def __init__(self, listModel, parent = None):
         QListView.__init__(self, parent)
         self.setModel(listModel)
-        self.setItemDelegate(LayerParametersDelegate())
+        self.setItemDelegate(LayerStackEntryDelegate())
         self.setSelectionModel(listModel.selectionModel)
         #self.setDragDropMode(self.InternalMove)
         self.installEventFilter(self)
@@ -170,7 +170,7 @@ if __name__ == "__main__":
     signal.signal(signal.SIGINT, signal.SIG_DFL)
 
     import sys
-    from volumeeditor.layerstack import LayerStackModel, LayerParameters
+    from volumeeditor.layerstack import LayerStackModel, LayerStackEntry
 
     from PyQt4.QtGui import QApplication, QPushButton, QHBoxLayout, QVBoxLayout
 
@@ -178,28 +178,28 @@ if __name__ == "__main__":
             
     model = LayerStackModel()
     
-    o1 = LayerParameters()
+    o1 = LayerStackEntry()
     o1.name = "Fancy Layer"
     o1.opacity = 0.5
     model.append(o1)
     
-    o2 = LayerParameters()
+    o2 = LayerStackEntry()
     o2.name = "Some other Layer"
     o2.opacity = 0.25
     model.append(o2)
     
-    o3 = LayerParameters()
+    o3 = LayerStackEntry()
     o3.name = "Invisible Layer"
     o3.opacity = 0.15
     o3.visible = False
     model.append(o3)
     
-    o4 = LayerParameters()
+    o4 = LayerStackEntry()
     o4.name = "Fancy Layer II"
     o4.opacity = 0.95
     model.append(o4)
     
-    o5 = LayerParameters()
+    o5 = LayerStackEntry()
     o5.name = "Fancy Layer III"
     o5.opacity = 0.65
     model.append(o5)

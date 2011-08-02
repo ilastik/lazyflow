@@ -272,7 +272,7 @@ if __name__ == "__main__":
     from volumeeditor._testing.from_lazyflow import OpDataProvider5D, OpDelay
     from volumeeditor.layer import GrayscaleLayer, RGBALayer
     from volumeeditor.layerwidget.layerwidget import LayerWidget
-    from volumeeditor.layerstack import LayerStackModel, LayerParameters
+    from volumeeditor.layerstack import LayerStackModel, LayerStackEntry
     
     from testing import stripes
     
@@ -386,9 +386,9 @@ if __name__ == "__main__":
                 source = nucleisrc
                 
                 layerstack = LayerStackModel()
-                l1 = LayerParameters(layer1)
+                l1 = LayerStackEntry(layer1)
                 l1.name = "Membranes"
-                l2 = LayerParameters(layer2)
+                l2 = LayerStackEntry(layer2)
                 l2.name = "Nuclei"
                 layerstack.append(l1)
                 layerstack.append(l2)
@@ -464,7 +464,7 @@ if __name__ == "__main__":
             if layerstack is None:
                 layerstack = LayerStackModel()
                 for layer in layers:
-                    layerstack.append(LayerParameters(layer))
+                    layerstack.append(LayerStackEntry(layer))
 
             if "label" in argv:
                 self.editor = VolumeEditor(shape, layerstack, labelsink=labelsrc, useGL=useGL)
