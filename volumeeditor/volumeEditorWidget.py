@@ -431,9 +431,11 @@ if __name__ == "__main__":
                 membranesrc = LazyflowSource(op4, "Output")
 
                 labelraw = np.zeros(shape=raw.shape, dtype=np.uint8)
-                labelsrc = ArraySinkSource(raw)
-                labellyr = RGBALayer( alpha=labelsrc )
-                #labellyr.opacity = 0.25
+                tint = np.zeros(shape=raw.shape, dtype=np.uint8)
+                tint[:] = 255
+                labelsrc = ArraySinkSource(labelraw)
+                tintsrc = ArraySource(tint)
+                labellyr = RGBALayer( blue=tintsrc, alpha=labelsrc )
                 layers = [RGBALayer( green = membranesrc, red = nucleisrc ), labellyr]
                 source = nucleisrc
 
