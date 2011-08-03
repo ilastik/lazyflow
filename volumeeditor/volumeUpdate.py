@@ -34,6 +34,10 @@ import numpy
 #*******************************************************************************
 
 class VolumeUpdate():
+    """
+    Legacy code.
+    """
+    
     def __init__(self, data, offsets, sizes, erasing):
         self.offsets = offsets
         self._data = data

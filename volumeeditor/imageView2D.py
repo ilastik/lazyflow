@@ -47,6 +47,14 @@ from interactionLogger import InteractionLogger
 #*******************************************************************************
 
 class ImageView2D(QGraphicsView):
+    """
+    Shows a ImageScene2D to the user and allows for interactive
+    scrolling, panning, zooming etc. It intercepts all meaningful
+    events on the widget for further interpretation (e.g. the view
+    does not know which slicing axis it represents in the 3D slice
+    viewer setting).
+    """
+    
     #notifies about the relative change in the slicing position
     #that is requested
     changeSliceDelta   = pyqtSignal(int)
@@ -66,6 +74,11 @@ class ImageView2D(QGraphicsView):
     
     @property
     def shape(self):
+        """
+        (width, height) of the scene.
+        Specifying the shape is necessary to allow for correct
+        scrollbars
+        """
         return self._shape
     @shape.setter
     def shape(self, s):
@@ -74,6 +87,7 @@ class ImageView2D(QGraphicsView):
         self._crossHairCursor.shape         = s
         self._sliceIntersectionMarker.shape = s
     
+    #FIXME unused?
     @property
     def name(self):
         return self._name
@@ -86,10 +100,11 @@ class ImageView2D(QGraphicsView):
         return self._hud
     @hud.setter
     def hud(self, hud):
-        '''Sets up a heads up display at the upper left corner of the view
+        """
+        Sets up a heads up display at the upper left corner of the view
         
         hud -- a QWidget
-        '''
+        """
         
         self._hud = hud
         self.setLayout(QVBoxLayout())
@@ -106,6 +121,13 @@ class ImageView2D(QGraphicsView):
         self._drawingEnabled = enable 
 
     def __init__(self, imagescene2d, useGL=False):
+        """
+        Constructs a view upon a ImageScene2D
+        
+        imagescene2d -- a ImgeScene2D instance
+        useGL        -- wether to enable OpenGL rendering
+        """
+        
         QGraphicsView.__init__(self)
         self._useGL = useGL
         self.setScene(imagescene2d)
@@ -201,8 +223,9 @@ class ImageView2D(QGraphicsView):
         self._tempErase = False
         
     def swapAxes(self):          
-        '''Displays this image as if the x and y axes were swapped.
-        '''
+        """
+        Displays this image as if the x and y axes were swapped.
+        """
         #FIXME: This is needed for the current arrangements of the three
         #       3D slice views. Can this be made more elegant
         self.rotate(90.0)
@@ -215,9 +238,14 @@ class ImageView2D(QGraphicsView):
         del self._ticker
 
     def viewportRect(self):
+        """
+        Return a QRectF giving the part of the scene currently displayed in this
+        widget's viewport in the scene's coordinates
+        """
         return self.mapToScene(self.viewport().geometry()).boundingRect()
 
     def saveSlice(self, filename):
+        """Legacy code."""
         #print "Saving in ", filename, "slice #", self.sliceNumber, "axis", self._axis
         result_image = QImage(self.scene().image.size(), self.scene().image.format())
         p = QPainter(result_image)
@@ -311,6 +339,7 @@ class ImageView2D(QGraphicsView):
                 self._tempErase = True
             mousePos = self.mapToScene(event.pos())
             self.beginDrawing(mousePos)
+            
     def mouseMoveEvent(self,event):
         if self._dragMode == True:
             #the mouse was moved because the user wants to change

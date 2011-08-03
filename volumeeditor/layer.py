@@ -1,8 +1,14 @@
 from PyQt4.QtCore import QObject, pyqtSignal
 
-class Layer( QObject ):
-    '''Represents the visual properties and the associated raw data of a n-dimensional layer.
+#*******************************************************************************
+# L a y e r                                                                    *
+#*******************************************************************************
 
+class Layer( QObject ):
+    '''
+    Entries of a LayerStackModel,
+    which is in turn displayed to the user via a LayerStackWidget
+    
     properties:
     datasources -- list of ArraySourceABC; read-only
     visible -- boolean
@@ -28,26 +34,31 @@ class Layer( QObject ):
         self._opacity = value
         self.opacityChanged.emit( value )
 
-
     @property
     def datasources( self ):
         return self._datasources
 
     def __init__( self, opacity = 1.0, visible = True ):
         super(Layer, self).__init__()
+        self.name    = "Unnamed Layer"
+        self.mode = "ReadOnly"
         self._visible = visible
         self._opacity = opacity
 
-        self._datasources = []
 
 
+#*******************************************************************************
+# G r a y s c a l e L a y e r                                                  *
+#*******************************************************************************
 
 class GrayscaleLayer( Layer ):
     def __init__( self, datasource ):
         super(GrayscaleLayer, self).__init__()
         self._datasources = [datasource]
 
-
+#*******************************************************************************
+# R G B A L a y e r                                                            *
+#*******************************************************************************
 
 class RGBALayer( Layer ):
     @property
@@ -58,9 +69,9 @@ class RGBALayer( Layer ):
     def alpha_missing_value( self ):
         return self._alpha_missing_value
 
-    def __init__( self, red = None, green = None, blue = None, alpha = None, color_missing_value = 0, alpha_missing_value = 255):
+    def __init__( self, red = None, green = None, blue = None, alpha = None, \
+                  color_missing_value = 0, alpha_missing_value = 255):
         super(RGBALayer, self).__init__()
         self._datasources = [red,green,blue,alpha]
         self._color_missing_value = color_missing_value
         self._alpha_missing_value = alpha_missing_value
-

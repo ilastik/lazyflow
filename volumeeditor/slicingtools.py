@@ -14,6 +14,10 @@ not wrapped in a sequence.
 
 '''
         
+#*******************************************************************************
+# S l                                                                          *
+#*******************************************************************************
+
 class Sl( object ):
     '''Helper to create slicings using nice subsprict syntax.
 
@@ -122,9 +126,9 @@ def intersection( lhs, rhs ):
         inter[d] = slice(start, stop)
     return tuple(inter)
 
-
-
-
+#*******************************************************************************
+# S l i c e P r o j e c t i o n                                                *
+#*******************************************************************************
 
 class SliceProjection( object ):
     @property
@@ -184,12 +188,12 @@ class SliceProjection( object ):
             slice = np.swapaxes(slice,0,1)
         return slice
 
-
-
-
-
+#*******************************************************************************
+# T e s t                                                                      *
+#*******************************************************************************
 
 import unittest as ut
+
 class SlTest( ut.TestCase ):
     def runTest( self ):
         self.assertEqual(sl[1,:34,:], (1, slice(34), slice(None)))

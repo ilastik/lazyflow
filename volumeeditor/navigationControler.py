@@ -46,7 +46,25 @@ def posView2D(pos3d, axis):
 #*******************************************************************************
 
 class NavigationInterpreter(QObject):
+    """
+    Provides slots to listens to mouse/keyboard events from multiple
+    slice views and interprets them as actions upon a N-D volume
+    (whereas the individual ImageView2D/ImageScene2D know nothing about the
+    data they display).
+    
+    After interpreting the user's events on these widgets, the position model
+    is updated.
+    """
+    
     def __init__(self, model):
+        """
+        Constructs an interpreter which will update the
+        PositionModel model.
+        
+        The user of this class needs to make the appropriate connections
+        from the ImageView2D to the methods of this class from the outside 
+        himself.
+        """
         QObject.__init__(self)
         self._model = model
     
@@ -85,6 +103,10 @@ class NavigationInterpreter(QObject):
         self._model.slicingPos = newPos
         
     def sliceIntersectionIndicatorToggle(self, show):
+        """
+        Toggle the display of the slice intersection indicator lines
+        to on/off according to `show`.
+        """
         self.indicateSliceIntersection = show
     
     def positionCursor(self, x, y, axis):
@@ -141,10 +163,18 @@ class NavigationInterpreter(QObject):
 #*******************************************************************************
 
 class NavigationControler(QObject):
-    '''Controler for navigating through the volume.'''
+    """
+    Controler for navigating through the volume.
+    
+    The NavigationContrler object listens to changes
+    in a given PositionModel and updates three slice
+    views (representing the spatial X, Y and Z slicings)
+    accordingly.
+    """
+    
     ##
     ## properties
-    ##
+    ##e
     
     @property
     def axisColors( self ):

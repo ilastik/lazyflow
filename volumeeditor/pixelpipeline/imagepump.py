@@ -11,17 +11,16 @@ class StackedImageSources( QObject ):
         super(StackedImageSources, self).__init__()
         self._layerStackModel = layerStackModel
         self._lseToIms = lseToIms
-        for entry in self._layerStackModel.layerStack:
-            layer = entry.layer
+        for layer in self._layerStackModel.layerStack:
             layer.opacityChanged.connect( partial(self._onOpacityChanged, layer) )
             layer.visibleChanged.connect( self._onVisibleChanged )
         for ims in lseToIms.itervalues():
             ims.isDirty.connect(self.isDirty)
 
     def __iter__( self ):
-        for entry in self._layerStackModel.layerStack:
-            if entry.layer.visible:
-                yield (entry.layer.opacity, self._lseToIms[entry])
+        for layer in self._layerStackModel.layerStack:
+            if layer.visible:
+                yield (layer.opacity, self._lseToIms[layer])
 
     def _onOpacityChanged( self, layer, opacity ):
         if layer.visible:
@@ -53,10 +52,10 @@ class ImagePump( object ):
     
         ## setup image source stack and slice sources
         slicesrcs = []
-        for layerStackEntry in layerStackModel.layerStack:
-            sliceSources, imageSource = self._parseLayer(layerStackEntry.layer)
+        for layer in layerStackModel.layerStack:
+            sliceSources, imageSource = self._parseLayer(layer)
             slicesrcs.extend(sliceSources)
-            self._lseToIms[layerStackEntry] = imageSource
+            self._lseToIms[layer] = imageSource
         self._syncedSliceSources = SyncedSliceSources( slicesrcs )
         self._stackedImageSources = StackedImageSources( self._layerStackModel, self._lseToIms )
 

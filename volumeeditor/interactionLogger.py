@@ -32,6 +32,10 @@
 #*******************************************************************************
 
 class InteractionLogger():
+    """
+    Singleton providing logging into a growing list of log entries.
+    """
+    
     #singleton pattern
     _instance = None
     _interactionLog = None

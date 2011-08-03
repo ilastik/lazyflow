@@ -53,6 +53,10 @@ from pixelpipeline.imagesourcefactories import createImageSource
 from pixelpipeline.imagepump import ImagePump
 from slicingtools import SliceProjection
 
+#*******************************************************************************
+# V o l u m e E d i t o r                                                      *
+#*******************************************************************************
+
 class VolumeEditor( QObject ):
     changedSlice      = pyqtSignal(int,int)
     onOverlaySelected = pyqtSignal(int)

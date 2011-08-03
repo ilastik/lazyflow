@@ -36,6 +36,10 @@ import numpy
 import threading
 import time
 
+#*******************************************************************************
+# B r u s h i n g M o d e l                                                    *
+#*******************************************************************************
+
 class BrushingModel(QObject):
     brushSizeChanged     = pyqtSignal(int)
     brushColorChanged    = pyqtSignal(QColor)

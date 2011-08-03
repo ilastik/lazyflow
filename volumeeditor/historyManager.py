@@ -36,6 +36,12 @@ import numpy
 #*******************************************************************************
 
 class HistoryManager(QObject):
+    """
+    DEPRECATED
+    Stores the history of the various brush strokes (including erasing)
+    that the user performed, such that undo/redo is possible.
+    """
+    
     def __init__(self, parent, maxSize = 3000):
         QObject.__init__(self)
         self.volumeEditor = parent

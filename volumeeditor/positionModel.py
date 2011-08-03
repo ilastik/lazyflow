@@ -36,6 +36,16 @@ from PyQt4.QtCore import QObject, pyqtSignal
 #*******************************************************************************
 
 class PositionModel(QObject):
+    """
+    Currently viewed position within a 5D data volume
+    (time, x,y,z, channels).
+    
+    By writing into the public properties of the PositionModel,
+    the user can manipulate the volume viewer by writing code
+    in the same way as would be possible by manipulating the
+    viewer with a mouse.
+    """
+    
     timeChanged            = pyqtSignal(int)
     channelChanged         = pyqtSignal(int)
     cursorPositionChanged  = pyqtSignal(object)
@@ -59,7 +69,9 @@ class PositionModel(QObject):
         self.channel     = self._channel
         
     def sliceShape(self, axis):
-        """returns the 2D shape of slices perpendicular to axis"""
+        """
+        returns the 2D shape of slices perpendicular to axis
+        """
         shape = self._shape5D[1:4]
         if len(shape) == 2:
             return shape
@@ -69,11 +81,19 @@ class PositionModel(QObject):
             return numpy.asarray(shape)
     
     def volumeExtent(self, axis):
-        """returns the 1D extent of the volume along axis"""
+        """
+        returns the 1D extent of the volume along axis
+        """
         return self._shape5D[axis+1]
     
     @property
     def activeView(self):
+        """
+        Currently active view.
+        A view is active when the mouse cursor hovered over it last.
+        
+        Returns the index of the active view in [0,1,2].
+        """
         return self._activeView
     @activeView.setter
     def activeView(self, view):
@@ -81,10 +101,16 @@ class PositionModel(QObject):
         
     @property
     def shape( self ):
+        """
+        the spatial shape
+        """
         return self._shape5D[1:4]
         
     @property    
     def time( self ):
+        """
+        the currently shown index of the time dimension
+        """
         return self._time
     @time.setter
     def time( self, value ):
@@ -95,6 +121,9 @@ class PositionModel(QObject):
 
     @property
     def channel( self ):
+        """
+        the currently shown index of the channel dimension
+        """
         return self._channel
     @channel.setter
     def channel(self, value):
@@ -105,6 +134,12 @@ class PositionModel(QObject):
     
     @property
     def cursorPos(self):
+        """
+        Returns the spatial position (x,y,z) that is defined by
+        the slice number of the slice under the cursor and the position
+        on the cursor on that slice.
+        Notice the difference to `slicingPos`.
+        """
         return self._cursorPos
     @cursorPos.setter
     def cursorPos(self, coordinates):
@@ -115,6 +150,12 @@ class PositionModel(QObject):
     
     @property
     def slicingPos(self):
+        """
+        Returns the spatial position (x,y,z) that the volume viewer is currently
+        configured to show.
+        Notice the difference to `cursorPos`. Here, we mean the position as defined
+        by the three slice views.
+        """
         return self._slicingPos
     @slicingPos.setter
     def slicingPos(self, pos):

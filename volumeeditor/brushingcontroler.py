@@ -1,8 +1,10 @@
 from PyQt4.QtCore import QObject
 
-from volumeeditor.positionModel import PositionModel
-
 import qimage2ndarray
+
+#*******************************************************************************
+# C r o s s h a i r C o n t r o l e r                                          *
+#*******************************************************************************
 
 class CrosshairControler(QObject):
     def __init__(self, brushingModel, imageViews):
@@ -17,6 +19,10 @@ class CrosshairControler(QObject):
     def _setBrushColor(self):
         pass
         
+#*******************************************************************************
+# B r u s h i n g C o n t r o l e r                                            *
+#*******************************************************************************
+
 class BrushingControler(QObject):
     def __init__(self, brushingModel, positionModel, dataSink):
         QObject.__init__(self, parent=None)
@@ -44,6 +50,10 @@ class BrushingControler(QObject):
         
         self._dataSink.put(slicing, labels)
         
+#*******************************************************************************
+# B r u s h i n g I n t e r p r e t e r                                        *
+#*******************************************************************************
+
 class BrushingInterpreter(QObject):
     def __init__(self, brushingModel, imageViews):
         QObject.__init__(self, parent=None)

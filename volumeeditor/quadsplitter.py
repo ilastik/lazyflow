@@ -39,13 +39,15 @@ from os import path
 import resources.icons
 _icondir = path.dirname(resources.icons.__file__)
 
-
-
 #*******************************************************************************
 # D o c k a b l e C o n t a i n e r                                            *
 #*******************************************************************************
 
 class DockableContainer(QWidget):
+    """
+    A widget that can be docked out of a `QuadSplitter` layout.
+    """
+    
     def __init__(self, number, parent=None):
         QWidget.__init__(self, parent)
         
@@ -126,7 +128,13 @@ class DockableContainer(QWidget):
 # Q u a d V i e w                                                              *
 #*******************************************************************************
 
-class QuadView(QWidget):    
+class QuadView(QWidget):
+    """
+    A layout widget that can hold four widgets (top left, top right, bottom left,
+    bottom right). A vertical and horizontal splitter can be used to change the
+    relative sizes of the grid columns and rows.
+    """
+      
     def horizontalSplitterMoved(self):
         w, h = self.size().width()-self.splitHorizontal1.handleWidth(), self.size().height()-self.splitVertical.handleWidth()
         

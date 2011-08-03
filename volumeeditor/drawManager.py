@@ -41,6 +41,11 @@ import time
 #*******************************************************************************
 
 class DrawManager(QObject):
+    """
+    DEPRECATED.
+    Will be replaced with BrushingModel, BrushingControler, BrushStroke.
+    """
+     
     brushSizeChanged  = pyqtSignal(int)
     brushColorChanged = pyqtSignal(QColor)
     
