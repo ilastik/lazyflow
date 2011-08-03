@@ -20,7 +20,7 @@ class StackedImageSources( QObject ):
         layerStackModel.orderChanged.connect( self.stackChanged )
 
     def __len__( self ):
-        return len(self._layerStackModel.layerStack)
+        return reduce( lambda cum, x: cum + 1, self, 0)
 
     def __iter__( self ):
         for layer in self._layerStackModel.layerStack:
