@@ -79,7 +79,7 @@ class NavigationInterpreter(QObject):
         if delta == 0:
             return
         newSlice = self._model.slicingPos[axis] + delta
-        if newSlice < 0 or newSlice > self._model.volumeExtent(axis):
+        if newSlice < 0 or newSlice >= self._model.volumeExtent(axis):
             return
         newPos = copy.copy(self._model.slicingPos)
         newPos[axis] = newSlice
@@ -270,7 +270,7 @@ class NavigationControler(QObject):
 
     def _updateSlice(self, num, axis):
         if num < 0 or num >= self._model.volumeExtent(axis):
-            raise Exception("NavigationControler._setSlice(): invalid slice number")
+            raise Exception("NavigationControler._setSlice(): invalid slice number = %d not in range [0,%d)" % (num, self._model.volumeExtent(axis)))
         #FIXME: Shouldnt the hud listen to the model changes itself?
         self._views[axis].hud.sliceSelector.setValue(num)
 
