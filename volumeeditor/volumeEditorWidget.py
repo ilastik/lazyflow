@@ -239,22 +239,11 @@ class VolumeEditorWidget(QWidget):
             self.shortcuts.append(self._shortcutHelper("Ctrl+Shift+Down", "Navigation", "10 slices down", v, partial(sliceDelta, i, -10), Qt.WidgetShortcut))
 
     def _updateInfoLabels(self, pos):
-        #FIXME
-        pass
-        #print "updateInfoLabels: I'm broken, please fix me."
-        #for i in range(3):
-        #    if pos[i] < 0 or pos[i] >= self._ve.posModel.shape[i]:
-        #        self._ve.posLabel.setText("")
-        #        return
-        #rawRef = self._ve.overlayWidget.getOverlayRef("Raw Data")
-        #colorValues = rawRef._data[0,pos[0], pos[1], pos[2], 0]
-        #self.posLabel.setText("<b>x:</b> %03i  <b>y:</b> %03i  <b>z:</b> %03i" % (pos[0], pos[1], pos[2]))
-        #FIXME RGB is a special case only
-        #if isinstance(colorValues, numpy.ndarray):
-        #    self.pixelValuesLabel.setText("<b>R:</b> %03i  <b>G:</b> %03i  <b>B:</b> %03i" % (colorValues[0], colorValues[1], colorValues[2]))
-        #else:
-        #    self.pixelValuesLabel.setText("<b>Gray:</b> %03i" %int(colorValues))
-            
+        if any((pos[i] < 0 or pos[i] >= self._ve.posModel.shape[i] for i in xrange(3))):
+            self._ve.posLabel.setText("")
+            return
+        self.posLabel.setText("<b>x:</b> %03i  <b>y:</b> %03i  <b>z:</b> %03i" % (pos[0], pos[1], pos[2]))
+             
 #*******************************************************************************
 # i f   _ _ n a m e _ _   = =   " _ _ m a i n _ _ "                            *
 #*******************************************************************************
