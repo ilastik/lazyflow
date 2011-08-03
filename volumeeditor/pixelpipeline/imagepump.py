@@ -27,6 +27,10 @@ class StackedImageSources( QObject ):
             if layer.visible:
                 yield (layer.opacity, self._layerToIms[layer])
 
+    def __getitem__(self, i):
+        l = [layer for layer in self._layerStackModel.layerStack if layer.visible]
+        return l[i]  
+
     def _onOpacityChanged( self, layer, opacity ):
         if layer.visible:
             self.isDirty.emit( QRect() )
