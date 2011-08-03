@@ -22,6 +22,10 @@ class StackedImageSources( QObject ):
             if layer.visible and layer in self._layerToIms:
                 yield (layer.opacity, self._layerToIms[layer])
 
+    def __getitem__(self, i):
+        l = [layer for layer in self._layerStackModel.layerStack if layer.visible]
+        return l[i]  
+
     def register( self, layer, imageSource ):
         assert not layer in self._layerToIms, "layer %s already registered" % str(layer)
         self._layerToIms[layer] = imageSource
