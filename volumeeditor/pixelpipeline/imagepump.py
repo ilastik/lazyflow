@@ -45,6 +45,9 @@ class StackedImageSources( QObject ):
         del self._layerToIms[layer]
         self.stackChanged.emit()
 
+    def isRegistered( self, layer ):
+        return layer in self._layerToIms
+
     def _onOpacityChanged( self, layer, opacity ):
         if layer.visible:
             self.isDirty.emit( QRect() )
@@ -75,38 +78,30 @@ class ImagePump( object ):
     
         ## setup image source stack and slice sources
         self._stackedImageSources = StackedImageSources( layerStackModel )
-        slicesrcs = []
+        self._syncedSliceSources = SyncedSliceSources()
         for layer in layerStackModel.layerStack:
-            sliceSources, imageSource = self._parseLayer(layer)
-            slicesrcs.extend(sliceSources)
-            self._layerToSliceSrcs[layer] = sliceSources
-            self._stackedImageSources.register(layer, imageSource)
-        self._syncedSliceSources = SyncedSliceSources( slicesrcs )
+            self._addLayer( layer )
 
-        ## handle removing layers
-        def onLayersAboutToBeRemoved( parent, start, end):
+        ## handle layers removed from layerStackModel
+        def onRowsAboutToBeRemoved( parent, start, end):
             for i in xrange(start, end + 1):
                 layer = self._layerStackModel.layerStack[i]
-                self._stackedImageSources.deregister(layer)
-                for ss in self._layerToSliceSrcs[layer]:
-                    self._syncedSliceSources.remove(ss)
-                del self._layerToSliceSrcs[layer]                
-        layerStackModel.rowsAboutToBeRemoved.connect(onLayersAboutToBeRemoved)
+                self._removeLayer( layer )
+        layerStackModel.rowsAboutToBeRemoved.connect(onRowsAboutToBeRemoved)
 
-        ## handle adding layers
-        def onLayersAdded( startIndexItem, endIndexItem):
+        ## handle new layers in layerStackModel
+        def onDataChanged( startIndexItem, endIndexItem):
             start = startIndexItem.row()
             stop = endIndexItem.row() + 1
             for i in xrange(start, stop):
                 layer = self._layerStackModel.layerStack[i]
-                sliceSources, imageSource = self._parseLayer(layer)
-                for ss in sliceSources:
-                    self._syncedSliceSources.add(ss)
-                self._layerToSliceSrcs[layer] = sliceSources
-                self._stackedImageSources.register(layer, imageSource)
-        layerStackModel.dataChanged.connect(onLayersAdded)
+                # model implementation removes and adds the same layer instance to move selections up/down
+                # therefore, check if the layer is already registered before adding as new
+                if not self._stackedImageSources.isRegistered(layer): 
+                    self._addLayer(layer)
+        layerStackModel.dataChanged.connect(onDataChanged)
 
-    def _parseLayer( self, layer ):
+    def _createSources( self, layer ):
         def sliceSrcOrNone( datasrc ):
             if datasrc:
                 return SliceSource( datasrc, self._projection )
@@ -118,3 +113,15 @@ class ImagePump( object ):
         slicesrcs = [ src for src in slicesrcs if src != None]
         return slicesrcs, ims
 
+    def _addLayer( self, layer ):
+        sliceSources, imageSource = self._createSources(layer)
+        for ss in sliceSources:
+            self._syncedSliceSources.add(ss)
+        self._layerToSliceSrcs[layer] = sliceSources
+        self._stackedImageSources.register(layer, imageSource)
+
+    def _removeLayer( self, layer ):
+        self._stackedImageSources.deregister(layer)
+        for ss in self._layerToSliceSrcs[layer]:
+            self._syncedSliceSources.remove(ss)
+        del self._layerToSliceSrcs[layer]                
