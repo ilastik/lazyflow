@@ -1,3 +1,4 @@
+from functools import partial
 from PyQt4.QtCore import QObject, pyqtSignal, QRect
 from slicesources import SliceSource, SyncedSliceSources
 from imagesourcefactories import createImageSource
@@ -12,17 +13,23 @@ class StackedImageSources( QObject ):
         self._lseToIms = lseToIms
         for entry in self._layerStackModel.layerStack:
             layer = entry.layer
-            layer.opacityChanged.connect( self._onChanged )
-            layer.visibleChanged.connect( self._onChanged )
+            layer.opacityChanged.connect( partial(self._onOpacityChanged, layer) )
+            layer.visibleChanged.connect( self._onVisibleChanged )
         for ims in lseToIms.itervalues():
             ims.isDirty.connect(self.isDirty)
 
     def __iter__( self ):
-        for layerStackEntry in self._layerStackModel.layerStack:
-            yield (layerStackEntry.opacity, self._lseToIms[layerStackEntry])
+        for entry in self._layerStackModel.layerStack:
+            if entry.layer.visible:
+                yield (entry.layer.opacity, self._lseToIms[entry])
 
-    def _onChanged( self ):
+    def _onOpacityChanged( self, layer, opacity ):
+        if layer.visible:
+            self.isDirty.emit( QRect() )
+
+    def _onVisibleChanged( self, visible ):
         self.isDirty.emit( QRect() )
+
 
 #*******************************************************************************
 # I m a g e P u m p                                                            *
