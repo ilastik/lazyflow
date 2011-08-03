@@ -123,7 +123,7 @@ class SyncedSliceSources( QObject ):
         self.setDirty( (slice(None), slice(None)) ) 
 
     def remove( self, sliceSrc ):
-        assert issubclass( sliceSrc, SliceSource )
+        assert isinstance( sliceSrc, SliceSource )
         self._srcs.remove( sliceSrc )
         self.setDirty( slice(None) )         
 

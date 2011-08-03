@@ -7,16 +7,11 @@ class StackedImageSources( QObject ):
     isDirty      = pyqtSignal( QRect )
     stackChanged = pyqtSignal()
 
-    def __init__( self, layerStackModel, layerToIms ):
+    def __init__( self, layerStackModel ):
         super(StackedImageSources, self).__init__()
         self._layerStackModel = layerStackModel
-        self._layerToIms = layerToIms
-        for layer in self._layerStackModel.layerStack:
-            layer.opacityChanged.connect( partial(self._onOpacityChanged, layer) )
-            layer.visibleChanged.connect( self._onVisibleChanged )
-        for ims in layerToIms.itervalues():
-            ims.isDirty.connect(self.isDirty)
-
+        self._layerToIms = {}
+        self._curryRegistry = {}
         layerStackModel.orderChanged.connect( self.stackChanged )
 
     def __len__( self ):
@@ -24,8 +19,27 @@ class StackedImageSources( QObject ):
 
     def __iter__( self ):
         for layer in self._layerStackModel.layerStack:
-            if layer.visible:
+            if layer.visible and layer in self._layerToIms:
                 yield (layer.opacity, self._layerToIms[layer])
+
+    def register( self, layer, imageSource ):
+        assert not layer in self._layerToIms, "layer %s already registered" % str(layer)
+        self._layerToIms[layer] = imageSource
+        imageSource.isDirty.connect(self.isDirty)
+        self._curryRegistry[layer] = partial(self._onOpacityChanged, layer)
+        layer.opacityChanged.connect( self._curryRegistry[layer] )
+        layer.visibleChanged.connect( self._onVisibleChanged )
+        self.stackChanged.emit()
+
+    def deregister( self, layer ):
+        assert layer in self._layerToIms, "layer %s is not registered; can't be deregistered" % str(layer)
+        ims = self._layerToIms[layer]
+        ims.isDirty.disconnect( self.isDirty)
+        layer.opacityChanged.disconnect( self._curryRegistry[layer] )
+        layer.visibleChanged.disconnect( self._onVisibleChanged )
+        del self._curryRegistry[layer]
+        del self._layerToIms[layer]
+        self.stackChanged.emit()
 
     def _onOpacityChanged( self, layer, opacity ):
         if layer.visible:
@@ -50,20 +64,29 @@ class ImagePump( object ):
         return self._stackedImageSources
 
     def __init__( self, layerStackModel, sliceProjection ):
-        #LayerStackEntry to ImageSource mapping
-        self._layerToIms = dict()
+        super(ImagePump, self).__init__()
         self._layerStackModel = layerStackModel
-
         self._projection = sliceProjection
+        self._layerToSliceSrcs = {}
     
         ## setup image source stack and slice sources
+        self._stackedImageSources = StackedImageSources( layerStackModel )
         slicesrcs = []
         for layer in layerStackModel.layerStack:
             sliceSources, imageSource = self._parseLayer(layer)
             slicesrcs.extend(sliceSources)
-            self._layerToIms[layer] = imageSource
+            self._layerToSliceSrcs[layer] = sliceSources
+            self._stackedImageSources.register(layer, imageSource)
         self._syncedSliceSources = SyncedSliceSources( slicesrcs )
-        self._stackedImageSources = StackedImageSources( self._layerStackModel, self._layerToIms )
+
+        def onLayersAboutToBeRemoved( parent, start, end):
+            for i in xrange(start, end + 1):
+                layer = self._layerStackModel.layerStack[i]
+                self._stackedImageSources.deregister(layer)
+                for ss in self._layerToSliceSrcs[layer]:
+                    self._syncedSliceSources.remove(ss)
+                del self._layerToSliceSrcs[layer]                
+        layerStackModel.rowsAboutToBeRemoved.connect(onLayersAboutToBeRemoved)
 
     def _parseLayer( self, layer ):
         def sliceSrcOrNone( datasrc ):
