@@ -276,7 +276,7 @@ if __name__ == "__main__":
     from volumeeditor._testing.from_lazyflow import OpDataProvider5D, OpDelay
     from volumeeditor.layer import GrayscaleLayer, RGBALayer
     from volumeeditor.layerwidget.layerwidget import LayerWidget
-    from volumeeditor.layerstack import LayerStackModel, LayerStackEntry
+    from volumeeditor.layerstack import LayerStackModel
     
     from testing import stripes
     
@@ -321,7 +321,7 @@ if __name__ == "__main__":
         def __init__(self, useGL, argv):
             QObject.__init__(self)
             
-            layerstack = None
+            layerstack = LayerStackModel()
             
             if "hugeslab" in argv:
                 N = 2000
@@ -332,6 +332,8 @@ if __name__ == "__main__":
                 op2.inputs["Input"].connect(op1.outputs["Data"])
                 source = LazyflowSource(op2, "Output")
                 layers = [GrayscaleLayer( source )]
+                
+                layerstack.append( GrayscaleLayer( source ) )
 
             elif "5d" in argv:
                 file = os.path.split(os.path.abspath(__file__))[0] +"/_testing/5d.npy"
@@ -342,14 +344,17 @@ if __name__ == "__main__":
                 op2 = OpDelay(g, 0.000003)
                 op2.inputs["Input"].connect(op1.outputs["Data5D"])
                 source = LazyflowSource(op2, "Output")
-                layers = [GrayscaleLayer( source )]
+                
+                layerstack.append( GrayscaleLayer( source ) )
                 
                 print "...done"
             elif "cuboid" in argv:
                 N = 100
                 from testing import testVolume
                 source = ArraySource(testVolume(N))
-                layers = [GrayscaleLayer( source )]
+                
+                layerstack.append( GrayscaleLayer( source ) )
+                
             elif "comp" in argv:
                 fn = os.path.split(os.path.abspath(__file__))[0] +"/_testing/5d.npy"
                 raw = np.load(fn)
@@ -365,10 +370,10 @@ if __name__ == "__main__":
                 op4.inputs["Input"].connect(op3.outputs["Data"])
                 membranesrc = LazyflowSource(op4, "Output")
 
-                layers = [RGBALayer( green = membranesrc, red = nucleisrc )]
+                layerstack.append( RGBALayer( green = membranesrc, red = nucleisrc ) )
+                
                 source = nucleisrc
 
-                print "...done"
             elif "layers" in argv:
                 fn = os.path.split(os.path.abspath(__file__))[0] +"/_testing/5d.npy"
                 raw = np.load(fn)
@@ -385,19 +390,16 @@ if __name__ == "__main__":
                 membranesrc = LazyflowSource(op4, "Output")
 
                 layer1 = GrayscaleLayer( membranesrc )
-                layer2 = RGBALayer( red = nucleisrc )
-                layer2.opacity = 0.5
-                source = nucleisrc
+                layer1.name = "Membranes"
+                layerstack.append(layer1)
                 
-                layerstack = LayerStackModel()
-                l1 = LayerStackEntry(layer1)
-                l1.name = "Membranes"
-                l2 = LayerStackEntry(layer2)
-                l2.name = "Nuclei"
-                layerstack.append(l1)
-                layerstack.append(l2)
+                layer2 = RGBALayer( red = nucleisrc )
+                layer2.name = "Nuclei"
+                layer2.opacity = 0.5
+                layerstack.append(layer2)
+                
+                source = nucleisrc
 
-                print "...done"
             elif "manylayers" in argv:
                 N = 200
                 print "%d Layers!" % N
@@ -411,15 +413,14 @@ if __name__ == "__main__":
                 op2 = OpDataProvider(g, raw[:,:,:,:,1:2]/5)
                 membranesrc = LazyflowSource(op2, "Data")
 
-                layers = []
-                layers.append(GrayscaleLayer( membranesrc ))
+                layerstack.append(GrayscaleLayer( membranesrc ))
+
                 for i in xrange(N):
                     layer = RGBALayer( red = nucleisrc )
                     layer.opacity = 0.3
-                    layers.append(layer)
+                    layerstack.append(layer)
                 source = nucleisrc
 
-                print "...done"
             elif "label" in argv:
                 fn = os.path.split(os.path.abspath(__file__))[0] +"/_testing/5d.npy"
                 raw = np.load(fn)
@@ -439,14 +440,16 @@ if __name__ == "__main__":
                 tint[:] = 255
                 labelsrc = ArraySinkSource(labelraw)
                 tintsrc = ArraySource(tint)
-                labellyr = RGBALayer( blue=tintsrc, alpha=labelsrc )
-                layers = [RGBALayer( green = membranesrc, red = nucleisrc ), labellyr]
+                
+                layerstack.append( RGBALayer( green = membranesrc, red = nucleisrc ) )
+                layerstack.append( RGBALayer( blue=tintsrc, alpha=labelsrc ) )
+                
                 source = nucleisrc
-
 
             elif "stripes" in argv:
                 source = ArraySource(stripes(50,35,20))
-                layers = [GrayscaleLayer( source )]
+                
+                layerstack.append( GrayscaleLayer( source ) )
             else:
                 raise RuntimeError("Invalid testing mode")
             
@@ -463,12 +466,6 @@ if __name__ == "__main__":
                 shape = source._op.outputs[source._outslot].shape
             if len(shape) == 3:
                 shape = (1,)+shape+(1,)
-                
-            # construct layer stack model
-            if layerstack is None:
-                layerstack = LayerStackModel()
-                for layer in layers:
-                    layerstack.append(LayerStackEntry(layer))
 
             if "label" in argv:
                 self.editor = VolumeEditor(shape, layerstack, labelsink=labelsrc, useGL=useGL)
@@ -492,7 +489,7 @@ if __name__ == "__main__":
 
     app = QApplication(sys.argv)
     
-    args = ['hugeslab', 'cuboid', '5d', 'comp', 'layers', 'manylayers', 't', 'label']
+    args = ['hugeslab', 'cuboid', '5d', 'comp', 'layers', 'manylayers', 't', 'label', 'stripes']
     
     if len(sys.argv) < 2 or not any(x in sys.argv for x in args) :
         print "Usage: python volumeeditor.py <testmode> %r" % args 

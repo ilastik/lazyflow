@@ -4,9 +4,9 @@
 
 class Layer( object ):
     """
-    Represents the visual properties and the associated raw data of a
-    n-dimensional layer.
-
+    Entries of a LayerStackModel,
+    which is in turn displayed to the user via a LayerStackWidget
+    
     properties:
     datasources -- list of ArraySourceABC; read-only
     visible     -- boolean
@@ -17,10 +17,12 @@ class Layer( object ):
     def datasources( self ):
         return self._datasources
 
-    def __init__( self ):
+    def __init__(self):
+        self.mode = 'ReadOnly' #drawing related...
+    
+        self.name    = "Unnamed Layer"
         self.visible = True
         self.opacity = 1.0
-
         self._datasources = []
 
 #*******************************************************************************

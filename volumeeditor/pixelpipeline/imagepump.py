@@ -23,7 +23,7 @@ class ImagePump( object ):
         slicesrcs = []
         stack_entries = []
         for layerWrapper in self._layerModel.layerStack:
-            srcs, entry = self._parseLayer(layerWrapper.layer)
+            srcs, entry = self._parseLayer(layerWrapper)
             slicesrcs.extend(srcs)
             stack_entries.append(entry)
         self._syncedSliceSources = SyncedSliceSources( slicesrcs )
