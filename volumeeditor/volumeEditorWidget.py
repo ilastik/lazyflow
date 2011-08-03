@@ -48,7 +48,7 @@ from view3d.view3d import OverviewScene
 from sliceSelectorHud import SliceSelectorHud
 from positionModel import PositionModel
 from navigationControler import NavigationControler, NavigationInterpreter
-from pixelpipeline.datasources import ArraySource, ArraySinkSource
+from pixelpipeline.datasources import ArraySource, ArraySinkSource, LazyflowSinkSource
 
 from volumeEditor import VolumeEditor
 
@@ -435,11 +435,19 @@ if __name__ == "__main__":
                 op4.inputs["Input"].connect(op3.outputs["Data"])
                 membranesrc = LazyflowSource(op4, "Output")
 
-                labelraw = np.zeros(shape=raw.shape, dtype=np.uint8)
+                
                 tint = np.zeros(shape=raw.shape, dtype=np.uint8)
                 tint[:] = 255
-                labelsrc = ArraySinkSource(labelraw)
                 tintsrc = ArraySource(tint)
+
+                #new shit
+                from lazyflow import operators
+                opLabels = operators.OpDenseSparseArray(g)                                
+                opLabels.inputs["shape"].setValue(raw.shape)
+                opLabels.inputs["eraser"].setValue(17)                
+
+                labelsrc = LazyflowSinkSource(opLabels, opLabels.outputs["Output"], opLabels.inputs["Input"])
+
                 
                 layerstack.append( RGBALayer( green = membranesrc, red = nucleisrc ) )
                 layerstack.append( RGBALayer( blue=tintsrc, alpha=labelsrc ) )

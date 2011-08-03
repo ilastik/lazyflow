@@ -60,16 +60,8 @@ class ArraySinkSource( ArraySource ):
         self.setDirty(pure)
 
 
-'''
-class LazyflowSink( object ):
-    def __init__( inputslot ):
-        self._slot = inputslot
 
-    def put( slicing, array ):
-        _op.InputSlots[name].setValue(array)
 
-        inputslot[slicing] = array
-'''
 
 
 
@@ -113,6 +105,19 @@ class LazyflowSource( QObject ):
 assert issubclass(LazyflowSource, SourceABC)
 
 
+
+
+class LazyflowSinkSource( LazyflowSource ):
+    def __init__( self, operator, outslot, inslot ):
+        LazyflowSource.__init__(self, operator,outslot.name)
+        self._outputSlot = outslot
+        self._inputSlot = inslot
+        
+
+    def put( self, slicing, array ):
+        self._inputSlot[slicing] = array
+        pure = index2slice(slicing)
+        self.setDirty(pure)
 
 #*******************************************************************************
 # C o n s t a n t R e q u e s t                                                *
