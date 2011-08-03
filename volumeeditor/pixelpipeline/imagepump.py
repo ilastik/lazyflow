@@ -2,25 +2,24 @@ from functools import partial
 from PyQt4.QtCore import QObject, pyqtSignal, QRect
 from slicesources import SliceSource, SyncedSliceSources
 from imagesourcefactories import createImageSource
-from imsstack import ImsStack
 
 class StackedImageSources( QObject ):
     isDirty = pyqtSignal( QRect )
 
-    def __init__( self, layerStackModel, lseToIms ):
+    def __init__( self, layerStackModel, layerToIms ):
         super(StackedImageSources, self).__init__()
         self._layerStackModel = layerStackModel
-        self._lseToIms = lseToIms
+        self._layerToIms = layerToIms
         for layer in self._layerStackModel.layerStack:
             layer.opacityChanged.connect( partial(self._onOpacityChanged, layer) )
             layer.visibleChanged.connect( self._onVisibleChanged )
-        for ims in lseToIms.itervalues():
+        for ims in layerToIms.itervalues():
             ims.isDirty.connect(self.isDirty)
 
     def __iter__( self ):
         for layer in self._layerStackModel.layerStack:
             if layer.visible:
-                yield (layer.opacity, self._lseToIms[layer])
+                yield (layer.opacity, self._layerToIms[layer])
 
     def _onOpacityChanged( self, layer, opacity ):
         if layer.visible:
@@ -45,7 +44,7 @@ class ImagePump( object ):
 
     def __init__( self, layerStackModel, sliceProjection ):
         #LayerStackEntry to ImageSource mapping
-        self._lseToIms = dict()
+        self._layerToIms = dict()
         self._layerStackModel = layerStackModel
 
         self._projection = sliceProjection
@@ -55,9 +54,9 @@ class ImagePump( object ):
         for layer in layerStackModel.layerStack:
             sliceSources, imageSource = self._parseLayer(layer)
             slicesrcs.extend(sliceSources)
-            self._lseToIms[layer] = imageSource
+            self._layerToIms[layer] = imageSource
         self._syncedSliceSources = SyncedSliceSources( slicesrcs )
-        self._stackedImageSources = StackedImageSources( self._layerStackModel, self._lseToIms )
+        self._stackedImageSources = StackedImageSources( self._layerStackModel, self._layerToIms )
 
     def _parseLayer( self, layer ):
         def sliceSrcOrNone( datasrc ):
