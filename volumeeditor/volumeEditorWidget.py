@@ -271,7 +271,7 @@ if __name__ == "__main__":
     from PyQt4.QtGui import QColor
     
     from lazyflow.graph import Graph, Operator, InputSlot, OutputSlot
-    from volumeeditor.pixelpipeline.datasources import LazyflowSource
+    from volumeeditor.pixelpipeline.datasources import LazyflowSource, ConstantSource
     from volumeeditor.pixelpipeline._testing import OpDataProvider
     from volumeeditor._testing.from_lazyflow import OpDataProvider5D, OpDelay
     from volumeeditor.layer import GrayscaleLayer, RGBALayer
@@ -542,12 +542,14 @@ if __name__ == "__main__":
     up   = QPushButton('Up')
     down = QPushButton('Down')
     delete = QPushButton('Delete')
+    add = QPushButton('Add artifical layer')
     lv  = QVBoxLayout()
     lh.addLayout(lv)
     
     lv.addWidget(up)
     lv.addWidget(down)
     lv.addWidget(delete)
+    lv.addWidget(add)
     
     w.setGeometry(100, 100, 800,600)
     
@@ -557,6 +559,14 @@ if __name__ == "__main__":
     model.canMoveSelectedDown.connect(down.setEnabled)
     delete.clicked.connect(model.deleteSelected)
     model.canDeleteSelected.connect(delete.setEnabled)
+
+    def addConstantLayer():
+        src = ConstantSource(128)
+        layer = RGBALayer( green = src )
+        layer.name = "Soylent Green"
+        layer.opacity = 0.5
+        model.append(layer)
+    add.clicked.connect(addConstantLayer)
     ######################################################################
     
     def layers(toggled):

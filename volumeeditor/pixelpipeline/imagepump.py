@@ -83,6 +83,7 @@ class ImagePump( object ):
             self._stackedImageSources.register(layer, imageSource)
         self._syncedSliceSources = SyncedSliceSources( slicesrcs )
 
+        ## handle removing layers
         def onLayersAboutToBeRemoved( parent, start, end):
             for i in xrange(start, end + 1):
                 layer = self._layerStackModel.layerStack[i]
@@ -91,6 +92,19 @@ class ImagePump( object ):
                     self._syncedSliceSources.remove(ss)
                 del self._layerToSliceSrcs[layer]                
         layerStackModel.rowsAboutToBeRemoved.connect(onLayersAboutToBeRemoved)
+
+        ## handle adding layers
+        def onLayersAdded( startIndexItem, endIndexItem):
+            start = startIndexItem.row()
+            stop = endIndexItem.row() + 1
+            for i in xrange(start, stop):
+                layer = self._layerStackModel.layerStack[i]
+                sliceSources, imageSource = self._parseLayer(layer)
+                for ss in sliceSources:
+                    self._syncedSliceSources.add(ss)
+                self._layerToSliceSrcs[layer] = sliceSources
+                self._stackedImageSources.register(layer, imageSource)
+        layerStackModel.dataChanged.connect(onLayersAdded)
 
     def _parseLayer( self, layer ):
         def sliceSrcOrNone( datasrc ):
