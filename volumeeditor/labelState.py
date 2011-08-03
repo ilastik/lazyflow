@@ -46,6 +46,8 @@ class State():
 #*******************************************************************************
 
 class LabelState(State):
+    """Stores an update of brush strokes for later undo/redo .Legacy code"""
+    
     def __init__(self, title, axis, num, offsets, shape, timeAxis, volumeEditor, erasing, labels, labelNumber):
         self.title = title
         self.time = timeAxis

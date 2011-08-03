@@ -52,6 +52,10 @@ from pixelpipeline.datasources import ArraySource, ArraySinkSource
 
 from volumeEditor import VolumeEditor
 
+#*******************************************************************************
+# V o l u m e E d i t o r W i d g e t                                          *
+#*******************************************************************************
+
 class VolumeEditorWidget(QWidget):
     def __init__( self, volumeeditor, parent=None ):
         super(VolumeEditorWidget, self).__init__(parent=parent)
@@ -312,7 +316,7 @@ if __name__ == "__main__":
         s[0:10,0:10,0:10] = 200
         
         return s
-    
+
     class Test(QObject):
         def __init__(self, useGL, argv):
             QObject.__init__(self)

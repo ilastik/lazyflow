@@ -37,6 +37,10 @@ except Exception, e:
     print e
     pass
 
+"""
+Old code implementing the raw OpenGL 3D slice viewer
+"""
+
 #*******************************************************************************
 # O v e r v i e w S c e n e F a c t o r y                                      *
 #*******************************************************************************

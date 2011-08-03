@@ -43,6 +43,11 @@ from collections import deque
 #*******************************************************************************
 
 class ImageSaveThread(QThread):
+    """
+    Renders all 2D slices of a 3D dataset into one image per slice.
+    Legacy code
+    """
+    
     def __init__(self, parent):
         QThread.__init__(self, None)
         self.ve = parent

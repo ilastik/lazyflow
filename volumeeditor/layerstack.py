@@ -6,7 +6,23 @@ from os import path
 import resources.icons
 _icondir = path.dirname(resources.icons.__file__)
 
-class LayerStackEntry( object ):
+#*******************************************************************************
+# L a y e r P a r a m e t e r s                                                *
+#*******************************************************************************
+
+class LayerParameters( object ):
+    """
+    Entries of a LayerStackModel,
+    which is in turn displayed to the user via a LayerStackWidget
+    
+    Currently also contains some drawing related code,
+    TODO: move this code out
+    
+    properties:
+    opacity -- float in range 0.0 - 1.0
+    visible -- bool
+    """
+    
     @property
     def opacity( self ):
         return self.layer.opacity
@@ -100,6 +116,10 @@ class LayerStackEntry( object ):
             
         painter.restore()
 
+#*******************************************************************************
+# L a y e r S t a c k M o d e l                                                *
+#*******************************************************************************
+
 class LayerStackModel(QAbstractListModel):
     canMoveSelectedUp = pyqtSignal("bool")
     canMoveSelectedDown = pyqtSignal("bool")
@@ -160,7 +180,7 @@ class LayerStackModel(QAbstractListModel):
         endRow   = min(row+count-1, len(self.layerStack))
         self.beginInsertRows(parent, beginRow, endRow) 
         while(beginRow <= endRow):
-            self.layerStack.insert(row, LayerStackEntry())
+            self.layerStack.insert(row, LayerParameters())
             beginRow += 1
         self.endInsertRows()
         assert self.rowCount() == oldRowCount+1
@@ -205,7 +225,10 @@ class LayerStackModel(QAbstractListModel):
         return None
     
     def setData(self, index, value, role = Qt.EditRole):
-        assert isinstance(value, LayerStackEntry)        
+        overlayParameters = value
+        if not isinstance(value, LayerParameters):
+            overlayParameters = value.toPyObject()
+        
         self.layerStack[index.row()] = value
         self.dataChanged.emit(index, index)
         return True

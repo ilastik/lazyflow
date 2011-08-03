@@ -35,6 +35,9 @@ from PyQt4.QtGui import QGraphicsItem, QPen
 #*******************************************************************************
 
 class SliceIntersectionMarker(QGraphicsItem) :
+    """
+    Marks a line within a ImageView2D/ImageScene2D
+    """
     
     def boundingRect(self):
         return QRectF(0,0, self.width, self.height)

@@ -35,6 +35,11 @@ from PyQt4.QtGui import QGraphicsItem, QPen
 #*******************************************************************************
 
 class CrossHairCursor(QGraphicsItem) :
+    """
+    A 2D cross-hair cursor centered around a point (x,y) on the scene.
+    A cross hair cursor usually follows the mouse cursor and has a color
+    and marks the size of the current brush.   
+    """
     modeYPosition  = 0
     modeXPosition  = 1
     modeXYPosition = 2

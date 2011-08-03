@@ -36,6 +36,14 @@ from PyQt4.QtGui import QFrame, QHBoxLayout, QSpinBox, QSizePolicy, QLabel, \
 #*******************************************************************************
 
 class SliceSelectorHud(QFrame):
+    """
+    Heads up display for slice selection.
+    
+    Compact widget that shows a name, a spinbox
+    and its maximum value explicitly. A background color can
+    be set.
+    """
+    
     @property
     def maximum(self): return self._maximum
     @property

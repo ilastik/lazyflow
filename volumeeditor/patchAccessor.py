@@ -41,7 +41,19 @@ import time
 #*******************************************************************************
 
 class PatchAccessor():
+    """
+    Cut a given 2D shape into tiles of given rectangular size
+    """
+    
     def __init__(self, size_x, size_y, blockSize = 128):
+        """
+        (size_x, size_y) -- 2D shape
+        blockSize        -- maximum width/height of tiles
+        
+        Constructs a PatchAccessor that while divide the given shape
+        into tiles that have a maximum given size.
+        """
+        
         self._blockSize = blockSize
         self.size_x = size_x
         self.size_y = size_y
@@ -68,7 +80,6 @@ class PatchAccessor():
         self.patchCount = self._cX * self._cY
 
     def getPatchBounds(self, blockNum, overlap = 0):
-        #z = int(numpy.floor(blockNum / (self._cX*self._cY)))
         rest = blockNum % (self._cX*self._cY)
         y = int(numpy.floor(rest / self._cX))
         x = rest % self._cX
@@ -94,7 +105,6 @@ class PatchAccessor():
         ex = int(numpy.ceil(1.0 * endx / self._blockSize))
         sy = int(numpy.floor(1.0 * starty / self._blockSize))
         ey = int(numpy.ceil(1.0 * endy / self._blockSize))
-        
         
         if ey > self._cY:
             ey = self._cY

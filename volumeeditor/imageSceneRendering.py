@@ -4,7 +4,22 @@ from PyQt4.QtGui import QPainter
 import threading
 from collections import deque, namedtuple
 
+#*******************************************************************************
+# I m a g e S c e n e R e n d e r T h r e a d                                  *
+#*******************************************************************************
+
 class ImageSceneRenderThread(QThread):
+    """
+    Composites individual tiles. For one tile,
+    it requests the corresponding region for all the
+    visible layers in the layerstack as QImage objects,
+    and then users alpha blending to arrive at a final
+    output image.
+    
+    A particular patch can be requested via `requestPatch`
+    A signal is emitted on completion of a request `patchAvailable`
+    """
+    
     patchAvailable = pyqtSignal(int)
     
     def __init__(self, imagePatches, imageSourceStack, parent = None):

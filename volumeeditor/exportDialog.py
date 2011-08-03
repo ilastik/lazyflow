@@ -36,6 +36,11 @@ from PyQt4.QtGui import QComboBox, QDialog, QFileDialog, QHBoxLayout, QLabel,\
 #*******************************************************************************
 
 class ExportDialog(QDialog):
+    """
+    Prompts the user where and how to save volume data.
+    Legacy code, unported.
+    """
+    
     def __init__(self, formatList, timeOffset, sliceOffset, channelOffset, parent=None):
         QDialog.__init__(self, parent)
         self.setWindowTitle("Export Images")
@@ -113,4 +118,14 @@ class ExportDialog(QDialog):
         else:
             return None
 
+#*******************************************************************************
+# i f   _ _ n a m e _ _   = =   " _ _ m a i n _ _ "                            *
+#*******************************************************************************
 
+if __name__== "__main__":
+    from PyQt4.QtGui import QApplication
+    app = QApplication([])
+    d = ExportDialog("test", 0, 1, 2)
+    d.show()
+    app.exec_()
+    
