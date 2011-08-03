@@ -4,7 +4,8 @@ from slicesources import SliceSource, SyncedSliceSources
 from imagesourcefactories import createImageSource
 
 class StackedImageSources( QObject ):
-    isDirty = pyqtSignal( QRect )
+    isDirty      = pyqtSignal( QRect )
+    stackChanged = pyqtSignal()
 
     def __init__( self, layerStackModel, layerToIms ):
         super(StackedImageSources, self).__init__()
@@ -15,6 +16,9 @@ class StackedImageSources( QObject ):
             layer.visibleChanged.connect( self._onVisibleChanged )
         for ims in layerToIms.itervalues():
             ims.isDirty.connect(self.isDirty)
+
+    def __len__( self ):
+        return len(self._layerStackModel.layerStack)
 
     def __iter__( self ):
         for layer in self._layerStackModel.layerStack:
