@@ -17,6 +17,8 @@ class StackedImageSources( QObject ):
         for ims in layerToIms.itervalues():
             ims.isDirty.connect(self.isDirty)
 
+        layerStackModel.orderChanged.connect( self.stackChanged )
+
     def __len__( self ):
         return len(self._layerStackModel.layerStack)
 
@@ -31,6 +33,7 @@ class StackedImageSources( QObject ):
 
     def _onVisibleChanged( self, visible ):
         self.isDirty.emit( QRect() )
+
 
 
 #*******************************************************************************

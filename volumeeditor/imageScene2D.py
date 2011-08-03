@@ -27,6 +27,7 @@
 #    authors and should not be interpreted as representing official policies, either expressed
 #    or implied, of their employers.
 
+from functools import partial
 from PyQt4.QtCore import QRect, QRectF, QTimer, pyqtSignal
 from PyQt4.QtGui import QGraphicsScene, QImage
 from PyQt4.QtOpenGL import QGLWidget
@@ -135,6 +136,8 @@ class ImageScene2D(QGraphicsScene):
     def stackedImageSources(self, s):
         self._stackedImageSources = s
         s.isDirty.connect(self._invalidateRect)
+        s.stackChanged.connect(partial(self._invalidateRect, QRect()))
+        
 
     @property
     def shape(self):
@@ -185,7 +188,7 @@ class ImageScene2D(QGraphicsScene):
         self._useGL = False
         self._glWidget = None
     
-    def _invalidateRect(self, rect):
+    def _invalidateRect(self, rect = QRect()):
         for i,patch in enumerate(self.imagePatches):
             if not rect.isValid() or rect.intersects(patch.rect):
                 #convention: if a rect is invalid, it is infinitely large
