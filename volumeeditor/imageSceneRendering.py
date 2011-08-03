@@ -7,8 +7,8 @@ from collections import deque, namedtuple
 class ImageSceneRenderThread(QThread):
     patchAvailable = pyqtSignal(int)
     
-    def __init__(self, imagePatches, imageSourceStack, parent = None):
-        assert hasattr(imageSourceStack, '__iter__')
+    def __init__(self, imagePatches, stackedImageSources, parent = None):
+        assert hasattr(stackedImageSources, '__iter__')
         QThread.__init__(self, parent)
         self._imagePatches = imagePatches
 
@@ -18,7 +18,7 @@ class ImageSceneRenderThread(QThread):
         self._dataPending.clear()
         self._stopped = False
 
-        self._imsStack = imageSourceStack
+        self._stackedIms = stackedImageSources
 
     def requestPatch(self, patchNr):
         if patchNr not in self._queue:
@@ -40,7 +40,7 @@ class ImageSceneRenderThread(QThread):
         # alpha blending of layers
         #
         # request image for every layer to allow parallel background computations 
-        requestStack = [ (entry[0], entry[1].request(patch.rect)) for entry in self._imsStack ]
+        requestStack = [ (entry[0], entry[1].request(patch.rect)) for entry in self._stackedIms ]
 
         # before the first layer is painted, initialize it white to enable sound alpha blending
         p = QPainter(patch.image)

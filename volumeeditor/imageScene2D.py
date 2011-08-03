@@ -99,14 +99,13 @@ class ImageScene2D(QGraphicsScene):
     glUpdateDelay = 10
     
     @property
-    def imageSourceStack(self):
-        return self._imsStack
+    def stackedImageSources(self):
+        return self._stackedImageSources
     
-    @imageSourceStack.setter
-    def imageSourceStack(self, s):
-        self._imsStack = s
-        for entry in self._imsStack:
-            entry[1].isDirty.connect(self._invalidateRect)
+    @stackedImageSources.setter
+    def stackedImageSources(self, s):
+        self._stackedImageSources = s
+        s.isDirty.connect(self._invalidateRect)
 
     @property
     def shape(self):
@@ -125,7 +124,7 @@ class ImageScene2D(QGraphicsScene):
             r = patchAccessor.patchRectF(i, self.overlap)
             patch = ImagePatch(r)
             self.imagePatches.append(patch)
-        self._renderThread = ImageSceneRenderThread(self.imagePatches, self.imageSourceStack, parent=self)
+        self._renderThread = ImageSceneRenderThread(self.imagePatches, self.stackedImageSources, parent=self)
         self._renderThread.start()
         self._renderThread.patchAvailable.connect(self._schedulePatchRedraw)
     
@@ -138,7 +137,7 @@ class ImageScene2D(QGraphicsScene):
         # tile rendering
         self.imagePatches = None
         self._renderThread = None
-        self._imsStack = None
+        self._stackedImageSources = None
     
         def cleanup():
             self._renderThread.stop()

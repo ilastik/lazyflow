@@ -34,6 +34,7 @@ class Layer( QObject ):
         return self._datasources
 
     def __init__( self, opacity = 1.0, visible = True ):
+        super(Layer, self).__init__()
         self._visible = visible
         self._opacity = opacity
 
