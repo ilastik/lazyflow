@@ -61,7 +61,7 @@ class SliceIntersectionMarker(QGraphicsItem) :
 
     @property
     def shape(self):
-        return [self.width, self.height]
+        return (self.width, self.height)
     @shape.setter
     def shape(self, shape2D):
         self.width = shape2D[0]

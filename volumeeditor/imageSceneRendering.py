@@ -1,7 +1,7 @@
 from PyQt4.QtCore import QThread, pyqtSignal, Qt
 from PyQt4.QtGui import QPainter
 
-import threading
+import threading, time
 from collections import deque, namedtuple
 
 #*******************************************************************************
@@ -48,29 +48,42 @@ class ImageSceneRenderThread(QThread):
     def _takeJob(self):
         patchNr = self._queue.pop()
         
-        patch = self._imagePatches[patchNr]
-        patch.rendering = True
-
-        #
-        # alpha blending of layers
-        #
-        # request image for every layer to allow parallel background computations 
-        requestStack = [ (entry[0], entry[1].request(patch.rect)) for entry in self._stackedIms ]
-
-        # before the first layer is painted, initialize it white to enable sound alpha blending
-        p = QPainter(patch.image)
-        r = patch.rect
-        p.fillRect(0,0,r.width(), r.height(), Qt.white)
-
-        for entry in requestStack:
-            p.setOpacity(entry[0])
-            img = entry[1].wait()
-            p.drawImage(0,0, img)
-        p.end()
+        rect = self._imagePatches[patchNr][0].rect
         
-        patch.dirty = False
-        patch.rendering = False
-        self.patchAvailable.emit(patchNr)
+        def onPatchFinished(image, patchNumber, patchLayer):
+            thisPatch = self._imagePatches[patchNumber][patchLayer]
+            
+            ### one layer of this patch is done, just assign the newly arrived image
+            thisPatch.mutex.lock()
+            thisPatch.image = image
+            thisPatch.mutex.unlock()
+            ### ...done
+            
+            numLayers      = len(self._imagePatches[patchNr])-1
+            compositePatch = self._imagePatches[patchNr][numLayers]
+        
+            ### render the composite patch             
+            compositePatch.mutex.lock()
+            compositePatch.dirty = True
+        
+            p = QPainter(compositePatch.image)
+            r = compositePatch.rect
+            p.fillRect(0,0,r.width(), r.height(), Qt.white)
+    
+            for layerNr, patch in enumerate(self._imagePatches[patchNr][:-1]):
+                p.setOpacity(self._stackedIms[layerNr].opacity)
+                p.drawImage(0,0, patch.image)
+            p.end()
+            
+            compositePatch.dirty = False
+            compositePatch.mutex.unlock()
+            ### ...done rendering
+            
+            self.patchAvailable.emit(patchNr)
+        
+        for layerNr, (opacity, imageSource) in enumerate(self._stackedIms):
+            request = imageSource.request(rect)
+            request.notify(onPatchFinished, patchNumber=patchNr, patchLayer=layerNr)
 
     def _runImpl(self):
         self._dataPending.wait()

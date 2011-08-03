@@ -28,7 +28,7 @@
 #    or implied, of their employers.
 
 from functools import partial
-from PyQt4.QtCore import QRect, QRectF, QTimer, pyqtSignal
+from PyQt4.QtCore import QRect, QRectF, QTimer, pyqtSignal, QMutex
 from PyQt4.QtGui import QGraphicsScene, QImage
 from PyQt4.QtOpenGL import QGLWidget
 from OpenGL.GL import GL_CLAMP_TO_EDGE, GL_COLOR_BUFFER_BIT, GL_DEPTH_TEST, \
@@ -67,7 +67,7 @@ class ImagePatch(object):
         self._image  = QImage(self.rect.width(), self.rect.height(), QImage.Format_ARGB32_Premultiplied)
         self.texture = -1
         self.dirty = True
-        self.rendering = False
+        self.mutex = QMutex()
 
     @property
     def height(self):
@@ -136,12 +136,13 @@ class ImageScene2D(QGraphicsScene):
     def stackedImageSources(self, s):
         self._stackedImageSources = s
         s.isDirty.connect(self._invalidateRect)
+        self._initializePatches()
+        #s.stackChanged.connect(self._initializePatches)
         s.stackChanged.connect(partial(self._invalidateRect, QRect()))
-        
 
     @property
     def shape(self):
-        return [self.sceneRect().width(), self.sceneRect().height()]
+        return (self.sceneRect().width(), self.sceneRect().height())
     @shape.setter
     def shape(self, shape2D):
         assert len(shape2D) == 2
@@ -150,15 +151,14 @@ class ImageScene2D(QGraphicsScene):
         del self._renderThread
         del self.imagePatches
         
-        self.imagePatches = []
-        patchAccessor = PatchAccessor(shape2D[1], shape2D[0], blockSize=self.blockSize)
-        for i in range(patchAccessor.patchCount):
-            r = patchAccessor.patchRectF(i, self.overlap)
-            patch = ImagePatch(r)
-            self.imagePatches.append(patch)
+        self._patchAccessor = PatchAccessor(self.shape[1], self.shape[0], blockSize=self.blockSize)
+        self.imagePatches = [[] for i in range(self._patchAccessor.patchCount)]
+            
         self._renderThread = ImageSceneRenderThread(self.imagePatches, self.stackedImageSources, parent=self)
         self._renderThread.start()
         self._renderThread.patchAvailable.connect(self._schedulePatchRedraw)
+        
+        self._initializePatches()
     
     def __init__( self ):
         QGraphicsScene.__init__(self)
@@ -170,6 +170,7 @@ class ImageScene2D(QGraphicsScene):
         self.imagePatches = None
         self._renderThread = None
         self._stackedImageSources = None
+        self._numLayers = 0 #current number of 'layers'
     
         def cleanup():
             self._renderThread.stop()
@@ -188,15 +189,28 @@ class ImageScene2D(QGraphicsScene):
         self._useGL = False
         self._glWidget = None
     
+    def _initializePatches(self):
+        if self.stackedImageSources is None or self.shape == (0.0, 0.0):
+            return
+        
+        if len(self.stackedImageSources) != self._numLayers:
+            self._numLayers = len(self.stackedImageSources)
+            #add an additional layer for the final composited image patch
+            for i in range(self._patchAccessor.patchCount):
+                r = self._patchAccessor.patchRectF(i, self.overlap)
+                patches = [ImagePatch(r) for j in range(self._numLayers+1)]
+                self.imagePatches[i] = patches
+    
+
     def _invalidateRect(self, rect = QRect()):
         for i,patch in enumerate(self.imagePatches):
             if not rect.isValid() or rect.intersects(patch.rect):
-                #convention: if a rect is invalid, it is infinitely large
-                patch.dirty = True
+                ##convention: if a rect is invalid, it is infinitely large
+                patch[self._numLayers].dirty = True
                 self._schedulePatchRedraw(i)
 
     def _schedulePatchRedraw(self, patchNr):
-        p = self.imagePatches[patchNr]
+        p = self.imagePatches[patchNr][self._numLayers]
         self._updatableTiles.append(patchNr)
         if not self._useGL:
             self.invalidate(p.rectF, QGraphicsScene.BackgroundLayer)
@@ -205,9 +219,12 @@ class ImageScene2D(QGraphicsScene):
 
     def drawBackgroundSoftware(self, painter, rect):
         drawnTiles = 0
-        for patch in self.imagePatches:
+        for patches in self.imagePatches:
+            patch = patches[self._numLayers]
             if not patch.rectF.intersect(rect): continue
+            patch.mutex.lock()
             painter.drawImage(patch.rectF.topLeft(), patch.image)
+            patch.mutex.unlock()
             drawnTiles +=1
         #print "ImageView2D.drawBackgroundSoftware: drew %d of %d tiles" % (drawnTiles, len(self.imagePatches)) 
     
@@ -220,7 +237,7 @@ class ImageScene2D(QGraphicsScene):
         
         #update the textures of those patches that were updated
         for t in self._updatableTiles:
-            patch = self.imagePatches[t]
+            patch = self.imagePatches[t][self._numLayers]
             if patch.texture > -1:
                 self._glWidget.deleteTexture(patch.texture)
             patch.texture = self._glWidget.bindTexture(patch.image)
@@ -233,7 +250,8 @@ class ImageScene2D(QGraphicsScene):
         self._updatableTiles = []
         
         drawnTiles = 0
-        for patch in self.imagePatches:
+        for patches in self.imagePatches:
+            patch = patches[self._numLayers]
             if not patch.rectF.intersect(rect): continue
             patch.drawTexture()
             drawnTiles +=1
@@ -249,6 +267,7 @@ class ImageScene2D(QGraphicsScene):
 
         #Find all patches that intersect the given 'rect'.
         for i,patch in enumerate(self.imagePatches):
+            patch = patch[self._numLayers]
             if patch.dirty and rect.intersects(patch.rectF):
                 self._renderThread.requestPatch(i)
         

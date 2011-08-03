@@ -177,9 +177,8 @@ class ImageView2D(QGraphicsView):
         if self._useGL:
             self.scene().activateOpenGL( self.openglWidget )
 
-        self._crossHairCursor = CrossHairCursor()
+        self._crossHairCursor = CrossHairCursor(self.scene())
         self._crossHairCursor.setZValue(99)
-        self.scene().addItem(self._crossHairCursor)
         
         self._sliceIntersectionMarker = SliceIntersectionMarker()
         self._sliceIntersectionMarker.setZValue(100)

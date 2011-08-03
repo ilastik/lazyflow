@@ -21,9 +21,10 @@ class SliceRequest( object ):
         return self._sp(self._ar.wait())
 
     def notify( self, callback, **kwargs ):
-        self._arrayreq.notify(self._onNotify, package = (callback, kwargs))
+        self._ar.notify(self._onNotify, package = (callback, kwargs))
 
     def _onNotify( self, result, package ):
+        callback, kwargs = package
         callback(self._sp(result), **kwargs)
 assert issubclass(SliceRequest, RequestABC)
 

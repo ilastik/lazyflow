@@ -154,7 +154,7 @@ class VolumeEditor( QObject ):
 
     def onCustomContextMenuRequested(self, pos):
         print "Volumeeditor.onCustomContextMenuRequested"
-        self.customContextMenuRequested.emit(pos)
+        #self.customContextMenuRequested.emit(pos)
         
     def onLabelSelected(self):
         item = self.labelWidget.currentItem()
@@ -186,16 +186,13 @@ class VolumeEditor( QObject ):
         formatList = [x for x in formatList if x in ['png', 'tif']]
         expdlg = ExportDialog(formatList, timeOffsetCheck, sliceOffsetCheck, None, parent=self.ilastik)
         expdlg.exec_()
-        try:
-            tempname = str(expdlg.path.text()) + "/" + str(expdlg.prefix.text())
-            filename = str(QDir.convertSeparators(tempname))
-            self._saveThread.start()
-            stuff = (filename, expdlg.timeOffset, expdlg.sliceOffset, expdlg.format)
-            self._saveThread.queue.append(stuff)
-            self._saveThread.imagePending.set()
-            
-        except:
-            pass
+
+        tempname = str(expdlg.path.text()) + "/" + str(expdlg.prefix.text())
+        filename = str(QDir.convertSeparators(tempname))
+        self._saveThread.start()
+        stuff = (filename, expdlg.timeOffset, expdlg.sliceOffset, expdlg.format)
+        self._saveThread.queue.append(stuff)
+        self._saveThread.imagePending.set()
     
     def focusNextPrevChild(self, forward = True):
         """this method is overwritten from QWidget

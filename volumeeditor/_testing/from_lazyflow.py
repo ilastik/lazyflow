@@ -36,7 +36,7 @@ class OpDelay(operators.OpArrayPiper):
         req = self.inputs["Input"][key].writeInto(resultArea)
         req.wait()
         t = self._delay_factor*resultArea.nbytes
-        print "Delay: " + str(t) + " secs."
+        #print "Delay: " + str(t) + " secs."
         time.sleep(t)    
 
 class OpDataProvider5D(Operator):

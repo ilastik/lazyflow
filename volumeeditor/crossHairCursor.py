@@ -47,8 +47,8 @@ class CrossHairCursor(QGraphicsItem) :
     def boundingRect(self):
         return QRectF(0,0, self.width, self.height)
     
-    def __init__(self):
-        QGraphicsItem.__init__(self)
+    def __init__(self, scene=None):
+        QGraphicsItem.__init__(self, scene=scene)
         
         self.width = 0
         self.height = 0
@@ -67,10 +67,10 @@ class CrossHairCursor(QGraphicsItem) :
     
     @property
     def shape(self):
-        return [self.width, self.height]
+        return (self.width, self.height)
     @shape.setter
     def shape(self, shape2D):
-        self.width = shape2D[0]
+        self.width  = shape2D[0]
         self.height = shape2D[1]
     
     def setColor(self, color):

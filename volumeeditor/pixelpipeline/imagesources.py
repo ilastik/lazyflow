@@ -105,13 +105,14 @@ class RGBAImageRequest( object ):
         return img.convertToFormat(QImage.Format_ARGB32_Premultiplied)        
     def notify( self, callback, **kwargs ):
         for i in xrange(4):
-            self._requests.notify(self._onNotify, package = (i, callback, kwargs))
+            self._requests[i].notify(self._onNotify, package = (i, callback, kwargs))
 
     def _onNotify( self, result, package ):
         channel = package[0]
         self._requestsFinished[channel] = True
         if all(self._requestsFinished):
             img = self.wait()
+        
             callback = package[1]
             kwargs = package[2]
             callback( img, **kwargs )

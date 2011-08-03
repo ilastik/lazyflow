@@ -23,16 +23,18 @@ class Layer( QObject ):
         return self._visible
     @visible.setter
     def visible( self, value ):
-        self._visible = value
-        self.visibleChanged.emit( value )
+        if value != self._visible:
+            self._visible = value
+            self.visibleChanged.emit( value )
 
     @property
     def opacity( self ):
         return self._opacity
     @opacity.setter
     def opacity( self, value ):
-        self._opacity = value
-        self.opacityChanged.emit( value )
+        if value != self._opacity:
+            self._opacity = value
+            self.opacityChanged.emit( value )
 
     @property
     def datasources( self ):
