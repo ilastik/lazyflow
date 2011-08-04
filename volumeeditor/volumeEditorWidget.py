@@ -43,7 +43,7 @@ import numpy, copy
 from functools import partial
 
 from quadsplitter import QuadView
-from view3d.view3d import OverviewScene
+#from view3d.view3d import OverviewScene
       
 from sliceSelectorHud import SliceSelectorHud
 from positionModel import PositionModel
@@ -70,11 +70,12 @@ class VolumeEditorWidget(QWidget):
         self.quadview.addWidget(2, self._ve.imageViews[1])
 
         #3d overview
-        self.overview = OverviewScene(self, self._ve._shape[1:4])
-        self.quadview.addWidget(3, self.overview)
+        #self.overview = OverviewScene(self, self._ve._shape[1:4])
+        #self.quadview.addWidget(3, self.overview)
+        self.quadview.addWidget(3, QWidget(self))
         #FIXME: resurrect        
         #self.overview.changedSlice.connect(self.changeSlice)
-        self._ve.changedSlice.connect(self.overview.ChangeSlice)
+        #self._ve.changedSlice.connect(self.overview.ChangeSlice)
 
         # layout
         viewingLayout = QVBoxLayout()

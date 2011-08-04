@@ -77,13 +77,13 @@ class ImagePump( object ):
         ## setup image source stack and slice sources
         self._stackedImageSources = StackedImageSources( layerStackModel )
         self._syncedSliceSources = SyncedSliceSources()
-        for layer in layerStackModel.layerStack:
+        for layer in layerStackModel:
             self._addLayer( layer )
 
         ## handle layers removed from layerStackModel
         def onRowsAboutToBeRemoved( parent, start, end):
             for i in xrange(start, end + 1):
-                layer = self._layerStackModel.layerStack[i]
+                layer = self._layerStackModel[i]
                 self._removeLayer( layer )
         layerStackModel.rowsAboutToBeRemoved.connect(onRowsAboutToBeRemoved)
 
@@ -92,7 +92,7 @@ class ImagePump( object ):
             start = startIndexItem.row()
             stop = endIndexItem.row() + 1
             for i in xrange(start, stop):
-                layer = self._layerStackModel.layerStack[i]
+                layer = self._layerStackModel[i]
                 # model implementation removes and adds the same layer instance to move selections up/down
                 # therefore, check if the layer is already registered before adding as new
                 if not self._stackedImageSources.isRegistered(layer): 
