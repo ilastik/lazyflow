@@ -23,6 +23,9 @@ class ImageSource( QObject ):
     def request( self, rect ):
         raise NotImplementedError
 
+    def cancel( self ):
+        raise NotImplementedError
+
     def setDirty( self, slicing ):
         '''Mark a region of the image as dirty.
 
@@ -54,10 +57,14 @@ class GrayscaleImageRequest( object ):
         a = self._arrayreq.wait()
         a = a.squeeze()
         img = gray2qimage(a)
-        return img.convertToFormat(QImage.Format_ARGB32_Premultiplied)        
+        return img.convertToFormat(QImage.Format_ARGB32_Premultiplied)
+            
     def notify( self, callback, **kwargs ):
         self._arrayreq.notify(self._onNotify, package = (callback, kwargs))
-
+    
+    def cancel( self ):
+        self._arrayreq.cancel()
+    
     def _onNotify( self, result, package ):
         img = self.wait()
         callback = package[0]
@@ -106,6 +113,10 @@ class RGBAImageRequest( object ):
     def notify( self, callback, **kwargs ):
         for i in xrange(4):
             self._requests[i].notify(self._onNotify, package = (i, callback, kwargs))
+
+    def cancel( self ):
+        for r in self._requests:
+            r.cancel()
 
     def _onNotify( self, result, package ):
         channel = package[0]

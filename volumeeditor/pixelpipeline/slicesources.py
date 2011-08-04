@@ -23,6 +23,9 @@ class SliceRequest( object ):
     def notify( self, callback, **kwargs ):
         self._ar.notify(self._onNotify, package = (callback, kwargs))
 
+    def cancel( self ):
+        self._ar.cancel()
+
     def _onNotify( self, result, package ):
         callback, kwargs = package
         callback(self._sp(result), **kwargs)

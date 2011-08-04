@@ -26,6 +26,10 @@ class RequestABC:
     def notify( self, callback, **kwargs ):
         pass
 
+    @abstractmethod
+    def cancel( self ):
+        pass
+
     @classmethod
     def __subclasshook__(cls, C):
         if cls is RequestABC:

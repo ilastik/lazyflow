@@ -13,6 +13,9 @@ class ArrayRequest( object ):
 
     def wait( self ):
         return self._result
+    
+    def cancel( self ):
+        pass
         
     # callback( result = result, **kwargs )
     def notify( self, callback, **kwargs ):
@@ -76,6 +79,9 @@ class LazyflowRequest( object ):
     def wait( self ):
         return self._lazyflow_request.wait()
 
+    def cancel( self ):
+        self._lazyflow_request.cancel()
+
     def notify( self, callback, **kwargs ):
         self._lazyflow_request.notify( callback, **kwargs)
 assert issubclass(LazyflowRequest, RequestABC)
@@ -129,6 +135,9 @@ class ConstantRequest( object ):
 
     def wait( self ):
         return self._result
+    
+    def cancel( self ):
+        pass
         
     # callback( result = result, **kwargs )
     def notify( self, callback, **kwargs ):

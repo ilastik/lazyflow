@@ -206,6 +206,12 @@ class ImageScene2D(QGraphicsScene):
         if self._stackedImageSources is not None and self._numLayers != len(self._stackedImageSources):
             self._initializePatches()
         
+        if not rect.isValid():
+            #everything is invalidated
+            #we cancel all requests
+            print "CANCEL EVERYTHING"
+            self._renderThread.cancelAll()
+        
         for i,patch in enumerate(self.imagePatches):
             if not rect.isValid() or rect.intersects(patch.rect):
                 ##convention: if a rect is invalid, it is infinitely large

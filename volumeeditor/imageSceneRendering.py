@@ -34,6 +34,7 @@ class ImageSceneRenderThread(QThread):
         self._stopped = False
 
         self._stackedIms = stackedImageSources
+        self._runningRequests = set()
 
     def requestPatch(self, patchNr):
         if patchNr not in self._queue:
@@ -45,12 +46,18 @@ class ImageSceneRenderThread(QThread):
         self._dataPending.set()
         self.wait()
 
+    def cancelAll(self):
+        temp = self._runningRequests
+        self._runningRequests = set()
+        for r in temp:
+            r.cancel()
+
     def _takeJob(self):
         patchNr = self._queue.pop()
         
         rect = self._imagePatches[patchNr][0].rect
         
-        def onPatchFinished(image, patchNumber, patchLayer):
+        def onPatchFinished(image, request, patchNumber, patchLayer):
             thisPatch = self._imagePatches[patchNumber][patchLayer]
             
             ### one layer of this patch is done, just assign the newly arrived image
@@ -78,6 +85,10 @@ class ImageSceneRenderThread(QThread):
             p.end()
             
             compositePatch.dirty = False
+            try:
+                self._runningRequests.remove(request)
+            except:
+                pass
             compositePatch.mutex.unlock()
             ### ...done rendering
             
@@ -85,7 +96,8 @@ class ImageSceneRenderThread(QThread):
         
         for layerNr, (opacity, visible, imageSource) in enumerate(self._stackedIms):
             request = imageSource.request(rect)
-            request.notify(onPatchFinished, patchNumber=patchNr, patchLayer=layerNr)
+            self._runningRequests.add(request)
+            request.notify(onPatchFinished, request = request, patchNumber=patchNr, patchLayer=layerNr)
 
     def _runImpl(self):
         self._dataPending.wait()
