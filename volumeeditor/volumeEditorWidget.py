@@ -37,7 +37,8 @@
 from PyQt4.QtCore import Qt, pyqtSignal, QTimer
 from PyQt4.QtGui import QApplication, QWidget, QLabel, QSpinBox, \
                         QShortcut, QKeySequence, QSplitter, \
-                        QVBoxLayout, QHBoxLayout, QPushButton, QToolButton
+                        QVBoxLayout, QHBoxLayout, QPushButton, QToolButton, \
+                        QSizePolicy
 
 import numpy, copy
 from functools import partial
@@ -98,6 +99,7 @@ class VolumeEditorWidget(QWidget):
 
         # Right side toolbox
         self._toolBox = QWidget()
+        self._toolBox.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Minimum)
         self._toolBoxLayout = QVBoxLayout()
         self._toolBoxLayout.setMargin(5)
         self._toolBox.setLayout(self._toolBoxLayout)
@@ -105,6 +107,7 @@ class VolumeEditorWidget(QWidget):
 
         # Toggle slice intersection marks
         self.indicateSliceIntersectionButton = QToolButton()
+        self.indicateSliceIntersectionButton.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Minimum)
         self.indicateSliceIntersectionButton.setText("Indicate Current Position")
         self.indicateSliceIntersectionButton.setCheckable(True)
         self.indicateSliceIntersectionButton.setChecked(True)        
@@ -112,6 +115,7 @@ class VolumeEditorWidget(QWidget):
 
         # Channel Selector QComboBox in right side tool box
         self._channelSpin = QSpinBox()
+        self._channelSpin.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Minimum)
         self._channelSpin.setEnabled(True)
         channelLayout = QHBoxLayout()
         channelLayout.addWidget(self._channelSpin)
@@ -121,6 +125,7 @@ class VolumeEditorWidget(QWidget):
 
         #time selector
         self._timeSpin = QSpinBox()
+        self._timeSpin.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Minimum)
         self._timeSpin.setEnabled(True)
         timeLayout = QHBoxLayout()
         timeLayout.addWidget(self._timeSpin)
@@ -501,9 +506,7 @@ if __name__ == "__main__":
         sys.exit(0)
     
     s = QSplitter()
-    t1 = Test(True, sys.argv)
     t2 = Test(False, sys.argv)
-    s.addWidget(t1.widget)
     s.addWidget(t2.widget)
 
     fitToViewButton   = QPushButton("fitToView")
@@ -522,7 +525,6 @@ if __name__ == "__main__":
 
     def fit():
         for i in range(3):
-            t1.editor.imageViews[i].changeViewPort(QRectF(0,0,30,30))
             t2.editor.imageViews[i].changeViewPort(QRectF(0,0,30,30))
     fitToViewButton.toggled.connect(fit)       
 
