@@ -209,7 +209,6 @@ class ImageScene2D(QGraphicsScene):
         if not rect.isValid():
             #everything is invalidated
             #we cancel all requests
-            print "CANCEL EVERYTHING"
             self._renderThread.cancelAll()
         
         for i,patch in enumerate(self.imagePatches):

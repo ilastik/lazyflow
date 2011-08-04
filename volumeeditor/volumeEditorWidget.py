@@ -180,7 +180,8 @@ class VolumeEditorWidget(QWidget):
             self._ve.navCtrl.indicateSliceIntersection = state
         self.indicateSliceIntersectionButton.toggled.connect(toggleSliceIntersection)
 
-        self._ve.posModel.cursorPositionChanged.connect(self._updateInfoLabels)
+        #Enabling this makes cursor movement too slow...
+        #self._ve.posModel.cursorPositionChanged.connect(self._updateInfoLabels)
 
         # shortcuts
         self._initShortcuts()
