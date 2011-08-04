@@ -440,9 +440,13 @@ if __name__ == "__main__":
 
                 labelsrc = LazyflowSinkSource(opLabels, opLabels.outputs["Output"], opLabels.inputs["Input"])
 
+                layer1 = RGBALayer( green = membranesrc, red = nucleisrc )
+                layer1.name = "Membranes/Nuclei"
+                layer2 = RGBALayer( blue=tintsrc, alpha=labelsrc )
+                layer2.name = "Labels"
                 
-                layerstack.append( RGBALayer( green = membranesrc, red = nucleisrc ) )
-                layerstack.append( RGBALayer( blue=tintsrc, alpha=labelsrc ) )
+                layerstack.append(layer1)
+                layerstack.append(layer2)
                 
                 source = nucleisrc
 
