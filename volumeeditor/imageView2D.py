@@ -84,8 +84,8 @@ class ImageView2D(QGraphicsView):
     def shape(self, s):
         self._shape = s
         self.scene().shape                  = s
-        self._crossHairCursor.shape         = s
-        self._sliceIntersectionMarker.shape = s
+        self._crossHairCursor.shape         = (s[1], s[0])
+        self._sliceIntersectionMarker.shape = (s[1], s[0])
     
     #FIXME unused?
     @property

@@ -124,14 +124,14 @@ class NavigationInterpreter(QObject):
         
         newPos = copy.copy(self._model.cursorPos)
         if axis == 0:
-            newPos[1] = x
-            newPos[2] = y
-        if axis == 1:
-            newPos[0] = x
-            newPos[2] = y
-        if axis == 2:
-            newPos[0] = x
             newPos[1] = y
+            newPos[2] = x
+        if axis == 1:
+            newPos[0] = y
+            newPos[2] = x
+        if axis == 2:
+            newPos[0] = y
+            newPos[1] = x
 
         if newPos == self._model.cursorPos:
             return
@@ -235,7 +235,7 @@ class NavigationControler(QObject):
     #private functions ########################################################
     
     def _updateCrossHairCursor(self):
-        x,y = posView2D(self._model.cursorPos, axis=self._model.activeView)
+        y,x = posView2D(self._model.cursorPos, axis=self._model.activeView)
         self._views[self._model.activeView]._crossHairCursor.showXYPosition(x,y)
         
         if self._model.activeView == 0: # x-axis
@@ -244,28 +244,28 @@ class NavigationControler(QObject):
             
             #in case of the x-view, yViewYpos and zViewYpos has to be updated
             #adding 0.5 to make line snap into middle of pixels, like the croshair
-            yView.showYPosition(y + 0.5, x)
-            zView.showYPosition(x + 0.5, y)
+            #yView.showYPosition(x, y)
+            #zView.showYPosition(y, x)
         elif self._model.activeView == 1: # y-axis
             xView = self._views[0]._crossHairCursor
             zView = self._views[2]._crossHairCursor
             
             #in case of the y-view, yViewYpos and zViewXpos has to be updated
             #adding 0.5 to make line snap into middle of pixels, like the croshair
-            xView.showYPosition(y + 0.5, x)
-            zView.showXPosition(x, y)
+            #xView.showYPosition(y, x)
+            #zView.showXPosition(x, y)
         else: # z-axis
             xView = self._views[0]._crossHairCursor
             yView = self._views[1]._crossHairCursor
                 
             #in case of the z-view, xViewYpos and yViewXpos has to be updated
             #no adding required in this case   
-            xView.showXPosition(y, x)
-            yView.showXPosition(x, y)
+            #xView.showXPosition(x, y)
+            #yView.showXPosition(x, y)
     
     def _updateSliceIntersection(self):
         for axis, v in enumerate(self._views):
-            x,y = posView2D(self._model.slicingPos, axis)
+            y,x = posView2D(self._model.slicingPos, axis)
             v._sliceIntersectionMarker.setPosition(x,y)
 
     def _updateSlice(self, num, axis):
