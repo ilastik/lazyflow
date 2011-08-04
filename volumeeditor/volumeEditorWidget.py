@@ -494,7 +494,7 @@ if __name__ == "__main__":
                 
                 predictsrc = LazyflowSource(selector.outputs["Output"][0])
                 
-                layer2 = RGBALayer( green=predictsrc, alpha=predictsrc )
+                layer2 = GrayscaleLayer( predictsrc )
                 layer2.name = "Prediction"
                 layerstack.append( layer2 )
 
