@@ -35,6 +35,7 @@ from PyQt4.QtGui  import QWidget, QPen, QGraphicsScene, QColor, QGraphicsLineIte
 import numpy
 import threading
 import time
+import qimage2ndarray
 
 #*******************************************************************************
 # B r u s h i n g M o d e l                                                    *
@@ -43,7 +44,8 @@ import time
 class BrushingModel(QObject):
     brushSizeChanged     = pyqtSignal(int)
     brushColorChanged    = pyqtSignal(QColor)
-    brushStrokeAvailable = pyqtSignal(QPointF, QImage)
+    brushStrokeAvailable = pyqtSignal(QPointF, object)
+    drawnNumberChanged   = pyqtSignal(int)
     
     minBrushSize       = 1
     maxBrushSize       = 61
@@ -61,7 +63,7 @@ class BrushingModel(QObject):
         self.drawnNumber = self.defaultDrawnNumber
 
         self.penVis  = QPen(self.drawColor, self.brushSize, Qt.SolidLine, Qt.RoundCap, Qt.RoundJoin)
-        self.penDraw = QPen(self.drawColor, self.brushSize, Qt.SolidLine, Qt.RoundCap, Qt.RoundJoin)
+        self.penDraw = QPen(QColor(255,255,255), self.brushSize, Qt.SolidLine, Qt.RoundCap, Qt.RoundJoin)
         self.pos = None
         self.erasing = False
         
@@ -91,6 +93,7 @@ class BrushingModel(QObject):
         self.brushSizeChanged.emit(self.brushSize)
     
     def setDrawnNumber(self, num):
+        print "Setting Drawnnumer", num
         self.drawnNumber = num
         self.drawnNumberChanged.emit(num)
         
@@ -111,7 +114,8 @@ class BrushingModel(QObject):
         self.drawColor = color
         self.penVis.setColor(color)
         self.emit.brushColorChanged(self.drawColor)
-        
+      
+    
     def beginDrawing(self, pos, shape):
         print "BrushingModel.beginDrawing(pos=%r, shape=%r)" % (pos, shape)
         self.shape = shape
@@ -135,8 +139,11 @@ class BrushingModel(QObject):
         painter = QPainter(tempi)
         self.scene.render(painter, target=QRectF(), source=QRectF(QPointF(self.bb.x(), self.bb.y()), QSizeF(self.bb.width(), self.bb.height())))
         painter.end()
-        
-        self.brushStrokeAvailable.emit(QPointF(self.bb.x(), self.bb.y()), tempi)
+        ndarr = qimage2ndarray.rgb_view(tempi)[:,:,0]
+
+        labels = numpy.where(ndarr>0,numpy.uint8(self.drawnNumber),numpy.uint8(0))
+
+        self.brushStrokeAvailable.emit(QPointF(self.bb.x(), self.bb.y()), labels)
 
     def dumpDraw(self, pos):
         res = self.endDrawing(pos)

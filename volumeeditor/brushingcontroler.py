@@ -32,21 +32,19 @@ class BrushingControler(QObject):
         self._brushingModel.brushStrokeAvailable.connect(self._writeIntoSink)
         self._positionModel = positionModel
         
-    def _writeIntoSink(self, brushStrokeOffset, brushStrokeImage):
+    def _writeIntoSink(self, brushStrokeOffset, labels):
         #print "BrushingControler._writeIntoSink(%r, %r)" % (brushStrokeOffset, brushStrokeImage)
-        ndarr = qimage2ndarray.rgb_view(brushStrokeImage)
-        labels = ndarr[:,:,0]
         
         activeView = self._positionModel.activeView
         slicingPos = self._positionModel.slicingPos
         t, c       = self._positionModel.time, self._positionModel.channel
         
-        slicing = [slice(brushStrokeOffset.y(), brushStrokeOffset.y()+brushStrokeImage.height()), \
-                     slice(brushStrokeOffset.x(), brushStrokeOffset.x()+brushStrokeImage.width())]
+        slicing = [slice(brushStrokeOffset.y(), brushStrokeOffset.y()+labels.shape[0]), \
+                     slice(brushStrokeOffset.x(), brushStrokeOffset.x()+labels.shape[1])]
         slicing.insert(activeView, slicingPos[activeView])
         
         slicing = (t,) + tuple(slicing) + (c,)
-        print "_writeIntoSink", slicing, labels.shape
+        print "_writeIntoSink", slicing, labels.shape, labels
         
         self._dataSink.put(slicing, labels)
         

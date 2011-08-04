@@ -426,11 +426,11 @@ if __name__ == "__main__":
                 op1 = OpDataProvider(g, raw[:,:,:,:,0:1]/20)
                 op2 = OpDelay(g, 0.00000)
                 op2.inputs["Input"].connect(op1.outputs["Data"])
-                nucleisrc = LazyflowSource(op2, "Output")
+                nucleisrc = LazyflowSource(op2.outputs["Output"])
                 op3 = OpDataProvider(g, raw[:,:,:,:,1:2]/10)
                 op4 = OpDelay(g, 0.00000)
                 op4.inputs["Input"].connect(op3.outputs["Data"])
-                membranesrc = LazyflowSource(op4, "Output")
+                membranesrc = LazyflowSource(op4.outputs["Output"])
 
 
                 
@@ -492,7 +492,7 @@ if __name__ == "__main__":
                 selector.inputs["Input"].connect(opPredict.outputs['PMaps'])
                 selector.inputs["Index"].setValue(1)
                 
-                predictsrc = LazyflowSource(selector.outputs["Output"].operator.innerOperators[0], "Output")
+                predictsrc = LazyflowSource(selector.outputs["Output"][0])
                 
                 layer2 = RGBALayer( green=predictsrc, alpha=predictsrc )
                 layer2.name = "Prediction"
@@ -514,13 +514,13 @@ if __name__ == "__main__":
             if hasattr(source, '_array'):
                 arr = source._array
             else:
-                arr = source._op.outputs[source._outslot]
+                arr = source._outslot
             
             shape = None
             if hasattr(source, '_array'):
                 shape = source._array.shape
             else:
-                shape = source._op.outputs[source._outslot].shape
+                shape = source._outslot.shape
             if len(shape) == 3:
                 shape = (1,)+shape+(1,)
 
@@ -562,6 +562,19 @@ if __name__ == "__main__":
     fitToViewButton   = QPushButton("fitToView")
     layerWidgetButton = QPushButton("Layers")
     layerWidgetButton.setCheckable(True)
+
+    
+    def label1Set():
+        t2.editor.brushingModel.setDrawnNumber(1)
+    
+    def label2Set():
+        t2.editor.brushingModel.setDrawnNumber(2)
+
+    label1Button   = QPushButton("Label1")
+    label1Button.clicked.connect(label1Set)
+    label2Button   = QPushButton("Label2")
+    label2Button.clicked.connect(label2Set)
+
     
     l = QVBoxLayout()
     w = QWidget()
@@ -570,6 +583,8 @@ if __name__ == "__main__":
     
     l.addWidget(fitToViewButton)
     l.addWidget(layerWidgetButton)
+    l.addWidget(label1Button)
+    l.addWidget(label2Button)  
     
     l.addStretch()
 
