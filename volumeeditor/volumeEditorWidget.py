@@ -414,6 +414,7 @@ if __name__ == "__main__":
 
             elif "label" in argv:
                 fn = os.path.split(os.path.abspath(__file__))[0] +"/_testing/5d.npy"
+                raw = np.load(fn)
 
                 g = Graph()
                 op1 = OpDataProvider(g, raw[:,:,:,:,0:1]/20)

@@ -213,7 +213,7 @@ class ImageScene2D(QGraphicsScene):
             self._renderThread.cancelAll()
         
         for i,patch in enumerate(self.imagePatches):
-            if not rect.isValid() or rect.intersects(patch.rect):
+            if not rect.isValid() or rect.intersects(patch[self._numLayers].rect):
                 ##convention: if a rect is invalid, it is infinitely large
                 patch[self._numLayers].dirty = True
                 self._schedulePatchRedraw(i)
