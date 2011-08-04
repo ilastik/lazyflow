@@ -326,7 +326,7 @@ if __name__ == "__main__":
                 op1 = OpDataProvider(g, (numpy.random.rand(1,N,2*N, 10,1)*255).astype(numpy.uint8))
                 op2 = OpDelay(g, 0.000003)
                 op2.inputs["Input"].connect(op1.outputs["Data"])
-                source = LazyflowSource(op2, "Output")
+                source = LazyflowSource(op2.outputs["Output"])
                 layers = [GrayscaleLayer( source )]
                 
                 layerstack.append( GrayscaleLayer( source ) )
@@ -339,7 +339,7 @@ if __name__ == "__main__":
                 op1 = OpDataProvider5D(g, file)
                 op2 = OpDelay(g, 0.000003)
                 op2.inputs["Input"].connect(op1.outputs["Data5D"])
-                source = LazyflowSource(op2, "Output")
+                source = LazyflowSource(op2.outputs["Output"])
                 
                 layerstack.append( GrayscaleLayer( source ) )
                 
@@ -360,11 +360,11 @@ if __name__ == "__main__":
                 op1 = OpDataProvider(g, raw[:,:,:,:,0:1]/20)
                 op2 = OpDelay(g, 0.00000)
                 op2.inputs["Input"].connect(op1.outputs["Data"])
-                nucleisrc = LazyflowSource(op2, "Output")
+                nucleisrc = LazyflowSource(op2.outputs["Output"])
                 op3 = OpDataProvider(g, raw[:,:,:,:,1:2]/10)
                 op4 = OpDelay(g, 0.00000)
                 op4.inputs["Input"].connect(op3.outputs["Data"])
-                membranesrc = LazyflowSource(op4, "Output")
+                membranesrc = LazyflowSource(op4.outputs["Output"])
 
                 layerstack.append( RGBALayer( green = membranesrc, red = nucleisrc ) )
                 
@@ -380,11 +380,11 @@ if __name__ == "__main__":
                 op1 = OpDataProvider(g, raw[:,:,:,:,0:1]/10)
                 op2 = OpDelay(g, 0.00000)
                 op2.inputs["Input"].connect(op1.outputs["Data"])
-                nucleisrc = LazyflowSource(op2, "Output")
+                nucleisrc = LazyflowSource(op2.outputs["Output"])
                 op3 = OpDataProvider(g, raw[:,:,:,:,1:2]/5)
                 op4 = OpDelay(g, 0.00000)
                 op4.inputs["Input"].connect(op3.outputs["Data"])
-                membranesrc = LazyflowSource(op4, "Output")
+                membranesrc = LazyflowSource(op4.outputs["Output"])
 
                 layer1 = GrayscaleLayer( membranesrc )
                 layer1.name = "Membranes"
@@ -406,9 +406,9 @@ if __name__ == "__main__":
 
                 g = Graph()
                 op1 = OpDataProvider(g, raw[:,:,:,:,0:1]/10)
-                nucleisrc = LazyflowSource(op1, "Data")
+                nucleisrc = LazyflowSource(op1.outputs["Data"])
                 op2 = OpDataProvider(g, raw[:,:,:,:,1:2]/5)
-                membranesrc = LazyflowSource(op2, "Data")
+                membranesrc = LazyflowSource(op2.outputs["Data"])
 
                 layerstack.append(GrayscaleLayer( membranesrc ))
 
@@ -431,8 +431,6 @@ if __name__ == "__main__":
                 op4 = OpDelay(g, 0.00000)
                 op4.inputs["Input"].connect(op3.outputs["Data"])
                 membranesrc = LazyflowSource(op4.outputs["Output"])
-
-
                 
                 tint = np.zeros(shape=raw.shape, dtype=np.uint8)
                 tint[:] = 255
