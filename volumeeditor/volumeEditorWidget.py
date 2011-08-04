@@ -479,9 +479,12 @@ if __name__ == "__main__":
                 opTrain.inputs['Images'].connect(stacker.outputs["Output"])
                 opTrain.inputs['fixClassifier'].setValue(False)                
 
+                opClassifierCache = operators.OpArrayCache(g)
+                opClassifierCache.inputs["Input"].connect(opTrain.outputs['Classifier'])
+
                 ################## Prediction
                 opPredict=operators.OpPredictRandomForest(g)
-                opPredict.inputs['Classifier'].connect(opTrain.outputs['Classifier'])    
+                opPredict.inputs['Classifier'].connect(opClassifierCache.outputs['Output'])    
                 opPredict.inputs['Image'].connect(stacker.outputs['Output'])            
                 opPredict.inputs['LabelsCount'].setValue(2)
                 

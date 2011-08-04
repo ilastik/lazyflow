@@ -95,9 +95,10 @@ class ImageSceneRenderThread(QThread):
             self.patchAvailable.emit(patchNr)
         
         for layerNr, (opacity, visible, imageSource) in enumerate(self._stackedIms):
-            request = imageSource.request(rect)
-            self._runningRequests.add(request)
-            request.notify(onPatchFinished, request = request, patchNumber=patchNr, patchLayer=layerNr)
+            if self._stackedIms[layerNr].visible:
+                request = imageSource.request(rect)
+                self._runningRequests.add(request)
+                request.notify(onPatchFinished, request = request, patchNumber=patchNr, patchLayer=layerNr)
 
     def _runImpl(self):
         self._dataPending.wait()
