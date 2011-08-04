@@ -432,6 +432,7 @@ if __name__ == "__main__":
                 op4.inputs["Input"].connect(op3.outputs["Data"])
                 membranesrc = LazyflowSource(op4, "Output")
 
+
                 
                 tint = np.zeros(shape=raw.shape, dtype=np.uint8)
                 tint[:] = 255
@@ -440,9 +441,11 @@ if __name__ == "__main__":
                 #new shit
                 from lazyflow import operators
                 opLabels = operators.OpSparseLabelArray(g)                                
-                opLabels.inputs["shape"].setValue(raw.shape)
-                opLabels.inputs["eraser"].setValue(17)                
-
+                opLabels.inputs["shape"].setValue(raw.shape[:-1] + (1,))
+                opLabels.inputs["eraser"].setValue(100)                
+                opLabels.inputs["Input"][0,0,0,0,0] = 1                    
+                opLabels.inputs["Input"][0,0,0,1,0] = 2                    
+                
                 labelsrc = LazyflowSinkSource(opLabels, opLabels.outputs["Output"], opLabels.inputs["Input"])
 
                 layer1 = RGBALayer( green = membranesrc, red = nucleisrc )
@@ -452,6 +455,49 @@ if __name__ == "__main__":
                 
                 layerstack.append(layer1)
                 layerstack.append(layer2)
+
+                opImage  = operators.OpArrayPiper(g)
+                opImage.inputs["Input"].setValue(raw[:,:,:,:,0:1]/20)
+                opImageList = operators.Op5ToMulti(g)    
+                opImageList.inputs["Input0"].connect(opImage.outputs["Output"])
+
+
+                opFeatureList = operators.Op5ToMulti(g)    
+                opFeatureList.inputs["Input0"].connect(opImageList.outputs["Outputs"])
+
+#                
+                stacker=operators.OpMultiArrayStacker(g)
+#                
+#                opMulti = operators.Op20ToMulti(g)    
+#                opMulti.inputs["Input00"].connect(opG.outputs["Output"])
+                stacker.inputs["Images"].connect(opFeatureList.outputs["Outputs"])
+                
+                ################## Training
+                opMultiL = operators.Op5ToMulti(g)    
+                
+                opMultiL.inputs["Input0"].connect(opLabels.outputs["Output"])
+                
+                opTrain = operators.OpTrainRandomForest(g)
+                opTrain.inputs['Labels'].connect(opMultiL.outputs["Outputs"])
+                opTrain.inputs['Images'].connect(stacker.outputs["Output"])
+                opTrain.inputs['fixClassifier'].setValue(False)                
+
+                ################## Prediction
+                opPredict=operators.OpPredictRandomForest(g)
+                opPredict.inputs['Classifier'].connect(opTrain.outputs['Classifier'])    
+                opPredict.inputs['Image'].connect(stacker.outputs['Output'])            
+                opPredict.inputs['LabelsCount'].setValue(2)
+                
+                
+                selector=operators.OpSingleChannelSelector(g)
+                selector.inputs["Input"].connect(opPredict.outputs['PMaps'])
+                selector.inputs["Index"].setValue(1)
+                
+                predictsrc = LazyflowSource(selector.outputs["Output"].operator.innerOperators[0], "Output")
+                
+                layer3 = RGBALayer( green=predictsrc, alpha=predictsrc )
+                layer3.name = "Prediction"
+                layerstack.append( layer3 )
                 
                 source = nucleisrc
 
@@ -506,7 +552,9 @@ if __name__ == "__main__":
         sys.exit(0)
     
     s = QSplitter()
+
     t2 = Test(False, sys.argv)
+
     s.addWidget(t2.widget)
 
     fitToViewButton   = QPushButton("fitToView")
