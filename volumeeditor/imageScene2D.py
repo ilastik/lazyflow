@@ -203,6 +203,9 @@ class ImageScene2D(QGraphicsScene):
     
 
     def _invalidateRect(self, rect = QRect()):
+        if self._stackedImageSources is not None and self._numLayers != len(self._stackedImageSources):
+            self._initializePatches()
+        
         for i,patch in enumerate(self.imagePatches):
             if not rect.isValid() or rect.intersects(patch.rect):
                 ##convention: if a rect is invalid, it is infinitely large

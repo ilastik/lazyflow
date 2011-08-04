@@ -24,7 +24,10 @@ class LayerStackModel(QAbstractListModel):
         
     def __repr__(self):
         return "<LayerStackModel: layerStack='%r'>" % (self.layerStack,)
-        
+    
+    def __iter__(self):
+        return self.layerStack.__iter__()    
+    
     def updateGUI(self):
         self.canMoveSelectedUp.emit(self.selectedRow()>0)
         self.canMoveSelectedDown.emit(self.selectedRow()<self.rowCount()-1)

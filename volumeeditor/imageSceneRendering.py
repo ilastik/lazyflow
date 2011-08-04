@@ -71,6 +71,8 @@ class ImageSceneRenderThread(QThread):
             p.fillRect(0,0,r.width(), r.height(), Qt.white)
     
             for layerNr, patch in enumerate(self._imagePatches[patchNr][:-1]):
+                if not self._stackedIms[layerNr].visible:
+                    continue
                 p.setOpacity(self._stackedIms[layerNr].opacity)
                 p.drawImage(0,0, patch.image)
             p.end()
@@ -81,7 +83,7 @@ class ImageSceneRenderThread(QThread):
             
             self.patchAvailable.emit(patchNr)
         
-        for layerNr, (opacity, imageSource) in enumerate(self._stackedIms):
+        for layerNr, (opacity, visible, imageSource) in enumerate(self._stackedIms):
             request = imageSource.request(rect)
             request.notify(onPatchFinished, patchNumber=patchNr, patchLayer=layerNr)
 
