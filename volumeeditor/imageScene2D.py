@@ -203,13 +203,14 @@ class ImageScene2D(QGraphicsScene):
     
 
     def _invalidateRect(self, rect = QRect()):
-        if self._stackedImageSources is not None and self._numLayers != len(self._stackedImageSources):
-            self._initializePatches()
-        
         if not rect.isValid():
             #everything is invalidated
             #we cancel all requests
             self._renderThread.cancelAll()
+            self._updatableTiles = []
+        
+        if self._stackedImageSources is not None and self._numLayers != len(self._stackedImageSources):
+            self._initializePatches()
         
         for i,patch in enumerate(self.imagePatches):
             if not rect.isValid() or rect.intersects(patch[self._numLayers].rect):
