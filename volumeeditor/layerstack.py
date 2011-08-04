@@ -17,13 +17,19 @@ class LayerStackModel(QAbstractListModel):
     
     def __init__(self, parent = None):
         QAbstractListModel.__init__(self, parent)
-        self.layerStack = []
+        self._layerStack = []
         self.selectionModel = QItemSelectionModel(self)
         self.selectionModel.selectionChanged.connect(self.onSelectionChanged)
         QTimer.singleShot(0, self.updateGUI)
         
     def __repr__(self):
-        return "<LayerStackModel: layerStack='%r'>" % (self.layerStack,)
+        return "<LayerStackModel: _layerStack='%r'>" % (self._layerStack,)
+    
+    def __getitem__(self, i):
+        return self._layerStack[i]
+    
+    def __iter__(self):
+        return self._layerStack.__iter__()
         
     def updateGUI(self):
         self.canMoveSelectedUp.emit(self.selectedRow()>0)
@@ -50,14 +56,14 @@ class LayerStackModel(QAbstractListModel):
     
     def onSelectionChanged(self, selected, deselected):
         if len(deselected) > 0:
-            self.layerStack[deselected[0].indexes()[0].row()].mode = 'ReadOnly'
+            self._layerStack[deselected[0].indexes()[0].row()].mode = 'ReadOnly'
         if len(selected) > 0:
-            self.layerStack[selected[0].indexes()[0].row()].mode = 'Expanded'
+            self._layerStack[selected[0].indexes()[0].row()].mode = 'Expanded'
         self.updateGUI()
     
     def rowCount(self, parent = QModelIndex()):
         if not parent.isValid():
-            return len(self.layerStack)
+            return len(self._layerStack)
         return 0
     
     def insertRows(self, row, count, parent = QModelIndex()):
@@ -65,10 +71,10 @@ class LayerStackModel(QAbstractListModel):
             return False
         oldRowCount = self.rowCount()
         beginRow = max(0,row)
-        endRow   = min(row+count-1, len(self.layerStack))
+        endRow   = min(row+count-1, len(self._layerStack))
         self.beginInsertRows(parent, beginRow, endRow) 
         while(beginRow <= endRow):
-            self.layerStack.insert(row, Layer())
+            self._layerStack.insert(row, Layer())
             beginRow += 1
         self.endInsertRows()
         assert self.rowCount() == oldRowCount+1
@@ -77,14 +83,14 @@ class LayerStackModel(QAbstractListModel):
     def removeRows(self, row, count, parent = QModelIndex()):
         if parent.isValid():
             return False
-        if row+count <= 0 or row >= len(self.layerStack):
+        if row+count <= 0 or row >= len(self._layerStack):
             return False
         oldRowCount = self.rowCount()
         beginRow = max(0,row)
-        endRow   = min(row+count-1, len(self.layerStack)-1)
+        endRow   = min(row+count-1, len(self._layerStack)-1)
         self.beginRemoveRows(parent, beginRow, endRow)
         while(beginRow <= endRow):
-            del self.layerStack[row]
+            del self._layerStack[row]
             beginRow += 1
         
         self.endRemoveRows()
@@ -104,11 +110,11 @@ class LayerStackModel(QAbstractListModel):
     def data(self, index, role):
         if not index.isValid():
             return None
-        if index.row() > len(self.layerStack):
+        if index.row() > len(self._layerStack):
             return None
         
         if role == Qt.DisplayRole or role == Qt.EditRole:
-            return self.layerStack[index.row()]
+            return self._layerStack[index.row()]
         
         return None
     
@@ -116,7 +122,7 @@ class LayerStackModel(QAbstractListModel):
         layer = value
         if not isinstance(value, Layer):
             layer = value.toPyObject()
-        self.layerStack[index.row()] = layer
+        self._layerStack[index.row()] = layer
         self.dataChanged.emit(index, index)
         return True
     
@@ -146,7 +152,7 @@ class LayerStackModel(QAbstractListModel):
         if row.row() != 0:
             oldRow = row.row()
             newRow = oldRow - 1
-            d = self.layerStack[oldRow]
+            d = self._layerStack[oldRow]
             self.removeRow(oldRow)
             self.insertRow(newRow)
             self.setData(self.index(newRow), d)
@@ -160,7 +166,7 @@ class LayerStackModel(QAbstractListModel):
         if row.row() != self.rowCount() - 1:
             oldRow = row.row()
             newRow = oldRow + 1
-            d = self.layerStack[oldRow]
+            d = self._layerStack[oldRow]
             self.removeRow(oldRow)
             self.insertRow(newRow)
             self.setData(self.index(newRow), d)
