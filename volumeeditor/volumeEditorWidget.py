@@ -38,7 +38,7 @@ from PyQt4.QtCore import Qt, pyqtSignal, QTimer
 from PyQt4.QtGui import QApplication, QWidget, QLabel, QSpinBox, \
                         QShortcut, QKeySequence, QSplitter, \
                         QVBoxLayout, QHBoxLayout, QPushButton, QToolButton, \
-                        QSizePolicy
+                        QSizePolicy, QColor
 
 import numpy, copy
 from functools import partial
@@ -270,7 +270,7 @@ if __name__ == "__main__":
     from volumeeditor.pixelpipeline.datasources import LazyflowSource, ConstantSource
     from volumeeditor.pixelpipeline._testing import OpDataProvider
     from volumeeditor._testing.from_lazyflow import OpDataProvider5D, OpDelay
-    from volumeeditor.layer import GrayscaleLayer, RGBALayer
+    from volumeeditor.layer import GrayscaleLayer, RGBALayer, ColortableLayer
     from volumeeditor.layerwidget.layerwidget import LayerWidget
     from volumeeditor.layerstack import LayerStackModel
     
@@ -450,11 +450,10 @@ if __name__ == "__main__":
 
                 layer1 = RGBALayer( green = membranesrc, red = nucleisrc )
                 layer1.name = "Membranes/Nuclei"
-                layer2 = RGBALayer( blue=tintsrc, alpha=labelsrc )
-                layer2.name = "Labels"
+
                 
                 layerstack.append(layer1)
-                layerstack.append(layer2)
+
 
                 opImage  = operators.OpArrayPiper(g)
                 opImage.inputs["Input"].setValue(raw[:,:,:,:,0:1]/20)
@@ -495,10 +494,13 @@ if __name__ == "__main__":
                 
                 predictsrc = LazyflowSource(selector.outputs["Output"].operator.innerOperators[0], "Output")
                 
-                layer3 = RGBALayer( green=predictsrc, alpha=predictsrc )
-                layer3.name = "Prediction"
-                layerstack.append( layer3 )
-                
+                layer2 = RGBALayer( green=predictsrc, alpha=predictsrc )
+                layer2.name = "Prediction"
+                layerstack.append( layer2 )
+
+                layer3 = ColortableLayer( labelsrc, colorTable = [QColor(0,0,0,0).rgba(), QColor(255,0,0,255).rgba(), QColor(0,0,255,255).rgba()] )
+                layer3.name = "Labels"
+                layerstack.append(layer3)                
                 source = nucleisrc
 
             elif "stripes" in argv:

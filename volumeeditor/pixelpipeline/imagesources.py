@@ -72,6 +72,40 @@ class GrayscaleImageRequest( object ):
         callback( img, **kwargs )
 assert issubclass(GrayscaleImageRequest, RequestABC)
 
+
+#*******************************************************************************
+# C o l o r t a b l e I m a g e R e q u e s t                                    *
+#*******************************************************************************
+
+class ColortableImageRequest( object ):
+    def __init__( self, arrayrequest, colorTable):
+        self._arrayreq = arrayrequest
+        self._colorTable = colorTable
+        
+    def wait( self ):
+        a = self._arrayreq.wait()
+        a = a.squeeze()
+        img = gray2qimage(a)
+        img.setColorTable(self._colorTable)# = img.convertToFormat(QImage.Format_ARGB32_Premultiplied, self._colorTable)
+        img = img.convertToFormat(QImage.Format_ARGB32_Premultiplied)
+        return img 
+            
+    def notify( self, callback, **kwargs ):
+        self._arrayreq.notify(self._onNotify, package = (callback, kwargs))
+    
+    def cancel( self ):
+        self._arrayreq.cancel()
+    
+    def _onNotify( self, result, package ):
+        img = self.wait()
+        callback = package[0]
+        kwargs = package[1]
+        callback( img, **kwargs )
+assert issubclass(ColortableImageRequest, RequestABC)
+
+
+
+
 #*******************************************************************************
 # G r a y s c a l e I m a g e S o u r c e                                      *
 #*******************************************************************************
@@ -90,6 +124,27 @@ class GrayscaleImageSource( ImageSource ):
         return GrayscaleImageRequest( req )
 assert issubclass(GrayscaleImageSource, SourceABC)
 
+
+
+#*******************************************************************************
+# C o l o r t a b l e I m a g e S o u r c e                                      *
+#*******************************************************************************
+
+class ColortableImageSource( ImageSource ):
+    def __init__( self, arraySource2D, colorTable ):
+        assert isinstance(arraySource2D, SourceABC), 'wrong type: %s' % str(type(arraySource2D))
+        super(ColortableImageSource, self).__init__()
+        self._arraySource2D = arraySource2D
+        self._arraySource2D.isDirty.connect(self.setDirty)
+        self._colorTable = colorTable
+        
+    def request( self, qrect ):
+        assert isinstance(qrect, QRect)
+        s = rect2slicing(qrect)
+        req = self._arraySource2D.request(s)
+        return ColortableImageRequest( req , self._colorTable)
+        
+assert issubclass(ColortableImageSource, SourceABC)
 
 
 #*******************************************************************************

@@ -58,6 +58,18 @@ class GrayscaleLayer( Layer ):
         super(GrayscaleLayer, self).__init__()
         self._datasources = [datasource]
 
+
+#*******************************************************************************
+# C o l o r t a b l e L a y e r                                                  *
+#*******************************************************************************
+
+class ColortableLayer( Layer ):
+    def __init__( self, datasource , colorTable):
+        super(ColortableLayer, self).__init__()
+        self._datasources = [datasource]
+        self.colorTable = colorTable
+
+
 #*******************************************************************************
 # R G B A L a y e r                                                            *
 #*******************************************************************************
