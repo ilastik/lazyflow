@@ -434,7 +434,7 @@ if __name__ == "__main__":
 
                 #new shit
                 from lazyflow import operators
-                opLabels = operators.OpDenseSparseArray(g)                                
+                opLabels = operators.OpSparseLabelArray(g)                                
                 opLabels.inputs["shape"].setValue(raw.shape)
                 opLabels.inputs["eraser"].setValue(17)                
 
