@@ -23,16 +23,13 @@ class LayerStackModel(QAbstractListModel):
         QTimer.singleShot(0, self.updateGUI)
         
     def __repr__(self):
-        return "<LayerStackModel: layerStack='%r'>" % (self._layerStack,)
-    
-    def __iter__(self):
-        return self.layerStack.__iter__()    
+        return "<LayerStackModel: layerStack='%r'>" % (self._layerStack,)  
     
     def __getitem__(self, i):
-        return self._layerStack[i]
+        return self._layerStack[-i-1]
     
     def __iter__(self):
-        return self._layerStack.__iter__()
+        return reversed(self._layerStack)
         
     def updateGUI(self):
         self.canMoveSelectedUp.emit(self.selectedRow()>0)
@@ -41,8 +38,10 @@ class LayerStackModel(QAbstractListModel):
         self.wantsUpdate()
     
     def append(self, data):
-        self.insertRow(self.rowCount())
-        self.setData(self.index(self.rowCount()-1), data)
+        #self.insertRow(self.rowCount())
+        #self.setData(self.index(self.rowCount()-1), data)
+        self.insertRow(0)
+        self.setData(self.index(0), data)
     
     def selectedRow(self):
         selected = self.selectionModel.selectedRows()

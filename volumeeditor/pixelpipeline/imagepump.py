@@ -18,11 +18,11 @@ class StackedImageSources( QObject ):
         return self._layerStackModel.rowCount()
 
     def __iter__( self ):
-        for layer in self._layerStackModel.layerStack:
+        for layer in self._layerStackModel:
             yield (layer.opacity, layer.visible, self._layerToIms[layer])
 
     def __getitem__(self, i):
-        return self._layerStackModel.layerStack[i] 
+        return self._layerStackModel[i] 
 
     def register( self, layer, imageSource ):
         assert not layer in self._layerToIms, "layer %s already registered" % str(layer)
