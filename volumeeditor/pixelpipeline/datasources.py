@@ -96,6 +96,7 @@ class LazyflowSource( QObject ):
     def __init__( self, outslot ):
         super(LazyflowSource, self).__init__()
         self._outslot = outslot
+        self._outslot.registerDirtyCallback(self.setDirty)
 
     def request( self, slicing ):
         if not is_pure_slicing(slicing):
@@ -107,6 +108,7 @@ class LazyflowSource( QObject ):
         if not is_pure_slicing(slicing):
             raise Exception('dirty region: slicing is not pure')
         self.isDirty.emit( slicing )
+        
 assert issubclass(LazyflowSource, SourceABC)
 
 
