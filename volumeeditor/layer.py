@@ -54,9 +54,10 @@ class Layer( QObject ):
 #*******************************************************************************
 
 class GrayscaleLayer( Layer ):
-    def __init__( self, datasource ):
+    def __init__( self, datasource, normalize = (0.0,255.0) ):
         super(GrayscaleLayer, self).__init__()
         self._datasources = [datasource]
+        self._normalize = normalize
 
 
 #*******************************************************************************

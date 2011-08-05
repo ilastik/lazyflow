@@ -455,8 +455,12 @@ if __name__ == "__main__":
 
                 opImage  = operators.OpArrayPiper(g)
                 opImage.inputs["Input"].setValue(raw[:,:,:,:,0:1]/20)
+                opImage2  = operators.OpArrayPiper(g)
+                opImage2.inputs["Input"].setValue(raw[:,:,:,:,1:2]/10)
+                
                 opImageList = operators.Op5ToMulti(g)    
                 opImageList.inputs["Input0"].connect(opImage.outputs["Output"])
+                opImageList.inputs["Input1"].connect(opImage2.outputs["Output"])
 
 
                 opFeatureList = operators.Op5ToMulti(g)    
@@ -495,7 +499,7 @@ if __name__ == "__main__":
                 
                 predictsrc = LazyflowSource(selector.outputs["Output"][0])
                 
-                layer2 = GrayscaleLayer( predictsrc )
+                layer2 = GrayscaleLayer( predictsrc, normalize = (0.0,1.0) )
                 layer2.name = "Prediction"
                 layerstack.append( layer2 )
 

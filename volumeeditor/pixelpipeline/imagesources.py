@@ -50,12 +50,13 @@ assert issubclass(ImageSource, SourceABC)
 #*******************************************************************************
 
 class GrayscaleImageRequest( object ):
-    def __init__( self, arrayrequest ):
+    def __init__( self, arrayrequest, normalize ):
         self._arrayreq = arrayrequest
+        self._normalize = normalize
 
     def wait( self ):
         a = self._arrayreq.wait()
-        a = a.squeeze()
+        a = (a.squeeze() - self._normalize[0])*255 / (self._normalize[1]-self._normalize[0])
         img = gray2qimage(a)
         return img.convertToFormat(QImage.Format_ARGB32_Premultiplied)
             
@@ -111,17 +112,18 @@ assert issubclass(ColortableImageRequest, RequestABC)
 #*******************************************************************************
 
 class GrayscaleImageSource( ImageSource ):
-    def __init__( self, arraySource2D ):
+    def __init__( self, arraySource2D, normalize ):
         assert isinstance(arraySource2D, SourceABC), 'wrong type: %s' % str(type(arraySource2D))
         super(GrayscaleImageSource, self).__init__()
         self._arraySource2D = arraySource2D
+        self._normalize = normalize
         self._arraySource2D.isDirty.connect(self.setDirty)
 
     def request( self, qrect ):
         assert isinstance(qrect, QRect)
         s = rect2slicing(qrect)
         req = self._arraySource2D.request(s)
-        return GrayscaleImageRequest( req )
+        return GrayscaleImageRequest( req, self._normalize )
 assert issubclass(GrayscaleImageSource, SourceABC)
 
 

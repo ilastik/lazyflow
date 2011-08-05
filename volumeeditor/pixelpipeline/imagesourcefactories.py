@@ -7,7 +7,7 @@ from datasources import ConstantSource
 @multimethod(GrayscaleLayer, list)
 def createImageSource( layer, datasources2d ):
     assert len(datasources2d) == 1
-    return GrayscaleImageSource( datasources2d[0] )
+    return GrayscaleImageSource( datasources2d[0], layer._normalize )
 
 @multimethod(ColortableLayer, list)
 def createImageSource( layer, datasources2d ):
