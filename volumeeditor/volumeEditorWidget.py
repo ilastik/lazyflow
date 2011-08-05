@@ -351,9 +351,14 @@ if __name__ == "__main__":
                 
                 layerstack.append( GrayscaleLayer( source ) )
             
-            elif "3dvol":
+            elif "3dvol" in argv:
                 import h5py
+                import os
                 fname = os.path.split(os.path.abspath(__file__))[0] +"/_testing/l.h5"
+                if not os.path.exists(fname):
+                    print "please run _testin/labeled3d.py to make a l.h5 file"
+                    app.quit()
+                    sys.exit(1)
                 f = h5py.File(fname, 'r')
                 d = f["volume/data"]
                 print d.shape, d.dtype
@@ -517,10 +522,6 @@ if __name__ == "__main__":
                 layerstack.append(layer3)                
                 source = nucleisrc
 
-            elif "stripes" in argv:
-                source = ArraySource(stripes(50,35,20))
-                
-                layerstack.append( GrayscaleLayer( source ) )
             else:
                 raise RuntimeError("Invalid testing mode")
             
@@ -554,18 +555,22 @@ if __name__ == "__main__":
                 self.editor.posModel.slicingPos = [5,10,2]
             else:
                 def randomMove():
-                    self.editor.posModel.slicingPos = [numpy.random.randint(0,self.data.shape[i]) for i in range(3)]
+                    self.editor.posModel.slicingPos = [numpy.random.randint(0,shape[i]) for i in range(1,4)]
                 t = QTimer(self)
-                t.setInterval(1000)
+                t.setInterval(3000)
                 t.timeout.connect(randomMove)
                 t.start()
 
     app = QApplication(sys.argv)
     
-    args = ['hugeslab', 'cuboid', '5d', 'comp', 'layers', 'manylayers', 't', 'label', 'stripes', '3dvol']
+    args = ['hugeslab', 'cuboid', '5d', 'comp', 'layers', 'manylayers', 't', 'label', '3dvol']
     
     if len(sys.argv) < 2 or not any(x in sys.argv for x in args) :
         print "Usage: python volumeeditor.py <testmode> %r" % args 
+        app.quit()
+        sys.exit(0)
+    if len(sys.argv) == 2 and "t" in sys.argv:
+        print "the 't' modifier needs to be used together with one of the other options."
         app.quit()
         sys.exit(0)
     
