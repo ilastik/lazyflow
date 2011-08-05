@@ -28,6 +28,10 @@ def sliceImg(width, height, axisLabels, perpAxisLabel, perpAxisValue):
     arrow(p, QPoint(offset, offset), QPoint(offset, height-offset), axisLabels[1])
     arrow(p, QPoint(offset, offset), QPoint(width-offset,  offset), axisLabels[0])
     p.drawText(2*offset, 2*offset, "%s=%d" % (perpAxisLabel, perpAxisValue))
+    fm = p.fontMetrics()
+    size = fm.size(Qt.TextSingleLine, "updown")
+
+    p.drawText(numpy.random.randint(offset, width-offset-size.width()), numpy.random.randint(offset, height-offset-size.height()), "updown")
 
     dots = []
     numPixels = 0
@@ -54,7 +58,7 @@ def sliceImg(width, height, axisLabels, perpAxisLabel, perpAxisValue):
         assert(a[rx,ry] == r), "a[%d,%d] == %d != %d)" % (rx, ry, a[rx,ry], r)
     return (a, dots)
 
-shape = (70,90,110)
+shape = (90,110,120)
 array3d = numpy.zeros(shape)
 
 for z in range(0,shape[2], 10):
