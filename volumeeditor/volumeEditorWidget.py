@@ -350,6 +350,15 @@ if __name__ == "__main__":
                 source = ArraySource(testVolume(N))
                 
                 layerstack.append( GrayscaleLayer( source ) )
+            
+            elif "3dvol":
+                import h5py
+                fname = os.path.split(os.path.abspath(__file__))[0] +"/_testing/l.h5"
+                f = h5py.File(fname, 'r')
+                d = f["volume/data"]
+                print d.shape, d.dtype
+                source = ArraySource(d)
+                layerstack.append( GrayscaleLayer( source ) )
                 
             elif "comp" in argv:
                 fn = os.path.split(os.path.abspath(__file__))[0] +"/_testing/5d.npy"
@@ -536,7 +545,9 @@ if __name__ == "__main__":
                 self.editor = VolumeEditor(shape, layerstack, useGL=useGL)
 
             self.widget = VolumeEditorWidget( self.editor )
-            self.widget.show()
+            
+            if "3dvol" in argv:
+                self.widget._ve.posModel.cursorPositionChanged.connect(self.widget._updateInfoLabels)
             
             if not 't' in sys.argv:
                 #show some initial position
@@ -551,7 +562,7 @@ if __name__ == "__main__":
 
     app = QApplication(sys.argv)
     
-    args = ['hugeslab', 'cuboid', '5d', 'comp', 'layers', 'manylayers', 't', 'label', 'stripes']
+    args = ['hugeslab', 'cuboid', '5d', 'comp', 'layers', 'manylayers', 't', 'label', 'stripes', '3dvol']
     
     if len(sys.argv) < 2 or not any(x in sys.argv for x in args) :
         print "Usage: python volumeeditor.py <testmode> %r" % args 
