@@ -44,7 +44,6 @@ class BrushingControler(QObject):
         slicing.insert(activeView, slicingPos[activeView])
         
         slicing = (t,) + tuple(slicing) + (c,)
-        print "_writeIntoSink", slicing, labels.shape, labels
         
         self._dataSink.put(slicing, labels)
         
