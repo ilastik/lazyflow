@@ -36,6 +36,31 @@ class ImageSceneRenderThread(QThread):
         self._stackedIms = stackedImageSources
         self._runningRequests = set()
 
+
+    def synchronousRequestPatch(self, patchNr):
+        numLayers = len(self._imagePatches[patchNr])-1
+        temp = []
+        rect = self._imagePatches[patchNr][0].rect
+        
+        for layerNr, (opacity, visible, imageSource) in enumerate(self._stackedIms):
+            if self._stackedIms[layerNr].visible:
+                request = imageSource.request(rect)
+                temp.append((request, layerNr))
+        
+        compositePatch = self._imagePatches[patchNr][numLayers]
+        p = QPainter(compositePatch.image)
+        r = compositePatch.rect
+        p.fillRect(0,0,r.width(), r.height(), Qt.white)
+        
+        for req,layerNr in temp:
+            img = req.wait()
+            p.setOpacity(self._stackedIms[layerNr].opacity)
+            p.drawImage(0,0, img)
+        p.end()
+        
+        return compositePatch.image
+
+
     def requestPatch(self, patchNr):
         if patchNr not in self._queue:
             self._queue.append(patchNr)

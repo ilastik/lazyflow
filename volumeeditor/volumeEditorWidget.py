@@ -385,6 +385,7 @@ if __name__ == "__main__":
                 source = nucleisrc
 
             elif "layers" in argv:
+                import os
                 fn = os.path.split(os.path.abspath(__file__))[0] +"/_testing/5d.npy"
                 raw = np.load(fn)
                 print "loading file '%s'" % fn
@@ -433,6 +434,7 @@ if __name__ == "__main__":
                 source = nucleisrc
 
             elif "label" in argv:
+                import os
                 fn = os.path.split(os.path.abspath(__file__))[0] +"/_testing/5d.npy"
                 raw = np.load(fn)
 
@@ -486,6 +488,8 @@ if __name__ == "__main__":
 #                opMulti = operators.Op20ToMulti(g)    
 #                opMulti.inputs["Input00"].connect(opG.outputs["Output"])
                 stacker.inputs["Images"].connect(opFeatureList.outputs["Outputs"])
+                stacker.inputs["AxisFlag"].setValue('c')
+                stacker.inputs["AxisIndex"].setValue(4)
                 
                 ################## Training
                 opMultiL = operators.Op5ToMulti(g)    
@@ -502,16 +506,21 @@ if __name__ == "__main__":
 
                 ################## Prediction
                 opPredict=operators.OpPredictRandomForest(g)
+                opPredict.inputs['LabelsCount'].setValue(2)
                 opPredict.inputs['Classifier'].connect(opClassifierCache.outputs['Output'])    
                 opPredict.inputs['Image'].connect(stacker.outputs['Output'])            
-                opPredict.inputs['LabelsCount'].setValue(2)
+
                 
                 
                 selector=operators.OpSingleChannelSelector(g)
                 selector.inputs["Input"].connect(opPredict.outputs['PMaps'])
                 selector.inputs["Index"].setValue(1)
                 
-                predictsrc = LazyflowSource(selector.outputs["Output"][0])
+                opSelCache = operators.OpArrayCache(g)
+                opSelCache.inputs["blockShape"].setValue((1,5,5,5,1))
+                opSelCache.inputs["Input"].connect(selector.outputs["Output"])                
+                
+                predictsrc = LazyflowSource(opSelCache.outputs["Output"][0])
                 
                 layer2 = GrayscaleLayer( predictsrc, normalize = (0.0,1.0) )
                 layer2.name = "Prediction"
