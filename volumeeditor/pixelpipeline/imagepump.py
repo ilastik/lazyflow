@@ -91,13 +91,15 @@ class ImagePump( object ):
         def onDataChanged( startIndexItem, endIndexItem):
             start = startIndexItem.row()
             stop = endIndexItem.row() + 1
-            for i in xrange(start, stop):
+            #for i in xrange(start, stop):
+            for i in range(self._layerStackModel.rowCount()):
                 layer = self._layerStackModel[i]
                 # model implementation removes and adds the same layer instance to move selections up/down
                 # therefore, check if the layer is already registered before adding as new
                 if not self._stackedImageSources.isRegistered(layer): 
                     self._addLayer(layer)
         layerStackModel.dataChanged.connect(onDataChanged)
+
 
     def _createSources( self, layer ):
         def sliceSrcOrNone( datasrc ):

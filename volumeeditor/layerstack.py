@@ -14,7 +14,7 @@ class LayerStackModel(QAbstractListModel):
     canDeleteSelected = pyqtSignal("bool")
     
     orderChanged = pyqtSignal()
-    
+        
     def __init__(self, parent = None):
         QAbstractListModel.__init__(self, parent)
         self._layerStack = []
