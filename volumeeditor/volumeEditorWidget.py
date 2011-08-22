@@ -260,7 +260,7 @@ if __name__ == "__main__":
     import signal
     signal.signal(signal.SIGINT, signal.SIG_DFL)
     
-    import os, sys
+    import os, sys, h5py
 
     import numpy as np
     from PyQt4.QtCore import QObject, QRectF, QTime
@@ -352,8 +352,6 @@ if __name__ == "__main__":
                 layerstack.append( GrayscaleLayer( source ) )
             
             elif "3dvol" in argv:
-                import h5py
-                import os
                 fname = os.path.split(os.path.abspath(__file__))[0] +"/_testing/l.h5"
                 if not os.path.exists(fname):
                     print "please run _testin/labeled3d.py to make a l.h5 file"
@@ -385,7 +383,6 @@ if __name__ == "__main__":
                 source = nucleisrc
 
             elif "layers" in argv:
-                import os
                 fn = os.path.split(os.path.abspath(__file__))[0] +"/_testing/5d.npy"
                 raw = np.load(fn)
                 print "loading file '%s'" % fn
@@ -434,7 +431,6 @@ if __name__ == "__main__":
                 source = nucleisrc
 
             elif "label" in argv:
-                import os
                 fn = os.path.split(os.path.abspath(__file__))[0] +"/_testing/5d.npy"
                 raw = np.load(fn)
 
