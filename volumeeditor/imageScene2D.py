@@ -28,8 +28,8 @@
 #    or implied, of their employers.
 
 from functools import partial
-from PyQt4.QtCore import QRect, QRectF, QTimer, pyqtSignal, QMutex
-from PyQt4.QtGui import QGraphicsScene, QImage
+from PyQt4.QtCore import QRect, QRectF, QTimer, pyqtSignal, QMutex, QPointF
+from PyQt4.QtGui import QGraphicsScene, QImage, QTransform, QPen, QColor, QBrush
 from PyQt4.QtOpenGL import QGLWidget
 from OpenGL.GL import GL_CLAMP_TO_EDGE, GL_COLOR_BUFFER_BIT, GL_DEPTH_TEST, \
                       GL_NEAREST, GL_QUADS, GL_TEXTURE_2D, \
@@ -141,17 +141,38 @@ class ImageScene2D(QGraphicsScene):
         s.stackChanged.connect(partial(self._invalidateRect, QRect()))
 
     @property
-    def shape(self):
+    def sceneShape(self):
+        """
+        The shape of the scene in QGraphicsView's coordinate system.
+        """
         return (self.sceneRect().width(), self.sceneRect().height())
-    @shape.setter
-    def shape(self, shape2D):
-        assert len(shape2D) == 2
-        self.setSceneRect(0,0, *shape2D)
+    @sceneShape.setter
+    def sceneShape(self, sceneShape):
+        """
+        Set the size of the scene in QGraphicsView's coordinate system.
+        sceneShape -- (widthX, widthY),
+        where the origin of the coordinate system is in the upper left corner
+        of the screen and 'x' points right and 'y' points down
+        """   
+            
+        assert len(sceneShape) == 2
+        self.setSceneRect(0,0, *sceneShape)
+        self.addRect(QRectF(0,0,*sceneShape), pen=QPen(QColor(255,0,0)))
+        
+        #The scene shape is in Qt's QGraphicsScene coordinate system,
+        #that is the origin is in the top left of the screen, and the
+        #'x' axis points to the right and the 'y' axis down.
+        
+        #The coordinate system of the data handles things differently.
+        #The x axis points down and the y axis points to the right.
+        
+        r = self.scene2data.mapRect(QRect(0,0,sceneShape[0], sceneShape[1]))
+        sliceShape = (r.width(), r.height())
         
         del self._renderThread
         del self.imagePatches
         
-        self._patchAccessor = PatchAccessor(self.shape[1], self.shape[0], blockSize=self.blockSize)
+        self._patchAccessor = PatchAccessor(sliceShape[0], sliceShape[1], blockSize=self.blockSize)
         self.imagePatches = [[] for i in range(self._patchAccessor.patchCount)]
             
         self._renderThread = ImageSceneRenderThread(self.imagePatches, self.stackedImageSources, parent=self)
@@ -172,6 +193,10 @@ class ImageScene2D(QGraphicsScene):
         self._stackedImageSources = None
         self._numLayers = 0 #current number of 'layers'
     
+        self.data2scene = QTransform(0,1,1,0,0,0)
+        
+        self.scene2data = self.data2scene.transposed()
+    
         def cleanup():
             self._renderThread.stop()
         self.destroyed.connect(cleanup)
@@ -190,18 +215,23 @@ class ImageScene2D(QGraphicsScene):
         self._glWidget = None
     
     def _initializePatches(self):
-        if self.stackedImageSources is None or self.shape == (0.0, 0.0):
+        if self.stackedImageSources is None or self.sceneShape == (0.0, 0.0):
             return
         
         if len(self.stackedImageSources) != self._numLayers:
             self._numLayers = len(self.stackedImageSources)
             #add an additional layer for the final composited image patch
             for i in range(self._patchAccessor.patchCount):
-                r = self._patchAccessor.patchRectF(i, self.overlap)
-                patches = [ImagePatch(r) for j in range(self._numLayers+1)]
+                rect = self._patchAccessor.patchRectF(i, self.overlap)
+                sceneRect = self.data2scene.mapRect(rect)
+                #the patch accessor uses the data coordinate system
+                #
+                #because the patch is drawn on the screen, its holds coordinates
+                #corresponding to Qt's QGraphicsScene's system
+                #convert to scene coordinates
+                patches = [ImagePatch(sceneRect) for j in range(self._numLayers+1)]
                 self.imagePatches[i] = patches
     
-
     def _invalidateRect(self, rect = QRect()):
         if not rect.isValid():
             #everything is invalidated
@@ -235,6 +265,8 @@ class ImageScene2D(QGraphicsScene):
             painter.drawImage(patch.rectF.topLeft(), patch.image)
             patch.mutex.unlock()
             drawnTiles +=1
+        r = self.scene2data.mapRect(QRect(0,0,self.sceneShape[0], self.sceneShape[1]))
+        sliceShape = (r.width(), r.height())
         #print "ImageView2D.drawBackgroundSoftware: drew %d of %d tiles" % (drawnTiles, len(self.imagePatches)) 
     
     def drawBackgroundGL(self, painter, rect):

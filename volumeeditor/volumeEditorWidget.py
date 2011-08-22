@@ -318,24 +318,27 @@ if __name__ == "__main__":
             QObject.__init__(self)
             
             layerstack = LayerStackModel()
+            g = Graph()
             
             if "hugeslab" in argv:
-                N = 2000
+                N = 500
                 
-                g = Graph()
-                op1 = OpDataProvider(g, (numpy.random.rand(1,N,2*N, 10,1)*255).astype(numpy.uint8))
+                hugeslab = (numpy.random.rand(1,N,2*N, 10,1)*255).astype(numpy.uint8)
+                
+                op1 = OpDataProvider(g, hugeslab)
                 op2 = OpDelay(g, 0.000003)
                 op2.inputs["Input"].connect(op1.outputs["Data"])
                 source = LazyflowSource(op2.outputs["Output"])
                 layers = [GrayscaleLayer( source )]
                 
                 layerstack.append( GrayscaleLayer( source ) )
+                
+                print "*** hugeslab has shape = %r" % (hugeslab.shape,)
 
             elif "5d" in argv:
                 file = os.path.split(os.path.abspath(__file__))[0] +"/_testing/5d.npy"
                 print "loading file '%s'" % file
                 
-                g = Graph()
                 op1 = OpDataProvider5D(g, file)
                 op2 = OpDelay(g, 0.000003)
                 op2.inputs["Input"].connect(op1.outputs["Data5D"])
@@ -368,7 +371,6 @@ if __name__ == "__main__":
                 raw = np.load(fn)
                 print "loading file '%s'" % fn
 
-                g = Graph()
                 op1 = OpDataProvider(g, raw[:,:,:,:,0:1]/20)
                 op2 = OpDelay(g, 0.00000)
                 op2.inputs["Input"].connect(op1.outputs["Data"])
@@ -388,7 +390,6 @@ if __name__ == "__main__":
                 print "loading file '%s'" % fn
                 print "raw data has shape %r", raw.shape
 
-                g = Graph()
                 op1 = OpDataProvider(g, raw[:,:,:,:,0:1]/10)
                 op2 = OpDelay(g, 0.00000)
                 op2.inputs["Input"].connect(op1.outputs["Data"])
@@ -416,7 +417,6 @@ if __name__ == "__main__":
                 raw = np.load(fn)
                 print "loading file '%s'" % fn
 
-                g = Graph()
                 op1 = OpDataProvider(g, raw[:,:,:,:,0:1]/10)
                 nucleisrc = LazyflowSource(op1.outputs["Data"])
                 op2 = OpDataProvider(g, raw[:,:,:,:,1:2]/5)
@@ -434,7 +434,6 @@ if __name__ == "__main__":
                 fn = os.path.split(os.path.abspath(__file__))[0] +"/_testing/5d.npy"
                 raw = np.load(fn)
 
-                g = Graph()
                 op1 = OpDataProvider(g, raw[:,:,:,:,0:1]/20)
                 op2 = OpDelay(g, 0.00000)
                 op2.inputs["Input"].connect(op1.outputs["Data"])
@@ -526,10 +525,9 @@ if __name__ == "__main__":
                 layer3.name = "Labels"
                 layerstack.append(layer3)                
                 source = nucleisrc
-
             else:
                 raise RuntimeError("Invalid testing mode")
-            
+        
             arr = None
             if hasattr(source, '_array'):
                 arr = source._array
@@ -543,8 +541,20 @@ if __name__ == "__main__":
                 shape = source._outslot.shape
             if len(shape) == 3:
                 shape = (1,)+shape+(1,)
+                
+            if "l" in sys.argv:
+                from lazyflow import operators
+                opLabels = operators.OpSparseLabelArray(g)                                
+                opLabels.inputs["shape"].setValue(shape[:-1] + (1,))
+                opLabels.inputs["eraser"].setValue(100)                
+                opLabels.inputs["Input"][0,0,0,0,0] = 1                    
+                opLabels.inputs["Input"][0,0,0,1,0] = 2
+                labelsrc = LazyflowSinkSource(opLabels, opLabels.outputs["Output"], opLabels.inputs["Input"])
+                layer = ColortableLayer( labelsrc, colorTable = [QColor(0,0,0,0).rgba(), QColor(255,0,0,255).rgba(), QColor(0,0,255,255).rgba()] )
+                layer.name = "Labels"
+                layerstack.append(layer)
 
-            if "label" in argv:
+            if "label" in argv or "l" in argv:
                 self.editor = VolumeEditor(shape, layerstack, labelsink=labelsrc, useGL=useGL)
                 self.editor.setDrawingEnabled(True)
             else:

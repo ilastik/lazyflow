@@ -137,7 +137,7 @@ class VolumeEditor( QObject ):
     def _initConnects(self):
         for i, v in enumerate(self.imageViews):
             #connect interpreter
-            v.shape  = self.posModel.sliceShape(axis=i)
+            v.sliceShape = self.posModel.sliceShape(axis=i)
             v.mouseMoved.connect(partial(self.navInterpret.positionCursor, axis=i))
             v.mouseDoubleClicked.connect(partial(self.navInterpret.positionSlice, axis=i))
             v.changeSliceDelta.connect(partial(self.navInterpret.changeSliceRelative, axis=i))

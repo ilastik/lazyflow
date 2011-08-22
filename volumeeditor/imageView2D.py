@@ -59,33 +59,35 @@ class ImageView2D(QGraphicsView):
     #that is requested
     changeSliceDelta   = pyqtSignal(int)
     
+    #all the following signals refer to data coordinates
     drawing            = pyqtSignal(QPointF)
     beginDraw          = pyqtSignal(QPointF, object)
     endDraw            = pyqtSignal(QPointF)
     
     erasingToggled     = pyqtSignal(bool)            
     
-    #notifies that the mouse has moved to 2D coordinate x,y
+    #notifies that the mouse has moved to 2D data coordinate x,y
     mouseMoved         = pyqtSignal(int, int)
-    #notifies that the user has double clicked on the 2D coordinate x,y    
+    #notifies that the user has double clicked on the 2D data coordinate x,y    
     mouseDoubleClicked = pyqtSignal(int, int)
     
     drawUpdateInterval = 300 #ms
     
     @property
-    def shape(self):
+    def sliceShape(self):
         """
         (width, height) of the scene.
         Specifying the shape is necessary to allow for correct
         scrollbars
         """
-        return self._shape
-    @shape.setter
-    def shape(self, s):
-        self._shape = s
-        self.scene().shape                  = s
-        self._crossHairCursor.shape         = (s[1], s[0])
-        self._sliceIntersectionMarker.shape = (s[1], s[0])
+        return self._sliceShape
+    @sliceShape.setter
+    def sliceShape(self, s):
+        self._sliceShape = s
+        sceneShape = (s[1], s[0])
+        self.scene().sceneShape             = sceneShape
+        self._crossHairCursor.shape         = sceneShape
+        self._sliceIntersectionMarker.shape = sceneShape
     
     #FIXME unused?
     @property
@@ -133,7 +135,7 @@ class ImageView2D(QGraphicsView):
         self.setScene(imagescene2d)
         
         #these attributes are exposed as public properties above
-        self._shape  = None #2D shape of this view's shown image
+        self._sliceShape  = None #2D shape of this view's shown image
         self._slices = None #number of slices that are stacked
         self._name   = ''
         self._hud    = None
@@ -221,15 +223,6 @@ class ImageView2D(QGraphicsView):
 
         self._tempErase = False
         
-    def swapAxes(self):          
-        """
-        Displays this image as if the x and y axes were swapped.
-        """
-        #FIXME: This is needed for the current arrangements of the three
-        #       3D slice views. Can this be made more elegant
-        self.rotate(90.0)
-        self.scale(1.0,-1.0)
-        
     def _cleanUp(self):        
         self._ticker.stop()
         self._drawTimer.stop()
@@ -262,6 +255,9 @@ class ImageView2D(QGraphicsView):
         result_image = result_image.transformed(transform)
         result_image.save(QString(filename))
    
+    def mapScene2Data(self, pos):
+        return self.scene().scene2data.map(pos)
+   
     def notifyDrawing(self):
         print "ImageView2D.notifyDrawing"
         #FIXME: resurrect
@@ -270,7 +266,7 @@ class ImageView2D(QGraphicsView):
     def beginDrawing(self, pos):
         self.mousePos = pos
         self._isDrawing  = True
-        self.beginDraw.emit(pos, self.shape)
+        self.beginDraw.emit(pos, self.sliceShape)
         
     def endDrawing(self, pos):
         InteractionLogger.log("%f: endDrawing()" % (time.clock()))     
@@ -283,7 +279,9 @@ class ImageView2D(QGraphicsView):
         k_alt = (keys == Qt.AltModifier)
         k_ctrl = (keys == Qt.ControlModifier)
 
-        self.mousePos = self.mapToScene(event.pos())
+        self.mousePos = self.mapScene2Data(self.mapToScene(event.pos()))
+
+        sceneMousePos = self.mapToScene(event.pos())
         grviewCenter  = self.mapToScene(self.viewport().rect().center())
 
         if event.delta() > 0:
@@ -304,7 +302,7 @@ class ImageView2D(QGraphicsView):
                 self.changeSlice(-1)
         if k_ctrl:
             mousePosAfterScale = self.mapToScene(event.pos())
-            offset = self.mousePos - mousePosAfterScale
+            offset = sceneMousePos - mousePosAfterScale
             newGrviewCenter = grviewCenter + offset
             self.centerOn(newGrviewCenter)
             self.mouseMoveEvent(event)
@@ -336,8 +334,8 @@ class ImageView2D(QGraphicsView):
             if QApplication.keyboardModifiers() == Qt.ShiftModifier:
                 self.erasingToggled.emit(True)
                 self._tempErase = True
-            mousePos = self.mapToScene(event.pos())
-            self.beginDrawing(mousePos)
+            self.mousePos = self.mapScene2Data(self.mapToScene(event.pos()))
+            self.beginDrawing(self.mousePos)
             
     def mouseMoveEvent(self,event):
         if self._dragMode == True:
@@ -352,16 +350,17 @@ class ImageView2D(QGraphicsView):
             #do nothing until it comes to a complete stop
             return
         
-        self.mousePos = mousePos = self.mapToScene(event.pos())
+        self.mousePos = mousePos = self.mapScene2Data(self.mapToScene(event.pos()))
         x = self.x = mousePos.x()
         y = self.y = mousePos.y()
-
         self.mouseMoved.emit(x,y)
 
         if self._isDrawing:
             self.drawing.emit(mousePos)
 
     def mouseReleaseEvent(self, event):
+        self.mousePos = self.mapScene2Data(self.mapToScene(event.pos()))
+        
         if event.button() == Qt.MidButton:
             self.setCursor(QCursor())
             releasePoint = event.pos()
@@ -369,8 +368,7 @@ class ImageView2D(QGraphicsView):
             self._dragMode = False
             self._ticker.start(20)
         if self._isDrawing:
-            mousePos = self.mapToScene(event.pos())
-            self.endDrawing(mousePos)
+            self.endDrawing(self.mousePos)
         if self._tempErase:
             self.erasingToggled.emit(False)
             self._tempErase = False
@@ -432,10 +430,10 @@ class ImageView2D(QGraphicsView):
             self._panning()
     
     def mouseDoubleClickEvent(self, event):
-        mousePos = self.mapToScene(event.pos())
-        self.mouseDoubleClicked.emit(mousePos.x(), mousePos.y())
+        self.mousePos = self.mapScene2Data(self.mapToScene(event.pos()))
+        self.mouseDoubleClicked.emit(self.mousePos.x(), self.mousePos.y())
 
-    def changeSlice(self, delta):
+    def changeSlice(self, delta):       
         if self._isDrawing:
             self.endDrawing(self.mousePos)
             self._isDrawing = True

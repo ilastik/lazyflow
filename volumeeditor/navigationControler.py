@@ -122,16 +122,8 @@ class NavigationInterpreter(QObject):
         #set this view as active
         self._model.activeView = axis
         
-        newPos = copy.copy(self._model.cursorPos)
-        if axis == 0:
-            newPos[1] = y
-            newPos[2] = x
-        if axis == 1:
-            newPos[0] = y
-            newPos[2] = x
-        if axis == 2:
-            newPos[0] = y
-            newPos[1] = x
+        newPos = [x,y]
+        newPos.insert(axis, self._model.cursorPos[axis])
 
         if newPos == self._model.cursorPos:
             return

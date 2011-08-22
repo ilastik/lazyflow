@@ -56,7 +56,7 @@ class BrushingModel(QObject):
     
     def __init__(self):
         QObject.__init__(self)
-        self.shape = None
+        self.sliceRect = None
         self.bb    = QRect() #bounding box enclosing the drawing
         self.brushSize = self.defaultBrushSize
         self.drawColor = self.defaultColor
@@ -116,9 +116,8 @@ class BrushingModel(QObject):
         self.emit.brushColorChanged(self.drawColor)
       
     
-    def beginDrawing(self, pos, shape):
-        print "BrushingModel.beginDrawing(pos=%r, shape=%r)" % (pos, shape)
-        self.shape = shape
+    def beginDrawing(self, pos, sliceRect):
+        self.sliceRect = sliceRect
         self.scene.clear()
         self.bb = QRect()
         if self.erasing:
@@ -130,8 +129,6 @@ class BrushingModel(QObject):
         return line
 
     def endDrawing(self, pos):
-        print "BrushingModel.endDrawing(pos=%r)" % (pos)
-        
         self.moveTo(pos)
 
         tempi = QImage(QSize(self.bb.width(), self.bb.height()), QImage.Format_ARGB32_Premultiplied) #TODO: format
@@ -139,15 +136,18 @@ class BrushingModel(QObject):
         painter = QPainter(tempi)
         self.scene.render(painter, target=QRectF(), source=QRectF(QPointF(self.bb.x(), self.bb.y()), QSizeF(self.bb.width(), self.bb.height())))
         painter.end()
+        
         ndarr = qimage2ndarray.rgb_view(tempi)[:,:,0]
-
         labels = numpy.where(ndarr>0,numpy.uint8(self.drawnNumber),numpy.uint8(0))
+        labels = labels.swapaxes(0,1)
+        assert labels.shape[0] == self.bb.width()
+        assert labels.shape[1] == self.bb.height()
 
         self.brushStrokeAvailable.emit(QPointF(self.bb.x(), self.bb.y()), labels)
 
     def dumpDraw(self, pos):
         res = self.endDrawing(pos)
-        self.beginDrawing(pos, self.shape)
+        self.beginDrawing(pos, self.sliceRect)
         return res
 
     def moveTo(self, pos):
@@ -163,10 +163,10 @@ class BrushingModel(QObject):
         if not self.bb.isValid():
             self.bb = QRect(QPoint(x,y), QSize(1,1))
         #grow bounding box
-        self.bb.setLeft(  min(self.bb.left(),   max(0,             x-self.brushSize/2-1) ) )
-        self.bb.setRight( max(self.bb.right(),  min(self.shape[0], x+self.brushSize/2+1) ) )
-        self.bb.setTop(   min(self.bb.top(),    max(0,             y-self.brushSize/2-1) ) )
-        self.bb.setBottom(max(self.bb.bottom(), min(self.shape[1], y+self.brushSize/2+1) ) )
+        self.bb.setLeft(  min(self.bb.left(),   max(0,                 x-self.brushSize/2-1) ) )
+        self.bb.setRight( max(self.bb.right(),  min(self.sliceRect[0], x+self.brushSize/2+1) ) )
+        self.bb.setTop(   min(self.bb.top(),    max(0,                 y-self.brushSize/2-1) ) )
+        self.bb.setBottom(max(self.bb.bottom(), min(self.sliceRect[1], y+self.brushSize/2+1) ) )
         
         #update/move position
         self.pos = pos
