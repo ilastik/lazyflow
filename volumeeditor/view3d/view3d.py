@@ -13,7 +13,7 @@ from vtk import vtkRenderer, vtkConeSource, vtkPolyDataMapper, vtkActor, \
 from PyQt4.QtGui import QWidget, QVBoxLayout, QHBoxLayout, QPushButton, \
                         QSizePolicy, QSpacerItem, QIcon, QFileDialog, \
                         QToolButton
-from PyQt4.QtCore import pyqtSignal, SIGNAL, QEvent
+from PyQt4.QtCore import pyqtSignal, SIGNAL, QEvent, QTimer
 
 import qimage2ndarray
 
@@ -23,6 +23,7 @@ from numpy2vtk import toVtkImageData
 
 import platform #to check whether we are running on a Mac
 import copy
+from functools import partial
 
 from slicingPlanesWidget import SlicingPlanesWidget
 
@@ -186,6 +187,10 @@ class Outliner(vtkPropAssembly):
 #*******************************************************************************
 
 class OverviewScene(QWidget):
+    
+    #emitted when slice changes
+    #  int -- slice number
+    #  int -- axis number
     changedSlice = pyqtSignal(int,int)
 
     def resizeEvent(self, event):
@@ -193,9 +198,18 @@ class OverviewScene(QWidget):
         self.qvtk.update() #needed on OS X
         
     def slicingCallback(self, obj, event):
+        def maybeUpdateSlice(old):
+            num = obj.coordinate[obj.lastChangedAxis]
+            axis = obj.lastChangedAxis
+            if old == (num, axis):
+                self.changedSlice.emit(num, axis)
+        
+        #when dragging the slice, wait for some milliseconds
+        #to see whether the user is dragging on before
+        #sending a signal            
         num = obj.coordinate[obj.lastChangedAxis]
         axis = obj.lastChangedAxis
-        self.changedSlice.emit(num, axis)
+        QTimer.singleShot(50, partial(maybeUpdateSlice, (num, axis)))
     
     def ShowPlaneWidget(self, axis, show):
         self.planes.ShowPlane(axis, show)
@@ -211,7 +225,7 @@ class OverviewScene(QWidget):
         self.planes.TogglePlaneWidget(2)
         self.qvtk.update()
     
-    def __init__(self, parent, shape):
+    def __init__(self, shape, parent=None):
         super(OverviewScene, self).__init__(parent)
         
         self.colorTable = None

@@ -27,7 +27,7 @@
 #    authors and should not be interpreted as representing official policies, either expressed
 #    or implied, of their employers.
 
-from PyQt4.QtCore import QObject
+from PyQt4.QtCore import QObject, QTimer
 from PyQt4.QtGui  import QColor
 
 import numpy
@@ -190,7 +190,7 @@ class NavigationControler(QObject):
         for v in self._views:
             v._sliceIntersectionMarker.setVisibility(show)
         
-    def __init__(self, imageView2Ds, sliceSources, positionModel, time = 0, channel = 0):
+    def __init__(self, imageView2Ds, sliceSources, positionModel, time = 0, channel = 0, view3d=None):
         QObject.__init__(self)
         assert len(imageView2Ds) == 3
 
@@ -200,6 +200,7 @@ class NavigationControler(QObject):
         self._model = positionModel
         self._beginStackIndex = 0
         self._endStackIndex   = 1
+        self._view3d = view3d
 
         #FIXME
         #self._views[0].swapAxes()
@@ -213,7 +214,17 @@ class NavigationControler(QObject):
         for i in range(3):
             self._updateSlice(self._model.slicingPos[i], i)
         self._updateSliceIntersection()
-    
+        
+        #when scrolling fast through the stack, we don't want to update
+        #the 3d view all the time
+        if self._view3d is None:
+            return
+        def maybeUpdateSlice(oldSlicing):
+            if oldSlicing == self._model.slicingPos:
+                for i in range(3):
+                    self._view3d.ChangeSlice(self._model.slicingPos[i], i)
+        QTimer.singleShot(50, partial(maybeUpdateSlice, self._model.slicingPos))
+                    
     def changeTime(self, newTime):
         for i in range(3):
             for src in self._sliceSources[i]:
