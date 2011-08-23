@@ -77,53 +77,53 @@ class ImageSceneRenderThread(QThread):
         for r in temp:
             r.cancel()
 
+    def _onPatchFinished(self, image, request, patchNumber, patchLayer):
+        thisPatch = self._imagePatches[patchNumber][patchLayer]
+        
+        ### one layer of this patch is done, just assign the newly arrived image
+        thisPatch.mutex.lock()
+        thisPatch.image = image
+        thisPatch.mutex.unlock()
+        ### ...done
+        
+        numLayers      = len(self._imagePatches[patchNumber])-1
+        compositePatch = self._imagePatches[patchNumber][numLayers]
+    
+        ### render the composite patch             
+        compositePatch.mutex.lock()
+        compositePatch.dirty = True
+    
+        p = QPainter(compositePatch.image)
+        r = compositePatch.rect
+        p.fillRect(0,0,r.width(), r.height(), Qt.white)
+
+        for layerNr, patch in enumerate(self._imagePatches[patchNumber][:-1]):
+            if not self._stackedIms[layerNr].visible:
+                continue
+            p.setOpacity(self._stackedIms[layerNr].opacity)
+            p.drawImage(0,0, patch.image)
+        p.end()
+        
+        compositePatch.dirty = False
+        try:
+            self._runningRequests.remove(request)
+        except:
+            pass
+        compositePatch.mutex.unlock()
+        ### ...done rendering
+        
+        self.patchAvailable.emit(patchNumber)
+
     def _takeJob(self):
         patchNr = self._queue.pop()
         
         rect = self._imagePatches[patchNr][0].rect
         
-        def onPatchFinished(image, request, patchNumber, patchLayer):
-            thisPatch = self._imagePatches[patchNumber][patchLayer]
-            
-            ### one layer of this patch is done, just assign the newly arrived image
-            thisPatch.mutex.lock()
-            thisPatch.image = image
-            thisPatch.mutex.unlock()
-            ### ...done
-            
-            numLayers      = len(self._imagePatches[patchNr])-1
-            compositePatch = self._imagePatches[patchNr][numLayers]
-        
-            ### render the composite patch             
-            compositePatch.mutex.lock()
-            compositePatch.dirty = True
-        
-            p = QPainter(compositePatch.image)
-            r = compositePatch.rect
-            p.fillRect(0,0,r.width(), r.height(), Qt.white)
-    
-            for layerNr, patch in enumerate(self._imagePatches[patchNr][:-1]):
-                if not self._stackedIms[layerNr].visible:
-                    continue
-                p.setOpacity(self._stackedIms[layerNr].opacity)
-                p.drawImage(0,0, patch.image)
-            p.end()
-            
-            compositePatch.dirty = False
-            try:
-                self._runningRequests.remove(request)
-            except:
-                pass
-            compositePatch.mutex.unlock()
-            ### ...done rendering
-            
-            self.patchAvailable.emit(patchNr)
-        
         for layerNr, (opacity, visible, imageSource) in enumerate(self._stackedIms):
             if self._stackedIms[layerNr].visible:
                 request = imageSource.request(rect)
                 self._runningRequests.add(request)
-                request.notify(onPatchFinished, request = request, patchNumber=patchNr, patchLayer=layerNr)
+                request.notify(self._onPatchFinished, request = request, patchNumber=patchNr, patchLayer=layerNr)
 
     def _runImpl(self):
         self._dataPending.wait()
