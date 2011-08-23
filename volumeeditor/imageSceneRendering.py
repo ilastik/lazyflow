@@ -1,8 +1,8 @@
 from PyQt4.QtCore import QThread, pyqtSignal, Qt
 from PyQt4.QtGui import QPainter
 
-import threading, time
-from collections import deque, namedtuple
+import threading
+from collections import deque
 
 #*******************************************************************************
 # I m a g e S c e n e R e n d e r T h r e a d                                  *
