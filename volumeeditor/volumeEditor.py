@@ -35,9 +35,9 @@
 #    e65f5bad2cd9fdaefbe7ceaafa0cce0e071b56e4
 
 from PyQt4.QtCore import Qt, pyqtSignal, QDir, QObject
-from PyQt4.QtGui import QApplication, QImageWriter
+from PyQt4.QtGui import QApplication, QImageWriter, QWidget
 
-import numpy, qimage2ndarray
+import numpy, qimage2ndarray, copy
 from functools import partial
 
 from imageSaveThread import ImageSaveThread
@@ -52,6 +52,14 @@ from pixelpipeline.imagesources import GrayscaleImageSource
 from pixelpipeline.imagesourcefactories import createImageSource
 from pixelpipeline.imagepump import ImagePump
 from slicingtools import SliceProjection
+
+useVTK = True
+try:
+    from view3d.view3d import OverviewScene
+except:
+    import traceback
+    traceback.print_exc()
+    useVTK = False
 
 #*******************************************************************************
 # V o l u m e E d i t o r                                                      *
@@ -113,12 +121,26 @@ class VolumeEditor( QObject ):
         self.imageViews.append(ImageView2D(self.imageScenes[1], useGL=useGL))
         self.imageViews.append(ImageView2D(self.imageScenes[2], useGL=useGL))
 
+        if useVTK:
+            self.view3d = OverviewScene(shape=self._shape[1:4])
+            def onSliceDragged(num, pos):
+                newPos = copy.deepcopy(self.posModel.slicingPos)
+                newPos[pos] = num
+                self.posModel.slicingPos = newPos
+                
+            self.view3d.changedSlice.connect(onSliceDragged)
+        else:
+            self.view3d = QWidget()
+
         for i in xrange(3):
             self.imageViews[i].customContextMenuRequested.connect(self.onCustomContextMenuRequested)
 
         # navigation control
         self.posModel     = PositionModel(self._shape)
-        self.navCtrl      = NavigationControler(self.imageViews, syncedSliceSources, self.posModel)
+        v3d = None
+        if useVTK:
+            v3d = self.view3d
+        self.navCtrl      = NavigationControler(self.imageViews, syncedSliceSources, self.posModel, view3d=v3d)
         self.navInterpret = NavigationInterpreter(self.posModel)
 
         # Add label widget to toolBoxLayout
