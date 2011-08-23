@@ -57,8 +57,12 @@ from volumeEditor import VolumeEditor
 #*******************************************************************************
 
 class VolumeEditorWidget(QWidget):
-    def __init__( self, parent=None ):
+    def __init__( self, parent=None, editor=None ):
         super(VolumeEditorWidget, self).__init__(parent=parent)
+        if editor!=None:
+            self.init(editor)
+            
+        
         
     def init(self, volumeeditor):
         self._ve = volumeeditor
@@ -558,7 +562,7 @@ if __name__ == "__main__":
             else:
                 self.editor = VolumeEditor(shape, layerstack, useGL=useGL)
 
-            self.widget = VolumeEditorWidget( self.editor )
+            self.widget = VolumeEditorWidget(parent=None, editor=self.editor)
             
             if "3dvol" in argv:
                 self.widget._ve.posModel.cursorPositionChanged.connect(self.widget._updateInfoLabels)
@@ -630,7 +634,7 @@ if __name__ == "__main__":
     #show rudimentary layer widget
     model = t2.editor.layerStack
     ######################################################################
-    view = LayerWidget(model)
+    view = LayerWidget(None, model)
 
     w = QWidget()
     lh = QHBoxLayout(w)
