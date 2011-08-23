@@ -32,6 +32,7 @@ class PyVolumeEditorWidgetPlugin(QtDesigner.QPyDesignerCustomWidgetPlugin):
         return self.initialized
     
     def createWidget(self, parent):
+        print "DDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDAAAAAA"
         g = Graph()
         layerstack = LayerStackModel()
         N=100
@@ -47,7 +48,8 @@ class PyVolumeEditorWidgetPlugin(QtDesigner.QPyDesignerCustomWidgetPlugin):
         layerstack.append( GrayscaleLayer( source ) )
 
         editor = VolumeEditor(shape, layerstack, labelsink=None, useGL=False)  
-        widget = VolumeEditorWidget(editor, parent=parent)
+        widget = VolumeEditorWidget(parent=parent)
+        widget.init(editor)
         print "RETURNING ", widget
         return widget
     

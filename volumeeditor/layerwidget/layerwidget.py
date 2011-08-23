@@ -227,8 +227,13 @@ class LayerEditor(QWidget):
 #*******************************************************************************
 
 class LayerWidget(QListView):
-    def __init__(self, listModel, parent = None):
+    def __init__(self, parent = None, listModel=None):
+        
         QListView.__init__(self, parent)
+        if listModel:
+          self.init(listModel)
+        
+    def init(self, listModel):
         self.setModel(listModel)
         self.setItemDelegate(LayerDelegate())
         self.setSelectionModel(listModel.selectionModel)

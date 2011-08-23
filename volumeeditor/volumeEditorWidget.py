@@ -57,8 +57,10 @@ from volumeEditor import VolumeEditor
 #*******************************************************************************
 
 class VolumeEditorWidget(QWidget):
-    def __init__( self, volumeeditor, parent=None ):
+    def __init__( self, parent=None ):
         super(VolumeEditorWidget, self).__init__(parent=parent)
+        
+    def init(self, volumeeditor):
         self._ve = volumeeditor
 
         self.setFocusPolicy(Qt.StrongFocus)
