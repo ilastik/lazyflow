@@ -91,6 +91,10 @@ class ImagePump( object ):
         def onDataChanged( startIndexItem, endIndexItem):
             start = startIndexItem.row()
             stop = endIndexItem.row() + 1
+            #FIXME: the layerstackmodel seems to be wrongly implemented
+            #       (we need a reverse sorting of the layer list, for which
+            #        some hacks were introduced)
+            #        the following loop is a necessary workaround for now.
             #for i in xrange(start, stop):
             for i in range(self._layerStackModel.rowCount()):
                 layer = self._layerStackModel[i]
