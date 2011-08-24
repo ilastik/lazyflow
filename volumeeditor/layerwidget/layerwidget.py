@@ -294,7 +294,7 @@ if __name__ == "__main__":
     import signal
     signal.signal(signal.SIGINT, signal.SIG_DFL)
 
-    import sys
+    import sys, numpy
     from volumeeditor.layerstack import LayerStackModel, Layer
 
     from PyQt4.QtGui import QApplication, QPushButton, QHBoxLayout, QVBoxLayout
@@ -340,12 +340,14 @@ if __name__ == "__main__":
     up   = QPushButton('Up')
     down = QPushButton('Down')
     delete = QPushButton('Delete')
+    add = QPushButton('Add')
     lv  = QVBoxLayout()
     lh.addLayout(lv)
     
     lv.addWidget(up)
     lv.addWidget(down)
     lv.addWidget(delete)
+    lv.addWidget(add)
     
     w.setGeometry(100, 100, 800,600)
     w.show()
@@ -356,5 +358,12 @@ if __name__ == "__main__":
     model.canMoveSelectedDown.connect(down.setEnabled)
     delete.clicked.connect(model.deleteSelected)
     model.canDeleteSelected.connect(delete.setEnabled)
+    def addRandomLayer():
+        o = Layer()
+        o.name = "Layer %d" % (model.rowCount()+1)
+        o.opacity = numpy.random.rand()
+        o.visible = bool(numpy.random.randint(0,2))
+        model.append(o)
+    add.clicked.connect(addRandomLayer)
 
     app.exec_()
