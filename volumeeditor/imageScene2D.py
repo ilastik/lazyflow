@@ -301,11 +301,6 @@ class ImageScene2D(QGraphicsScene):
         painter.endNativePainting()
 
     def drawBackground(self, painter, rect):
-        #Abandon previous workloads
-        #FIXME FIXME
-        #self._renderThread.queue.clear()
-        #self._renderThread.newerDataPending.set()
-
         #Find all patches that intersect the given 'rect'.
         for i,patch in enumerate(self.imagePatches):
             patch = patch[self._numLayers]
