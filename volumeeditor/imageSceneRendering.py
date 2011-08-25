@@ -12,9 +12,12 @@ class ImageSceneRenderThread(QThread):
     """
     Composites individual tiles. For one tile,
     it requests the corresponding region for all the
-    visible layers in the layerstack as QImage objects,
-    and then users alpha blending to arrive at a final
+    visible layers in the layer stack as QImage objects,
+    and then uses alpha blending to arrive at a final
     output image.
+    As alpha blending of RGBA pre-multiplied images is an associative
+    operation, the order of the incoming patches (which have an
+    associated layer) does not matter.
     
     A particular patch can be requested via `requestPatch`
     A signal is emitted on completion of a request `patchAvailable`
@@ -35,31 +38,6 @@ class ImageSceneRenderThread(QThread):
 
         self._stackedIms = stackedImageSources
         self._runningRequests = set()
-
-
-    def synchronousRequestPatch(self, patchNr):
-        numLayers = len(self._imagePatches[patchNr])-1
-        temp = []
-        rect = self._imagePatches[patchNr][0].rect
-        
-        for layerNr, (opacity, visible, imageSource) in enumerate(self._stackedIms):
-            if self._stackedIms[layerNr].visible:
-                request = imageSource.request(rect)
-                temp.append((request, layerNr))
-        
-        compositePatch = self._imagePatches[patchNr][numLayers]
-        p = QPainter(compositePatch.image)
-        r = compositePatch.rect
-        p.fillRect(0,0,r.width(), r.height(), Qt.white)
-        
-        for req,layerNr in temp:
-            img = req.wait()
-            p.setOpacity(self._stackedIms[layerNr].opacity)
-            p.drawImage(0,0, img)
-        p.end()
-        
-        return compositePatch.image
-
 
     def requestPatch(self, patchNr):
         if patchNr not in self._queue:
