@@ -45,7 +45,7 @@ from functools import partial
 
 from quadsplitter import QuadView
       
-from sliceSelectorHud import SliceSelectorHud
+from sliceSelectorHud import imageView2DHud, QuadStatusBar
 from positionModel import PositionModel
 from navigationControler import NavigationControler, NavigationInterpreter
 from pixelpipeline.datasources import ArraySource, ArraySinkSource, LazyflowSinkSource
@@ -68,124 +68,51 @@ class VolumeEditorWidget(QWidget):
         self._ve = volumeeditor
 
         self.setFocusPolicy(Qt.StrongFocus)
+        
+        self.layout = QHBoxLayout()
+        self.setLayout(self.layout)
 
         # setup quadview
-        self.quadview = QuadView(self)
-        self.quadview.addWidget(0, self._ve.imageViews[2])
-        self.quadview.addWidget(1, self._ve.imageViews[0])
-        self.quadview.addWidget(2, self._ve.imageViews[1])
+        axisLabels = ["X:", "Y:", "Z:"]
+        axisColors = [QColor("#dc143c"), QColor("green"), QColor("blue")]
+        for i, v in enumerate(self._ve.imageViews):
+            v.hud = imageView2DHud()
+            #connect interpreter
+            v.hud.createImageView2DHud(axisLabels[i], self._ve.posModel.volumeExtent(i), axisColors[i], QColor("white"))
+            v.hud.sliceSelector.valueChanged.connect(partial(self._ve.navInterpret.changeSliceAbsolute, axis=i))
 
-        self.quadview.addWidget(3, self._ve.view3d)
-        #FIXME: resurrect        
-        #self.overview.changedSlice.connect(self.changeSlice)
-        #self._ve.changedSlice.connect(self.overview.ChangeSlice)
+        self.quadview = QuadView(self, self._ve.imageViews[2], self._ve.imageViews[0], self._ve.imageViews[1], self._ve.view3d)
+        self.quadViewStatusBar = QuadStatusBar()
+        self.quadViewStatusBar.createQuadViewStatusBar(QColor("#dc143c"), QColor("white"), QColor("green"), QColor("white"), QColor("blue"), QColor("white"), QColor("gray"), QColor("white"))
+        self.quadview.addStatusBar(self.quadViewStatusBar)
+        self.layout.addWidget(self.quadview)
 
-        # layout
-        viewingLayout = QVBoxLayout()
-        viewingLayout.setContentsMargins(10,2,0,2)
-        viewingLayout.setSpacing(0)
-        viewingLayout.addWidget(self.quadview)
-        self.quadview.setContentsMargins(0,0,10,0)
-
-        # Label below views
-        labelLayout = QHBoxLayout()
-        labelLayout.setMargin(0)
-        labelLayout.setSpacing(5)
-        labelLayout.setContentsMargins(0,0,0,0)
-        self.posLabel = QLabel()
-        self.pixelValuesLabel = QLabel()
-        labelLayout.addWidget(self.posLabel)
-        labelLayout.addWidget(self.pixelValuesLabel)
-        labelLayout.addStretch()
-        viewingLayout.addLayout(labelLayout)
-
-        # Right side toolbox
-        self._toolBox = QWidget()
-        self._toolBox.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Minimum)
-        self._toolBoxLayout = QVBoxLayout()
-        self._toolBoxLayout.setMargin(5)
-        self._toolBox.setLayout(self._toolBoxLayout)
-        self._toolBoxLayout.addStretch()
-
-        # Toggle slice intersection marks
-        self.indicateSliceIntersectionButton = QToolButton()
-        self.indicateSliceIntersectionButton.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Minimum)
-        self.indicateSliceIntersectionButton.setText("Indicate Current Position")
-        self.indicateSliceIntersectionButton.setCheckable(True)
-        self.indicateSliceIntersectionButton.setChecked(True)        
-        self._toolBoxLayout.addWidget(self.indicateSliceIntersectionButton)
-
-        # Channel Selector QComboBox in right side tool box
-        self._channelSpin = QSpinBox()
-        self._channelSpin.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Minimum)
-        self._channelSpin.setEnabled(True)
-        channelLayout = QHBoxLayout()
-        channelLayout.addWidget(self._channelSpin)
-        self._channelSpinLabel = QLabel("Channel:")
-        self._toolBoxLayout.addWidget(self._channelSpinLabel)
-        self._toolBoxLayout.addLayout(channelLayout)
-
-        #time selector
-        self._timeSpin = QSpinBox()
-        self._timeSpin.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Minimum)
-        self._timeSpin.setEnabled(True)
-        timeLayout = QHBoxLayout()
-        timeLayout.addWidget(self._timeSpin)
-        self._timeSpinLabel = QLabel("Time:")
-        self._toolBoxLayout.addWidget(self._timeSpinLabel)
-        self._toolBoxLayout.addLayout(timeLayout)
-        
-        self._toolBoxLayout.setAlignment(Qt.AlignTop)
-
-        self._channelSpin.setRange(0,self._ve._shape[-1] - 1)
-        self._timeSpin.setRange(0,self._ve._shape[0] - 1)
+        self.quadview.statusBar.channelSpinBox.setRange(0,self._ve._shape[-1] - 1)
+        self.quadview.statusBar.timeSpinBox.setRange(0,self._ve._shape[0] - 1)
         def setChannel(c):
             print "set channel = %d, posModel has channel = %d" % (c, self._ve.posModel.channel)
             if c == self._ve.posModel.channel:
                 return
             self._ve.posModel.channel = c
-        self._channelSpin.valueChanged.connect(setChannel)
+        self.quadview.statusBar.channelSpinBox.valueChanged.connect(setChannel)
         def getChannel(newC):
-            self._channelSpin.setValue(newC)
+            self.quadview.statusBar.channelSpinBox.setValue(newC)
         self._ve.posModel.channelChanged.connect(getChannel)
         def setTime(t):
             print "set channel = %d, posModel has time = %d" % (t, self._ve.posModel.time)
             if t == self._ve.posModel.time:
                 return
             self._ve.posModel.time = t
-        self._timeSpin.valueChanged.connect(setTime)
+        self.quadview.statusBar.timeSpinBox.valueChanged.connect(setTime)
         def getTime(newT):
-            self._timeSpin.setValue(newT)
-        self._ve.posModel.timeChanged.connect(getTime)
+            self.quadview.statusBar.timeSpinBox.setValue(newT)
+        self._ve.posModel.timeChanged.connect(getTime) 
 
-        # setup the layout for display
-        self.splitter = QSplitter()
-        self.splitter.setContentsMargins(0,0,0,0)
-        tempWidget = QWidget()
-        tempWidget.setLayout(viewingLayout)
-        self.splitter.addWidget(tempWidget)
-        self.splitter.addWidget(self._toolBox)
-        splitterLayout = QVBoxLayout()
-        splitterLayout.setMargin(0)
-        splitterLayout.setSpacing(0)
-        splitterLayout.addWidget(self.splitter)
-        self.setLayout(splitterLayout)
-
-        # drawing
-        axisLabels = ["X:", "Y:", "Z:"]
-        for i, v in enumerate(self._ve.imageViews):
-            v.hud = SliceSelectorHud()
-            #connect interpreter
-            v.hud.sliceSelector.valueChanged.connect(partial(self._ve.navInterpret.changeSliceAbsolute, axis=i))
-            #hud
-            v.hud.bgColor = self._ve.navCtrl.axisColors[i] #FIXME
-            v.hud.label = axisLabels[i]
-            v.hud.minimum = 0
-            v.hud.maximum = self._ve.posModel.volumeExtent(i)
 
         def toggleSliceIntersection(state):
-            self._ve.navCtrl.indicateSliceIntersection = state
-        self.indicateSliceIntersectionButton.toggled.connect(toggleSliceIntersection)
+            self._ve.navCtrl.indicateSliceIntersection = (state == Qt.Checked)
+#        self.indicateSliceIntersectionButton.toggled.connect(toggleSliceIntersection)
+        self.quadview.statusBar.positionCheckBox.stateChanged.connect(toggleSliceIntersection)
 
         #Enabling this makes cursor movement too slow...
         #self._ve.posModel.cursorPositionChanged.connect(self._updateInfoLabels)

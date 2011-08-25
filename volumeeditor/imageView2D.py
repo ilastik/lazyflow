@@ -111,7 +111,7 @@ class ImageView2D(QGraphicsView):
         self._hud = hud
         self.setLayout(QVBoxLayout())
         self.layout().setContentsMargins(0,0,0,0)
-        self.layout().addWidget(self._hud)
+        self.layout().addLayout(self._hud)
         self.layout().addStretch()
 
 
@@ -133,6 +133,9 @@ class ImageView2D(QGraphicsView):
         QGraphicsView.__init__(self)
         self._useGL = useGL
         self.setScene(imagescene2d)
+        
+        self.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        self.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         
         #these attributes are exposed as public properties above
         self._sliceShape  = None #2D shape of this view's shown image

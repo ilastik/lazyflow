@@ -29,312 +29,191 @@
 
 from PyQt4.QtCore import *
 from PyQt4.QtGui import *
-
-import sys
-
-#
-# discover icon path
-#
-from os import path
-import resources.icons
-_icondir = path.dirname(resources.icons.__file__)
-
-#*******************************************************************************
-# D o c k a b l e C o n t a i n e r                                            *
-#*******************************************************************************
-
-class DockableContainer(QWidget):
-    """
-    A widget that can be docked out of a `QuadSplitter` layout.
-    """
-    
-    def __init__(self, number, parent=None):
-        QWidget.__init__(self, parent)
-        
-        self.isDocked = True
-        self.replaceWidget = None
-        self.mainLayout = None
-        self.maximized = False
-        
-        self.replaceWidget = QWidget(None)
-        self.replaceWidget.setObjectName("replaceWidget_%d" % (number))
-        
-        self.dockButton = QPushButton(None)
-        self.dockButton.setObjectName("%d" % (number))
-        self.dockButton.setFlat(True)
-        self.dockButton.setAutoFillBackground(True)
-        self.dockButton.setIcon(QIcon(QPixmap(path.join(_icondir, 'arrow_up.png'))))
-        self.dockButton.setIconSize(QSize(10,10));
-        self.dockButton.setFixedSize(10,10)
-        self.dockButton.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
-        
-        self.maximizeButton = QPushButton(None)
-        self.maximizeButton.setObjectName("%d" % (number))
-        self.maximizeButton.setFlat(True)
-        self.maximizeButton.setAutoFillBackground(True)
-        self.maximizeButton.setIcon(QIcon(QPixmap(path.join(_icondir, 'maximize.png'))))
-        self.maximizeButton.setIconSize(QSize(10,10));
-        self.maximizeButton.setFixedSize(10,10)
-        self.maximizeButton.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
-        
-        h = QHBoxLayout(None)
-        h.setMargin(0); h.setSpacing(0)
-        h.addStretch()
-        h.addWidget(self.maximizeButton)
-        h.addWidget(self.dockButton)
-        
-        self.mainLayout = QVBoxLayout(None)
-        self.mainLayout.setMargin(0); self.mainLayout.setSpacing(0)
-        self.mainLayout.addItem(h)
-        
-        self.mainWidget = QTextEdit(None); self.mainWidget.setDocument(QTextDocument("MAIN widget %d" % (number)))
-        self.mainLayout.addWidget(self.mainWidget)
-        
-        self.setLayout(self.mainLayout)
-        
-        self.connect(self.dockButton, SIGNAL('clicked()'), self.__onDockButtonClicked )
-        self.connect(self.maximizeButton, SIGNAL('clicked()'), self.__onMaximizeButtonClicked )
-    
-    def __del__(self):
-        if not self.isDocked:
-            del self
-    
-    def __onMaximizeButtonClicked(self):
-        self.maximized = not self.maximized
-        self.dockButton.setEnabled(not self.maximized)
-        self.emit(SIGNAL('maximize(bool)'), self.maximized)
-    
-    def __onDockButtonClicked(self):
-        self.setDocked(not self.isDocked)
-    
-    def setDocked(self, docked):
-        if docked:
-            self.dockButton.setIcon(QIcon(QPixmap(path.join(_icondir, 'arrow_up.png'))))
-        else:
-            self.dockButton.setIcon(QIcon(QPixmap(path.join(_icondir, 'arrow_down.png'))))
-        
-        if not docked:
-            self.emit(SIGNAL('undock()'))
-            widgetSize = self.size()
-            self.setParent(None, Qt.Window)
-            self.setWindowFlags(Qt.WindowFlags(self.windowFlags() & ~Qt.WindowCloseButtonHint))
-            self.show()
-        else:
-            self.emit(SIGNAL('dock()'))
             
-        self.isDocked = not self.isDocked
+class ImageView2DFloatingWindow(QWidget):
+    onCloseClick = pyqtSignal()
+    def __init__(self):
+        QWidget.__init__(self)
+        
+    def closeEvent(self, event):
+        self.onCloseClick.emit()
+        event.ignore()
 
-#*******************************************************************************
-# Q u a d V i e w                                                              *
-#*******************************************************************************
+class ImageView2DDockWidget(QWidget):
+    onDockButtonClicked = pyqtSignal()
+    onMaxButtonClicked = pyqtSignal()
+    onMinButtonClicked = pyqtSignal()
+    def __init__(self, graphicsView):
+        QWidget.__init__(self)
+        
+        self.graphicsView = graphicsView
+        self._isDocked = True
+        self._isMaximized = False
+        
+        self.setContentsMargins(0, 0, 0, 0)
+        
+        self.layout = QVBoxLayout()
+        self.layout.setContentsMargins(0, 0, 0, 0)
+        self.setLayout(self.layout)
+        
+        self.windowForGraphicsView = ImageView2DFloatingWindow()
+        self.windowForGraphicsView.layout = QVBoxLayout()
+        self.windowForGraphicsView.layout.setContentsMargins(0, 0, 0, 0)
+        self.windowForGraphicsView.setLayout(self.windowForGraphicsView.layout)
+        
+        self.windowForGraphicsView.onCloseClick.connect(self.onDockButton)
+    
+        self.addGraphicsView()
+    
+    def connectHud(self):
+        self.graphicsView._hud.dockButtonClicked.connect(self.onDockButton)
+        self.graphicsView._hud.maximizeButtonClicked.connect(self.onMaxButton)
+        
+    def onMaxButton(self):
+        if self._isMaximized:
+            self.onMinButtonClicked.emit()
+            self.minimizeView()
+        else:
+            self.onMaxButtonClicked.emit()
+            self.maximizeView()
+        
+    def onDockButton(self):
+        self.onDockButtonClicked.emit()
+        
+    def addGraphicsView(self):
+        self.layout.addWidget(self.graphicsView)
+        
+    def removeGraphicsView(self):
+        self.layout.removeWidget(self.graphicsView)
+        
+    def undockView(self):
+        self._isDocked = False
+        self.graphicsView._hud.dockButton.setDockIcon()
+        self.graphicsView._hud.maxButton.setEnabled(False)
+        
+        self.removeGraphicsView()
+        self.windowForGraphicsView.layout.addWidget(self.graphicsView)
+        self.windowForGraphicsView.show()
+        self.windowForGraphicsView.raise_()
+    
+    def dockView(self):
+        self._isDocked = True
+        self.graphicsView._hud.dockButton.setUndockIcon()
+        self.graphicsView._hud.maxButton.setEnabled(True)
+        
+        self.windowForGraphicsView.layout.removeWidget(self.graphicsView)
+        self.windowForGraphicsView.hide()
+        self.addGraphicsView()
+        
+    def maximizeView(self):
+        self._isMaximized = True
+        self.graphicsView._hud.maxButton.setMinimizeIcon()
+        
+    def minimizeView(self):
+        self._isMaximized = False
+        self.graphicsView._hud.maxButton.setMaximizeIcon()
+
+
 
 class QuadView(QWidget):
-    """
-    A layout widget that can hold four widgets (top left, top right, bottom left,
-    bottom right). A vertical and horizontal splitter can be used to change the
-    relative sizes of the grid columns and rows.
-    """
-      
-    def horizontalSplitterMoved(self):
-        w, h = self.size().width()-self.splitHorizontal1.handleWidth(), self.size().height()-self.splitVertical.handleWidth()
-        
-        w1  = [self.dockableContainer[i].mainLayout.minimumSize().width() for i in [0,2] ]
-        w2  = [self.dockableContainer[i].mainLayout.minimumSize().width() for i in [1,3] ]
-        wLeft  = max(w1)
-        wRight = max(w2)
-        
-        if self.sender().objectName() == "splitter1":
-            s = self.splitHorizontal1.sizes()
-            if s[0] < wLeft or s[1] < wRight:
-                self.splitHorizontal1.setSizes(self.splitHorizontal2.sizes())
-            else:
-                self.splitHorizontal2.setSizes( self.splitHorizontal1.sizes() )
-
-        if self.sender().objectName() == "splitter2":
-            s = self.splitHorizontal2.sizes()
-            if s[0] < wLeft or s[1] < wRight:
-                self.splitHorizontal2.setSizes( self.splitHorizontal1.sizes() )
-            else:
-                self.splitHorizontal1.setSizes( self.splitHorizontal2.sizes() )
-    
-    def addWidget(self, i, widget):
-        assert 0 <= i < 4, "range of i"
-        
-        w = self.dockableContainer[i]
-        oldMainWidget = w.mainWidget
-        w.mainWidget = widget
-        oldMainWidget.setParent(None); del oldMainWidget
-        w.mainLayout.addWidget(w.mainWidget)
-    
-    def __init__(self, parent=None):
+    def __init__(self, parent, view1, view2, view3, view4 = None):
         QWidget.__init__(self, parent)
         
-        self.dockButton        = 4*[None]
-        self.dockableContainer = 4*[None]
-        self.firstTime = True
-        self.maximized = False
-
-        #split up <-> down
-        self.splitVertical    = QSplitter(Qt.Vertical, self)
-        self.splitVertical.setChildrenCollapsible(False)
-        #split left <-> right
+        self.dockableContainer = []
+        
+        self.layout = QVBoxLayout()
+        self.setLayout(self.layout)
+        self.layout.setContentsMargins(4, 4, 4, 4)
+        self.layout.setSpacing(0)
+        
+        self.splitVertical = QSplitter(Qt.Vertical, self)
+        self.layout.addWidget(self.splitVertical)
         self.splitHorizontal1 = QSplitter(Qt.Horizontal, self.splitVertical)
-        self.splitHorizontal1.setChildrenCollapsible(False)
         self.splitHorizontal1.setObjectName("splitter1")
         self.splitHorizontal2 = QSplitter(Qt.Horizontal, self.splitVertical)
         self.splitHorizontal2.setObjectName("splitter2")
-        self.splitHorizontal2.setChildrenCollapsible(False)
-        
-        for i in range(4):
-            if i<2:
-                self.dockableContainer[i] = DockableContainer(i, self.splitHorizontal1)
-            else:
-                self.dockableContainer[i] = DockableContainer(i, self.splitHorizontal2)
-            self.dockableContainer[i].setObjectName("%d" % (i))
-            self.connect(self.dockableContainer[i], SIGNAL('dock()'), self.dockContainer )
-            self.connect(self.dockableContainer[i], SIGNAL('undock()'), self.undockContainer )
-            self.connect(self.dockableContainer[i], SIGNAL('maximize(bool)'), self.maximizeContainer )
-        
-        self.layout = QVBoxLayout()
-        self.layout.setMargin(0); self.layout.setSpacing(0)
-        self.layout.addWidget(self.splitVertical)
-        self.setLayout(self.layout)
-        
         self.connect( self.splitHorizontal1, SIGNAL( 'splitterMoved( int, int )'), self.horizontalSplitterMoved)
         self.connect( self.splitHorizontal2, SIGNAL( 'splitterMoved( int, int )'), self.horizontalSplitterMoved)
-
-    def __del__(self):
-        for i in range(4):
-            if not self.dockableContainer[i]:
-                del self.dockableContainer[i]
-
-    def setMaximized(self, maximized, i):
-        if maximized:
-            self.splitVertical.setParent(None)
-            self.layout.addWidget(self.dockableContainer[i])
-        else:
-            for i in range(4):
-                self.dockableContainer[i].setParent(None)
-            for i in range(4):
-                if i<2:
-                    self.dockableContainer[i].setParent(self.splitHorizontal1)
-                else:
-                    self.dockableContainer[i].setParent(self.splitHorizontal2)
-            self.layout.addWidget(self.splitVertical)
-            self.__resizeEqual()
-        self.maximized = maximized
-    
-    def toggleMaximized(self, i):
-        self.setMaximized(not self.maximized, i)
-    
-    def maximizeContainer(self, maximized):
-        i = int(self.sender().objectName())
-        self.setMaximized(maximized, i)
-    
-    def deleteUndocked(self):
-        toDelete = []
-        for i in range(4):
-            if not self.dockableContainer[i].isDocked:
-                toDelete.append( self.dockableContainer[i] )
-        for x in toDelete: x.deleteLater()
-
-    def resizeEvent(self, event):
-        if self.firstTime:
-            self.__resizeEqual()
-            self.firstTime=False
-    
-    def __resizeEqual(self):
-        w, h = self.size().width()-self.splitHorizontal1.handleWidth(), self.size().height()-self.splitVertical.handleWidth()
         
-        w1  = [self.dockableContainer[i].mainLayout.minimumSize().width() for i in [0,2] ]
-        w2  = [self.dockableContainer[i].mainLayout.minimumSize().width() for i in [1,3] ]
-        wLeft  = max(w1)
-        wRight = max(w2)
-        if wLeft > wRight and wLeft > w/2:
-            wRight = w - wLeft
-        elif wRight >= wLeft and wRight > w/2:
-            wLeft = w - wRight
-        else:
-            wLeft = w/2
-            wRight = w/2
-        self.splitHorizontal1.setSizes([wLeft, wRight+10])
-        self.splitHorizontal2.setSizes([wLeft, wRight+10])
-        self.splitVertical.setSizes([h/2, h/2])
-    
-    def undockContainer(self):
-        i = int(self.sender().objectName())
-        w = self.dockableContainer[i]
+        self.imageView2D_1 = view1
         
-        index = i
-        splitter = self.splitHorizontal1
-        if i>=2:
-            index = i-2
-            splitter = self.splitHorizontal2
-        assert 0 <= index < 2
-    
-        size = w.size()
-        splitter.widget(index).setParent(None)
-        w.replaceWidget.resize(size)
-        splitter.insertWidget(index, w.replaceWidget)
+        self.imageView2D_2 = view2
         
-        if i<2:
-            self.splitHorizontal2.setSizes( self.splitHorizontal1.sizes() )
-        else:
-            self.splitHorizontal1.setSizes( self.splitHorizontal2.sizes() )
-            
-    def dockContainer(self):
-        i = int(self.sender().objectName())
-        w = self.dockableContainer[i]
-        assert not w.isDocked
-
-        index = i
-        splitter = self.splitHorizontal1
-        if i>=2:
-            index = i-2
-            splitter = self.splitHorizontal2
-        assert 0 <= index < 2
-
-        splitter.widget(index).setParent(None)
-        if i<2:
-            self.splitHorizontal1.insertWidget(index, w)
-        else:
-            self.splitHorizontal2.insertWidget(index, w)
-
-#*******************************************************************************
-# i f   _ _ n a m e _ _   = =   " _ _ m a i n _ _ "                            *
-#*******************************************************************************
-
-if __name__ == "__main__":
-    #make the program quit on Ctrl+C
-    import signal
-    signal.signal(signal.SIGINT, signal.SIG_DFL)
-    
-    app = QApplication(sys.argv)
-
-    class Window(QMainWindow):
-        def __init__(self):
-            QMainWindow.__init__(self)
-            #self.setAttribute(Qt.WA_DeleteOnClose)
-            
-            widget= QWidget()
-            mainLayout = QVBoxLayout()
-            mainLayout.setMargin(0); mainLayout.setSpacing(0)
-            self.q = QuadView(self)
-            
-            for i in range(4):
-                edit = QTextEdit()
-                edit.setDocument(QTextDocument("view %d" % (i)))
-                edit.setMinimumSize(200+100*i,200+100*i)
-                self.q.addWidget(i, edit)
-            
-            mainLayout.addWidget(self.q)
-            self.setCentralWidget(widget)
-            widget.setLayout(mainLayout)
+        self.imageView2D_3 = view3
         
-        def closeEvent(self, event):
-            self.q.deleteUndocked()
-            self.deleteLater()
+        if view4 is None:
+            view4 = QWidget()
+        self.testView4 = ImageView2DDockWidget(view4)
+        
+        self.dock1_ofSplitHorizontal1 = ImageView2DDockWidget(self.imageView2D_1)
+        self.dock1_ofSplitHorizontal1.connectHud()
+        self.dockableContainer.append(self.dock1_ofSplitHorizontal1)
+        self.dock1_ofSplitHorizontal1.onDockButtonClicked.connect(lambda arg=self.dock1_ofSplitHorizontal1 : self.on_dock(arg))
+        self.dock1_ofSplitHorizontal1.onMaxButtonClicked.connect(lambda arg=self.dock1_ofSplitHorizontal1 : self.on_max(arg))
+        self.dock1_ofSplitHorizontal1.onMinButtonClicked.connect(lambda arg=self.dock1_ofSplitHorizontal1 : self.on_min(arg))
 
-    window = Window()
-    window.show()
-    app.exec_()
+        self.splitHorizontal1.addWidget(self.dock1_ofSplitHorizontal1)
+        self.dock2_ofSplitHorizontal1 = ImageView2DDockWidget(self.imageView2D_2)
+        self.dock2_ofSplitHorizontal1.onDockButtonClicked.connect(lambda arg=self.dock2_ofSplitHorizontal1 : self.on_dock(arg))
+        self.dock2_ofSplitHorizontal1.onMaxButtonClicked.connect(lambda arg=self.dock2_ofSplitHorizontal1 : self.on_max(arg))
+        self.dock2_ofSplitHorizontal1.onMinButtonClicked.connect(lambda arg=self.dock2_ofSplitHorizontal1 : self.on_min(arg))
+        self.dock2_ofSplitHorizontal1.connectHud()
+        self.dockableContainer.append(self.dock2_ofSplitHorizontal1)
+
+        self.splitHorizontal1.addWidget(self.dock2_ofSplitHorizontal1)
+        self.dock1_ofSplitHorizontal2 = ImageView2DDockWidget(self.imageView2D_3)
+        self.dock1_ofSplitHorizontal2.onDockButtonClicked.connect(lambda arg=self.dock1_ofSplitHorizontal2 : self.on_dock(arg))
+        self.dock1_ofSplitHorizontal2.onMaxButtonClicked.connect(lambda arg=self.dock1_ofSplitHorizontal2 : self.on_max(arg))
+        self.dock1_ofSplitHorizontal2.onMinButtonClicked.connect(lambda arg=self.dock1_ofSplitHorizontal2 : self.on_min(arg))
+        self.dock1_ofSplitHorizontal2.connectHud()
+        self.dockableContainer.append(self.dock1_ofSplitHorizontal2)
+        self.splitHorizontal2.addWidget(self.dock1_ofSplitHorizontal2)
+        self.dock2_ofSplitHorizontal2 = ImageView2DDockWidget(self.testView4)
+        self.dockableContainer.append(self.dock2_ofSplitHorizontal2)
+
+        self.splitHorizontal2.addWidget(self.dock2_ofSplitHorizontal2)  
+        
+        
+    def horizontalSplitterMoved(self, x, y):
+        sizes = self.splitHorizontal1.sizes()
+        if self.splitHorizontal2.closestLegalPosition(x, y) < self.splitHorizontal2.closestLegalPosition(x, y):
+            sizeLeft = self.splitHorizontal1.closestLegalPosition(x, y)
+        else:
+            sizeLeft = self.splitHorizontal2.closestLegalPosition(x, y)
+            
+        sizeRight = sizes[0] + sizes[1] - sizeLeft
+        sizes = [sizeLeft, sizeRight]
+        
+        self.splitHorizontal1.setSizes(sizes)
+        self.splitHorizontal2.setSizes(sizes) 
+        
+    def addStatusBar(self, bar):
+        self.statusBar = bar
+        self.layout.addLayout(self.statusBar)
+        
+    def setGrayScaleToQuadStatusBar(self, gray):
+        self.quadViewStatusBar.setGrayScale(gray)
+        
+    def setMouseCoordsToQuadStatusBar(self, x, y, z):
+        self.quadViewStatusBar.setMouseCoords(x, y, z) 
+        
+        
+    def on_dock(self, dockWidget):
+        if dockWidget._isDocked:
+            dockWidget.undockView()
+            self.on_min(dockWidget)
+            dockWidget.minimizeView()
+        else:
+            dockWidget.dockView()
+   
+    
+    def on_max(self, dockWidget):
+        for dock in self.dockableContainer:
+            if not dockWidget == dock:
+                dock.setVisible(False)
+                
+    def on_min(self, dockWidget):
+        for dock in self.dockableContainer:
+            if not dockWidget == dock:
+                dock.setVisible(True)
+    
