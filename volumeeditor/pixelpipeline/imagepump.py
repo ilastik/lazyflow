@@ -25,7 +25,7 @@ class StackedImageSources( QObject ):
         return self._layerStackModel[i] 
 
     def register( self, layer, imageSource ):
-        print "<StackedImageSources.register(self=%r, layer=%r, imageSource=%r)>" % (self, layer, imageSource)
+        #print "<StackedImageSources.register(self=%r, layer=%r, imageSource=%r)>" % (self, layer, imageSource)
         assert not layer in self._layerToIms, "layer %s already registered" % str(layer)
         self._layerToIms[layer] = imageSource
         imageSource.isDirty.connect(self.isDirty)
@@ -33,10 +33,10 @@ class StackedImageSources( QObject ):
         layer.opacityChanged.connect( self._curryRegistry[layer] )
         layer.visibleChanged.connect( self._onVisibleChanged )
         self.stackChanged.emit()
-        print "</StackedImageSources.register(self=%r)>" % (self)
+        #print "</StackedImageSources.register(self=%r)>" % (self)
 
     def deregister( self, layer ):
-        print "<StackedImageSources.deregister(self=%r, layer=%r)>" % (self, layer)
+        #print "<StackedImageSources.deregister(self=%r, layer=%r)>" % (self, layer)
         assert layer in self._layerToIms, "layer %s is not registered; can't be deregistered" % str(layer)
         ims = self._layerToIms[layer]
         ims.isDirty.disconnect( self.isDirty)
@@ -45,7 +45,7 @@ class StackedImageSources( QObject ):
         del self._curryRegistry[layer]
         del self._layerToIms[layer]
         self.stackChanged.emit()
-        print "</StackedImageSources.deregister(self=%r)>" % (self)
+        #print "</StackedImageSources.deregister(self=%r)>" % (self)
 
     def isRegistered( self, layer ):
         return layer in self._layerToIms
@@ -86,7 +86,7 @@ class ImagePump( object ):
 
         ## handle layers removed from layerStackModel
         def onRowsAboutToBeRemoved( parent, start, end):
-            print "ImagePump.onRowsAboutToBeRemoved"
+            #print "ImagePump.onRowsAboutToBeRemoved"
             for i in xrange(start, end + 1):
                 layer = self._layerStackModel[i]
                 self._removeLayer( layer )
@@ -123,18 +123,18 @@ class ImagePump( object ):
         return slicesrcs, ims
 
     def _addLayer( self, layer ):
-        print "<ImagePump._addLayer(self=%r, layer=%r) >" % (self, layer)
+        #print "<ImagePump._addLayer(self=%r, layer=%r) >" % (self, layer)
         sliceSources, imageSource = self._createSources(layer)
         for ss in sliceSources:
             self._syncedSliceSources.add(ss)
         self._layerToSliceSrcs[layer] = sliceSources
         self._stackedImageSources.register(layer, imageSource)
-        print "</ImagePump._addLayer>(self=%r)>" % self
+        #print "</ImagePump._addLayer>(self=%r)>" % self
 
     def _removeLayer( self, layer ):
-        print "<ImagePump._removeLayer(self=%r, layer=%r) >" % (self, layer)
+        #print "<ImagePump._removeLayer(self=%r, layer=%r) >" % (self, layer)
         self._stackedImageSources.deregister(layer)
         for ss in self._layerToSliceSrcs[layer]:
             self._syncedSliceSources.remove(ss)
         del self._layerToSliceSrcs[layer] 
-        print "</ImagePump._removeLayer(self=%r)>" % self               
+        #print "</ImagePump._removeLayer(self=%r)>" % self               
