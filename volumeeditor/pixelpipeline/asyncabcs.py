@@ -27,6 +27,18 @@ class RequestABC:
         pass
 
     @abstractmethod
+    def cancelLock(self):
+        pass
+    
+    @abstractmethod
+    def cancelUnlock(self):
+        pass
+    
+    @abstractmethod
+    def canceled(self):
+        pass
+
+    @abstractmethod
     def cancel( self ):
         pass
 

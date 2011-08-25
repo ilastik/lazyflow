@@ -1,12 +1,55 @@
-from PyQt4.QtCore import QThread, pyqtSignal, Qt
+from PyQt4.QtCore import QThread, pyqtSignal, Qt, QMutex
 from PyQt4.QtGui import QPainter
 
-import threading
+import threading, copy
 from collections import deque
 
 #*******************************************************************************
 # I m a g e S c e n e R e n d e r T h r e a d                                  *
 #*******************************************************************************
+
+class Requests(object):
+    def __init__(self):
+        self._mutex = QMutex()
+        self._id2r  = dict()
+        self._r     = set()
+
+    def addRequest(self, id, request):
+        self._mutex.lock()
+        
+        if not id in self._id2r:
+            self._id2r[id] = []
+        self._id2r[id].append(request)
+        self._r.add(request)
+        
+        self._mutex.unlock()
+        
+    def removeById(self, id):
+        self._mutex.lock()
+        if id in self._id2r:
+            for req in self._id2r[id]:
+                self._r.remove(req)
+                req.cancel()
+            del self._id2r[id]
+        self._mutex.unlock()
+    
+    def cancelAll(self):
+        self._mutex.lock()
+        
+        for r in self._r:
+            r.cancel()
+        self._r = set()
+        self._id2r = dict()
+        self._mutex.unlock()
+
+    def removeByRequest(self, req):
+        self._mutex.lock()
+        if req in self._r:
+            id = (id for id,r in self._id2r.items() if req in r).next()
+            self._id2r[id].remove(req)
+            self._r.remove(req)
+            req.cancel()
+        self._mutex.unlock()
 
 class ImageSceneRenderThread(QThread):
     """
@@ -37,9 +80,11 @@ class ImageSceneRenderThread(QThread):
         self._stopped = False
 
         self._stackedIms = stackedImageSources
-        self._runningRequests = set()
+        self._runningRequests = Requests()
 
     def requestPatch(self, patchNr):
+        self._runningRequests.removeById(patchNr)
+        
         if patchNr not in self._queue:
             self._queue.append(patchNr)
             self._dataPending.set()
@@ -50,27 +95,42 @@ class ImageSceneRenderThread(QThread):
         self.wait()
 
     def cancelAll(self):
-        temp = self._runningRequests
-        self._runningRequests = set()
-        for r in temp:
-            r.cancel()
+        self._runningRequests.cancelAll()
 
     def _onPatchFinished(self, image, request, patchNumber, patchLayer):
+        #
+        # FIXME
+        #
+        # Currently, the asynchronous notify callback can interrupt the execution
+        # of this thread at anytime. The request to the graph was issued from the
+        # _takeJob function, which executes in the context of the render thread.
+        # When the notify calls the _onPatchFinished, the callback will execute
+        # in the same thread.
+        #
+        # We need to be very careful here
+        # _no_ function executing in the context of the render thread is allowed to
+        # use the cancelLock(), except this function
+        #
+        
+        #acquire lock for 'cancel' operation
+        request.cancelLock()
+        #we might have been canceled!
+        if request.canceled():
+            return
+        #no one will cancel this request before we release the lock...
+        
         thisPatch = self._imagePatches[patchNumber][patchLayer]
         
         ### one layer of this patch is done, just assign the newly arrived image
-        thisPatch.mutex.lock()
         thisPatch.image = image
-        thisPatch.mutex.unlock()
         ### ...done
         
         numLayers      = len(self._imagePatches[patchNumber])-1
         compositePatch = self._imagePatches[patchNumber][numLayers]
     
-        ### render the composite patch             
+        ### render the composite patch ######             
         compositePatch.mutex.lock()
         compositePatch.dirty = True
-    
         p = QPainter(compositePatch.image)
         r = compositePatch.rect
         p.fillRect(0,0,r.width(), r.height(), Qt.white)
@@ -81,16 +141,17 @@ class ImageSceneRenderThread(QThread):
             p.setOpacity(self._stackedIms[layerNr].opacity)
             p.drawImage(0,0, patch.image)
         p.end()
-        
         compositePatch.dirty = False
-        try:
-            self._runningRequests.remove(request)
-        except:
-            pass
         compositePatch.mutex.unlock()
-        ### ...done rendering
+        ### ...done rendering ################
         
         self.patchAvailable.emit(patchNumber)
+        
+        request.cancelUnlock()
+        
+        #Now that the lock has been released, we can remove the (done)
+        #request (which will lock the request again)
+        self._runningRequests.removeByRequest(request)
 
     def _takeJob(self):
         patchNr = self._queue.pop()
@@ -100,7 +161,7 @@ class ImageSceneRenderThread(QThread):
         for layerNr, (opacity, visible, imageSource) in enumerate(self._stackedIms):
             if self._stackedIms[layerNr].visible:
                 request = imageSource.request(rect)
-                self._runningRequests.add(request)
+                self._runningRequests.addRequest(patchNr, request)
                 request.notify(self._onPatchFinished, request = request, patchNumber=patchNr, patchLayer=layerNr)
 
     def _runImpl(self):

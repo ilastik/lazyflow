@@ -1,4 +1,4 @@
-from PyQt4.QtCore import QObject, QRect, pyqtSignal
+from PyQt4.QtCore import QObject, QRect, pyqtSignal, QMutex
 from PyQt4.QtGui import QImage
 from qimage2ndarray import gray2qimage, array2qimage, alpha_view, rgb_view
 from asyncabcs import SourceABC, RequestABC
@@ -51,6 +51,8 @@ assert issubclass(ImageSource, SourceABC)
 
 class GrayscaleImageRequest( object ):
     def __init__( self, arrayrequest, normalize ):
+        self._mutex = QMutex()
+        self._canceled = False
         self._arrayreq = arrayrequest
         self._normalize = normalize
 
@@ -63,8 +65,18 @@ class GrayscaleImageRequest( object ):
     def notify( self, callback, **kwargs ):
         self._arrayreq.notify(self._onNotify, package = (callback, kwargs))
     
+    def cancelLock(self):
+        self._mutex.lock()
+    def cancelUnlock(self):
+        self._mutex.unlock()
+    def canceled(self):
+        return self._canceled
+    
     def cancel( self ):
+        self.cancelLock()
         self._arrayreq.cancel()
+        self._canceled = True
+        self.cancelUnlock()
     
     def _onNotify( self, result, package ):
         img = self.wait()
@@ -80,6 +92,8 @@ assert issubclass(GrayscaleImageRequest, RequestABC)
 
 class ColortableImageRequest( object ):
     def __init__( self, arrayrequest, colorTable):
+        self._mutex = QMutex()
+        self._canceled = False
         self._arrayreq = arrayrequest
         self._colorTable = colorTable
         
@@ -94,8 +108,18 @@ class ColortableImageRequest( object ):
     def notify( self, callback, **kwargs ):
         self._arrayreq.notify(self._onNotify, package = (callback, kwargs))
     
+    def cancelLock(self):
+        self._mutex.lock()
+    def cancelUnlock(self):
+        self._mutex.unlock()
+    def canceled(self):
+        return self._canceled
+    
     def cancel( self ):
+        self.cancelLock()
         self._arrayreq.cancel()
+        self._canceled = True
+        self.cancelUnlock()
     
     def _onNotify( self, result, package ):
         img = self.wait()
@@ -155,6 +179,8 @@ assert issubclass(ColortableImageSource, SourceABC)
 
 class RGBAImageRequest( object ):
     def __init__( self, r, g, b, a, shape ):
+        self._mutex = QMutex()
+        self._canceled = False
         self._requests = r, g, b, a
         shape.append(4)
         self._data = np.empty(shape, dtype=np.uint8)
@@ -171,9 +197,19 @@ class RGBAImageRequest( object ):
         for i in xrange(4):
             self._requests[i].notify(self._onNotify, package = (i, callback, kwargs))
 
+    def cancelLock(self):
+        self._mutex.lock()
+    def cancelUnlock(self):
+        self._mutex.unlock()
+    def canceled(self):
+        return self._canceled
+
     def cancel( self ):
+        self.cancelLock()
         for r in self._requests:
             r.cancel()
+        self._canceled = True
+        self.cancelUnlock()
 
     def _onNotify( self, result, package ):
         channel = package[0]
