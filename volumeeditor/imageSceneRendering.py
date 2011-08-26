@@ -11,8 +11,8 @@ from collections import deque
 class Requests(object):
     def __init__(self):
         self._mutex = QMutex()
-        self._id2r  = dict()
-        self._r     = set()
+        self._id2r = dict()
+        self._r = set()
 
     def addRequest(self, id, request):
         self._mutex.lock()
@@ -45,7 +45,7 @@ class Requests(object):
     def removeByRequest(self, req):
         self._mutex.lock()
         if req in self._r:
-            id = (id for id,r in self._id2r.items() if req in r).next()
+            id = (id for id, r in self._id2r.items() if req in r).next()
             self._id2r[id].remove(req)
             self._r.remove(req)
             req.cancel()
@@ -68,8 +68,8 @@ class ImageSceneRenderThread(QThread):
     
     patchAvailable = pyqtSignal(int)
     
-    def __init__(self, imagePatches, stackedImageSources, parent = None):
-        assert hasattr(stackedImageSources, '__iter__')
+    def __init__(self, imagePatches, stackedImageSources, parent=None):
+        #assert hasattr(stackedImageSources, '__iter__')
         QThread.__init__(self, parent)
         self._imagePatches = imagePatches
 
@@ -95,6 +95,8 @@ class ImageSceneRenderThread(QThread):
         self.wait()
 
     def cancelAll(self):
+        self._dataPending.clear()
+        self._queue = deque()
         self._runningRequests.cancelAll()
 
     def _onPatchFinished(self, image, request, patchNumber, patchLayer):
@@ -125,7 +127,7 @@ class ImageSceneRenderThread(QThread):
         thisPatch.image = image
         ### ...done
         
-        numLayers      = len(self._imagePatches[patchNumber])-2
+        numLayers = len(self._imagePatches[patchNumber]) - 2
         compositePatch = self._imagePatches[patchNumber][numLayers]
     
         ### render the composite patch ######             
@@ -133,13 +135,14 @@ class ImageSceneRenderThread(QThread):
         compositePatch.dirty = True
         p = QPainter(compositePatch.image)
         r = compositePatch.rect
-        p.fillRect(0,0,r.width(), r.height(), Qt.white)
+        p.fillRect(0, 0, r.width(), r.height(), Qt.white)
 
-        for layerNr, patch in enumerate(self._imagePatches[patchNumber][:-2]):
+        for layerNr in range(numLayers-1, -1, -1):
             if not self._stackedIms[layerNr].visible:
                 continue
+            patch = self._imagePatches[patchNumber][layerNr]
             p.setOpacity(self._stackedIms[layerNr].opacity)
-            p.drawImage(0,0, patch.image)
+            p.drawImage(0, 0, patch.image)
         p.end()
         compositePatch.dirty = False
         compositePatch.mutex.unlock()
@@ -158,11 +161,13 @@ class ImageSceneRenderThread(QThread):
         
         rect = self._imagePatches[patchNr][0].rect
         
-        for layerNr, (opacity, visible, imageSource) in enumerate(self._stackedIms):
-            if self._stackedIms[layerNr].visible:
+        for layerNr in range(len(self._stackedIms)):
+            layer = self._stackedIms[layerNr]
+            imageSource = self._stackedIms._layerToIms[layer]
+            if layer.visible:
                 request = imageSource.request(rect)
                 self._runningRequests.addRequest(patchNr, request)
-                request.notify(self._onPatchFinished, request = request, patchNumber=patchNr, patchLayer=layerNr)
+                request.notify(self._onPatchFinished, request=request, patchNumber=patchNr, patchLayer=layerNr)
 
     def _runImpl(self):
         self._dataPending.wait()

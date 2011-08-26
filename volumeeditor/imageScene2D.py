@@ -139,6 +139,16 @@ class ImageScene2D(QGraphicsScene):
         s.isDirty.connect(self._invalidateRect)
         self._initializePatches()
         s.stackChanged.connect(partial(self._invalidateRect, QRect()))
+        s.aboutToResize.connect(self._onAboutToResize)
+        self._numLayers = len(s)
+        self._initializePatches()
+
+    def _onAboutToResize(self, newSize):
+        print "<_onAboutToResize(newSize=%d), %r>" % (newSize, self)
+        self._renderThread.cancelAll()
+        self._numLayers = newSize
+        self._initializePatches()
+        print "</_onAboutToResize, %r>" % self
 
     @property
     def sceneShape(self):
@@ -225,19 +235,17 @@ class ImageScene2D(QGraphicsScene):
         if self.stackedImageSources is None or self.sceneShape == (0.0, 0.0):
             return
         
-        if len(self.stackedImageSources) != self._numLayers:
-            self._numLayers = len(self.stackedImageSources)
-            #add an additional layer for the final composited image patch
-            for i in range(self._patchAccessor.patchCount):
-                rect = self._patchAccessor.patchRectF(i, self.overlap)
-                sceneRect = self.data2scene.mapRect(rect)
-                #the patch accessor uses the data coordinate system
-                #
-                #because the patch is drawn on the screen, its holds coordinates
-                #corresponding to Qt's QGraphicsScene's system
-                #convert to scene coordinates
-                patches = [ImagePatch(sceneRect) for j in range(self._numLayers+2)]
-                self.imagePatches[i] = patches
+        #add an additional layer for the final composited image patch
+        for i in range(self._patchAccessor.patchCount):
+            rect = self._patchAccessor.patchRectF(i, self.overlap)
+            sceneRect = self.data2scene.mapRect(rect)
+            #the patch accessor uses the data coordinate system
+            #
+            #because the patch is drawn on the screen, its holds coordinates
+            #corresponding to Qt's QGraphicsScene's system
+            #convert to scene coordinates
+            patches = [ImagePatch(sceneRect) for j in range(self._numLayers+2)]
+            self.imagePatches[i] = patches
     
     def _invalidateRect(self, rect = QRect()):
         if not rect.isValid():
@@ -252,9 +260,6 @@ class ImageScene2D(QGraphicsScene):
                 drawPatch.image.fill(0)
                 drawPatch.dirty = False
                 drawPatch.mutex.unlock()
-        
-        if self._stackedImageSources is not None and self._numLayers != len(self._stackedImageSources):
-            self._initializePatches()
         
         for i,patch in enumerate(self.imagePatches):
             if not rect.isValid() or rect.intersects(patch[self._numLayers].rect):
