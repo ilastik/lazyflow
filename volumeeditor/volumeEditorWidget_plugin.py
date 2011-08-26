@@ -62,13 +62,6 @@ class PyVolumeEditorWidgetPlugin(QtDesigner.QPyDesignerCustomWidgetPlugin):
     def domXml(self):
         return (
                '<widget class="VolumeEditorWidget" name=\"volumeEditorWidget\">\n'
-               " <property name=\"toolTip\" >\n"
-               "  <string>The current time</string>\n"
-               " </property>\n"
-               " <property name=\"whatsThis\" >\n"
-               "  <string>The analog clock widget displays "
-               "the current time.</string>\n"
-               " </property>\n"
                "</widget>\n"
                )
     
