@@ -173,6 +173,15 @@ class QuadView(QWidget):
 
         self.splitHorizontal2.addWidget(self.dock2_ofSplitHorizontal2)  
         
+        QTimer.singleShot(0, self.synchronizeSplitter)
+        
+    def synchronizeSplitter(self):
+        sizes1 = self.splitHorizontal1.sizes()
+        sizes2 = self.splitHorizontal2.sizes()        
+        if sizes1[0] > sizes2[0]:
+            self.splitHorizontal1.setSizes(sizes2)
+        else:
+            self.splitHorizontal2.setSizes(sizes1) 
         
     def horizontalSplitterMoved(self, x, y):
         sizes = self.splitHorizontal1.sizes()
