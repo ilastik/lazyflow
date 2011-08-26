@@ -65,6 +65,7 @@ class ImagePatch(object):
         self.rect   = QRect(round(rectF.x()),     round(rectF.y()), \
                             round(rectF.width()), round(rectF.height()))
         self._image  = QImage(self.rect.width(), self.rect.height(), QImage.Format_ARGB32_Premultiplied)
+        self._image.fill(0)
         self.texture = -1
         self.dirty = True
         self.mutex = QMutex()
@@ -176,10 +177,20 @@ class ImageScene2D(QGraphicsScene):
             
         self._renderThread = ImageSceneRenderThread(self.imagePatches, self.stackedImageSources, parent=self)
         self._renderThread.start()
+        def onPatchAvailable(patchNr):
+            drawPatch = self.imagePatches[self._numLayers+1].mutex.lock()
+            if drawPatch.dirty:
+                self.drawPatch.mutex.lock()
+                self.drawPatch.image.fill(0)
+                self.drawPatch.dirty = False
+                self.drawPatch.mutex.unlock()
         self._renderThread.patchAvailable.connect(self._schedulePatchRedraw)
         
         self._initializePatches()
-    
+
+    def setBrush(self, b):
+        self._brush = b
+
     def __init__( self , showDebugTiles=False):
         QGraphicsScene.__init__(self)
         self._glWidget = None
@@ -225,7 +236,7 @@ class ImageScene2D(QGraphicsScene):
                 #because the patch is drawn on the screen, its holds coordinates
                 #corresponding to Qt's QGraphicsScene's system
                 #convert to scene coordinates
-                patches = [ImagePatch(sceneRect) for j in range(self._numLayers+1)]
+                patches = [ImagePatch(sceneRect) for j in range(self._numLayers+2)]
                 self.imagePatches[i] = patches
     
     def _invalidateRect(self, rect = QRect()):
@@ -234,6 +245,13 @@ class ImageScene2D(QGraphicsScene):
             #we cancel all requests
             self._renderThread.cancelAll()
             self._updatableTiles = []
+            
+            for patches in self.imagePatches:
+                drawPatch = patches[self._numLayers+1]
+                drawPatch.mutex.lock()
+                drawPatch.image.fill(0)
+                drawPatch.dirty = False
+                drawPatch.mutex.unlock()
         
         if self._stackedImageSources is not None and self._numLayers != len(self._stackedImageSources):
             self._initializePatches()
@@ -253,18 +271,30 @@ class ImageScene2D(QGraphicsScene):
             self._updatableTiles.append(patchNr)
             QTimer.singleShot(self.glUpdateDelay, self.update)
 
-    def drawBackgroundSoftware(self, painter, rect):
-        drawnTiles = 0
-        for patchNr, patches in enumerate(self.imagePatches):
-            patch = patches[self._numLayers]
-            if not patch.rectF.intersect(rect): continue
+    def drawForeground(self, painter, rect):
+        for patches in self.imagePatches:
+            patch = patches[self._numLayers+1]
+            if not patch.dirty or not patch.rectF.intersect(rect): continue
             patch.mutex.lock()
             painter.drawImage(patch.rectF.topLeft(), patch.image)
             patch.mutex.unlock()
+
+    def drawBackgroundSoftware(self, painter, rect):
+        for patchNr, patches in enumerate(self.imagePatches):
+            
+            compositePatch = patches[self._numLayers]
+            drawPatch      = patches[self._numLayers+1]
+            
+            if not compositePatch.rectF.intersect(rect):
+                continue
+            
+            compositePatch.mutex.lock()
+            painter.drawImage(compositePatch.rectF.topLeft(), compositePatch.image)
+            compositePatch.mutex.unlock()
+
             if self._showTiles:
-                painter.drawRect(patch.rectF.adjusted(5,5,-5,-5))
-                painter.drawText(patch.rectF.topLeft()+QPointF(20,20), "%d" % patchNr)
-            drawnTiles +=1
+                painter.drawRect(compositePatch.rectF.adjusted(5,5,-5,-5))
+                painter.drawText(compositePatch.rectF.topLeft()+QPointF(20,20), "%d" % patchNr)
     
     def drawBackgroundGL(self, painter, rect):
         painter.beginNativePainting()

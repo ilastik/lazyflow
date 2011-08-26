@@ -35,7 +35,7 @@
 #    e65f5bad2cd9fdaefbe7ceaafa0cce0e071b56e4
 
 from PyQt4.QtCore import Qt, pyqtSignal, QDir, QObject
-from PyQt4.QtGui import QApplication, QImageWriter, QWidget
+from PyQt4.QtGui import QApplication, QImageWriter, QWidget, QBrush, QPen, QColor
 
 import numpy, qimage2ndarray, copy
 from functools import partial
@@ -153,6 +153,22 @@ class VolumeEditor( QObject ):
         #self.crosshairControler = CrosshairControler() 
         self.brushingInterpreter = BrushingInterpreter(self.brushingModel, self.imageViews)
         self.brushingControler = BrushingControler(self.brushingModel, self.posModel, labelsink)
+        
+        def onBrushSize(s):
+            print "onBrushSize"
+            b = QPen(QBrush(self.brushingModel.drawColor), s)
+            #b = QPen(QBrush(QColor(0,255,0)), 15) #for testing
+            for s in self.imageScenes:
+                s.setBrush(b)
+        def onBrushColor(c):
+            print "onBrushColor"
+            b = QPen(QBrush(c), self.brushingModel.brushSize)
+            #b = QPen(QBrush(QColor(0,255,0)), 15) #for testing
+            for s in self.imageScenes:
+                s.setBrush(b)
+        
+        self.brushingModel.brushSizeChanged.connect(onBrushSize)
+        self.brushingModel.brushColorChanged.connect(onBrushColor)
         
         self._initConnects()
 

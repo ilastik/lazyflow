@@ -125,7 +125,7 @@ class ImageSceneRenderThread(QThread):
         thisPatch.image = image
         ### ...done
         
-        numLayers      = len(self._imagePatches[patchNumber])-1
+        numLayers      = len(self._imagePatches[patchNumber])-2
         compositePatch = self._imagePatches[patchNumber][numLayers]
     
         ### render the composite patch ######             
@@ -135,7 +135,7 @@ class ImageSceneRenderThread(QThread):
         r = compositePatch.rect
         p.fillRect(0,0,r.width(), r.height(), Qt.white)
 
-        for layerNr, patch in enumerate(self._imagePatches[patchNumber][:-1]):
+        for layerNr, patch in enumerate(self._imagePatches[patchNumber][:-2]):
             if not self._stackedIms[layerNr].visible:
                 continue
             p.setOpacity(self._stackedIms[layerNr].opacity)

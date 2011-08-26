@@ -30,7 +30,7 @@
 from PyQt4.QtCore import QPoint, QPointF, QTimer, pyqtSignal, Qt, \
                          QString
 from PyQt4.QtGui import QColor, QCursor, QGraphicsView, QPainter, QImage, \
-                        QVBoxLayout, QApplication, QTransform
+                        QVBoxLayout, QApplication, QTransform, QBrush, QPen
 from PyQt4.QtOpenGL import QGLWidget
 
 import numpy
@@ -121,7 +121,7 @@ class ImageView2D(QGraphicsView):
     @drawingEnabled.setter
     def drawingEnabled(self, enable):
         self._drawingEnabled = enable 
-
+    
     def __init__(self, imagescene2d, useGL=False):
         """
         Constructs a view upon a ImageScene2D
@@ -354,11 +354,34 @@ class ImageView2D(QGraphicsView):
             return
         
         self.mousePos = mousePos = self.mapScene2Data(self.mapToScene(event.pos()))
+        oldX, oldY = self.x, self.y
         x = self.x = mousePos.x()
         y = self.y = mousePos.y()
         self.mouseMoved.emit(x,y)
 
         if self._isDrawing:
+            ### FIXME
+            patch = None
+            patchNr = -1
+            for patchNr, patch in enumerate(self.scene().imagePatches):
+                patch = patch[self.scene()._numLayers+1]
+                if patch.rectF.contains(self.mapToScene(event.pos())):
+                    break
+            patch.mutex.lock()
+            p = QPainter(patch.image)
+            p.setPen(self.scene()._brush)
+            
+            tL = patch.rectF.topLeft()
+            o  = self.scene().data2scene.map(QPointF(oldX,oldY))
+            n  = self.scene().data2scene.map(QPointF(x,y))
+            
+            p.drawLine(o-tL, n-tL)
+            p.end()
+            patch.dirty = True
+            patch.mutex.unlock()
+            self.scene()._schedulePatchRedraw(patchNr)
+            ### end FIXME
+            
             self.drawing.emit(mousePos)
 
     def mouseReleaseEvent(self, event):
