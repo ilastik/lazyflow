@@ -180,7 +180,7 @@ class ImageScene2D(QGraphicsScene):
         
         self._initializePatches()
     
-    def __init__( self ):
+    def __init__( self , showDebugTiles=False):
         QGraphicsScene.__init__(self)
         self._glWidget = None
         self._useGL = False
@@ -198,6 +198,8 @@ class ImageScene2D(QGraphicsScene):
         def cleanup():
             self._renderThread.stop()
         self.destroyed.connect(cleanup)
+        
+        self._showTiles=showDebugTiles
 
     def activateOpenGL( self, qglwidget ):
         self._useGL = True
@@ -253,12 +255,15 @@ class ImageScene2D(QGraphicsScene):
 
     def drawBackgroundSoftware(self, painter, rect):
         drawnTiles = 0
-        for patches in self.imagePatches:
+        for patchNr, patches in enumerate(self.imagePatches):
             patch = patches[self._numLayers]
             if not patch.rectF.intersect(rect): continue
             patch.mutex.lock()
             painter.drawImage(patch.rectF.topLeft(), patch.image)
             patch.mutex.unlock()
+            if self._showTiles:
+                painter.drawRect(patch.rectF.adjusted(5,5,-5,-5))
+                painter.drawText(patch.rectF.topLeft()+QPointF(20,20), "%d" % patchNr)
             drawnTiles +=1
     
     def drawBackgroundGL(self, painter, rect):
