@@ -73,7 +73,7 @@ class VolumeEditor( QObject ):
     zoomInFactor  = 1.1
     zoomOutFactor = 0.9
 
-    def __init__( self, shape, layerStackModel, labelsink=None, useGL = False):
+    def __init__( self, shape, layerStackModel, labelsink=None, useGL = False, showDebugTiles=False):
         super(VolumeEditor, self).__init__()
         assert(len(shape) == 5)
         self._shape = shape
@@ -109,9 +109,9 @@ class VolumeEditor( QObject ):
 
         # three ortho image scenes
         self.imageScenes = []
-        self.imageScenes.append(ImageScene2D())
-        self.imageScenes.append(ImageScene2D())
-        self.imageScenes.append(ImageScene2D())
+        self.imageScenes.append(ImageScene2D(showDebugTiles=showDebugTiles))
+        self.imageScenes.append(ImageScene2D(showDebugTiles=showDebugTiles))
+        self.imageScenes.append(ImageScene2D(showDebugTiles=showDebugTiles))
         for i in xrange(3):
             self.imageScenes[i].stackedImageSources = imagepumps[i].stackedImageSources
 
