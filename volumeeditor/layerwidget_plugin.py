@@ -54,7 +54,7 @@ class PyLayerWidgetPlugin(QtDesigner.QPyDesignerCustomWidgetPlugin):
         o5.opacity = 0.65
         model.append(o5)
     
-        view = LayerWidget(model, parent=parent)
+        view = LayerWidget(parent, model)
         view.updateGeometry()
         
         return view
