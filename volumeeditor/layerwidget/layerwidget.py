@@ -329,7 +329,7 @@ if __name__ == "__main__":
     o5.opacity = 0.65
     model.append(o5)
 
-    view = LayerWidget(model)
+    view = LayerWidget(None, model)
     view.show()
     view.updateGeometry()
 
