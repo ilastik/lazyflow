@@ -30,7 +30,7 @@ from slicingPlanesWidget import SlicingPlanesWidget
 # discover icon path
 from os import path
 
-_icondir = path.dirname(__file__+'/../resources/icons')
+_icondir = path.split(__file__)[0]+'/../resources/icons'
 
 def convertVTPtoOBJ(vtpFilename, objFilename):
     f = open(vtpFilename, 'r')
@@ -245,16 +245,26 @@ class OverviewScene(QWidget):
         hbox = QHBoxLayout(None)
         hbox.setMargin(0)
         hbox.setSpacing(5)
-        hbox.setContentsMargins(5,0,5,0)
-        b1 = QToolButton(); b1.setText('X')
+        hbox.setContentsMargins(5,3,5,3)
+        
+        b1 = QToolButton()
+        b1.setIcon(QIcon(path.join(_icondir, 'x-axis.png')))
         b1.setCheckable(True); b1.setChecked(True)
-        b2 = QToolButton(); b2.setText('Y')
+        
+        b2 = QToolButton()
+        b2.setIcon(QIcon(path.join(_icondir, 'y-axis.png')))
         b2.setCheckable(True); b2.setChecked(True)
-        b3 = QToolButton(); b3.setText('Z')
+        
+        b3 = QToolButton()
+        b3.setIcon(QIcon(path.join(_icondir, 'z-axis.png')))
         b3.setCheckable(True); b3.setChecked(True)
-        bAnaglyph = QToolButton(); bAnaglyph.setText('A')
+        
+        bAnaglyph = QToolButton()
+        bAnaglyph.setIcon(QIcon(path.join(_icondir, '3d_glasses.png')))
         bAnaglyph.setCheckable(True); bAnaglyph.setChecked(False)
-        bCutter = QToolButton(); bCutter.setText('use cutter')
+        
+        bCutter = QToolButton()
+        bCutter.setIcon(QIcon(path.join(_icondir, 'edit-cut.png')))
         bCutter.setCheckable(True); bCutter.setChecked(False)
         self.bCutter = bCutter
         

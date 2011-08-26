@@ -1,5 +1,5 @@
 from PyQt4.QtCore import QAbstractListModel, pyqtSignal, QModelIndex, Qt, \
-                         QTimer
+                         QTimer, pyqtSignature
 from PyQt4.QtGui import QItemSelectionModel
 
 from layer import Layer
@@ -139,6 +139,7 @@ class LayerStackModel(QAbstractListModel):
     def wantsUpdate(self):
         self.layoutChanged.emit()
 
+    @pyqtSignature("deleteSelected()")
     def deleteSelected(self):
         print "delete"
         assert len(self.selectionModel.selectedRows()) == 1
@@ -148,6 +149,7 @@ class LayerStackModel(QAbstractListModel):
             self.selectionModel.select(self.index(0), QItemSelectionModel.Select)
         self.updateGUI()
 
+    @pyqtSignature("moveSelectedUp()")
     def moveSelectedUp(self):
         assert len(self.selectionModel.selectedRows()) == 1
         row = self.selectionModel.selectedRows()[0]
@@ -162,6 +164,7 @@ class LayerStackModel(QAbstractListModel):
             self.orderChanged.emit()
             self.updateGUI()
     
+    @pyqtSignature("moveSelectedDown()")
     def moveSelectedDown(self):
         assert len(self.selectionModel.selectedRows()) == 1
         row = self.selectionModel.selectedRows()[0]
