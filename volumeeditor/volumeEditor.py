@@ -156,6 +156,10 @@ class VolumeEditor( QObject ):
         
         self._initConnects()
 
+    def scheduleSlicesRedraw(self):
+        for s in self.imageScenes:
+            s._invalidateRect()
+
     def _initConnects(self):
         for i, v in enumerate(self.imageViews):
             #connect interpreter

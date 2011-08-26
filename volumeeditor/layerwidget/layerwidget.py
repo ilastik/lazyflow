@@ -9,6 +9,7 @@ from volumeeditor.layer import Layer
 
 from os import path
 import volumeeditor.resources.icons
+from volumeeditor.layerstack import LayerStackModel
 _icondir = path.dirname(volumeeditor.resources.icons.__file__)
 
 #*******************************************************************************
@@ -230,8 +231,9 @@ class LayerWidget(QListView):
     def __init__(self, parent = None, listModel=None):
         
         QListView.__init__(self, parent)
-        if listModel:
-          self.init(listModel)
+        if listModel == None:
+            listModel = LayerStackModel(self)
+        self.init(listModel)
         
     def init(self, listModel):
         self.setModel(listModel)

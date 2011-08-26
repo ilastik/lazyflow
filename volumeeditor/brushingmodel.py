@@ -113,8 +113,7 @@ class BrushingModel(QObject):
     def setBrushColor(self, color):
         self.drawColor = color
         self.penVis.setColor(color)
-        self.emit.brushColorChanged(self.drawColor)
-      
+        self.brushColorChanged.emit(self.drawColor)
     
     def beginDrawing(self, pos, sliceRect):
         self.sliceRect = sliceRect
