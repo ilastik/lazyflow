@@ -2,7 +2,6 @@ from PyQt4 import QtGui, QtDesigner
 from volumeeditor.volumeEditorWidget import *
 from volumeeditor.layerstack import LayerStackModel
 
-
 from lazyflow.graph import Graph, Operator, InputSlot, OutputSlot
 from volumeeditor.pixelpipeline.datasources import LazyflowSource, ConstantSource
 from volumeeditor.pixelpipeline._testing import OpDataProvider
@@ -32,7 +31,6 @@ class PyVolumeEditorWidgetPlugin(QtDesigner.QPyDesignerCustomWidgetPlugin):
         return self.initialized
     
     def createWidget(self, parent):
-        print "DDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDAAAAAA"
         g = Graph()
         layerstack = LayerStackModel()
         N=100
@@ -50,7 +48,6 @@ class PyVolumeEditorWidgetPlugin(QtDesigner.QPyDesignerCustomWidgetPlugin):
         editor = VolumeEditor(shape, layerstack, labelsink=None, useGL=False)  
         widget = VolumeEditorWidget(parent=parent)
         widget.init(editor)
-        print "RETURNING ", widget
         return widget
     
     def name(self):
