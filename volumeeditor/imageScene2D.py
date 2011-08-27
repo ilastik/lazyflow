@@ -40,7 +40,7 @@ from imageSceneRendering import ImageSceneRenderThread
 
 class ImagePatch(object):    
     """
-    A tile/patch that makes up the whole 2D scene as displayed in ImageScene2D.
+    A patch that makes up the whole 2D scene as displayed in ImageScene2D.
    
     An ImagePatch has a bounding box (self.rect, self.rectF) and
     its image content is either represented by a QImage
@@ -178,7 +178,7 @@ class ImageScene2D(QGraphicsScene):
         QGraphicsScene.__init__(self)
         self._updatableTiles = []
 
-        # tile rendering
+        # tiled rendering of patches
         self.imagePatches = None
         self._renderThread = None
         self._stackedImageSources = None

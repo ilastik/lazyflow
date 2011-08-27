@@ -37,16 +37,16 @@ import numpy
 
 class PatchAccessor():
     """
-    Cut a given 2D shape into tiles of given rectangular size
+    Cut a given 2D shape into patches of given rectangular size
     """
     
     def __init__(self, size_x, size_y, blockSize = 128):
         """
         (size_x, size_y) -- 2D shape
-        blockSize        -- maximum width/height of tiles
+        blockSize        -- maximum width/height of patches
         
         Constructs a PatchAccessor that while divide the given shape
-        into tiles that have a maximum given size.
+        into patches that have a maximum given size.
         """
         
         self._blockSize = blockSize

@@ -53,7 +53,7 @@ class Requests(object):
 
 class ImageSceneRenderThread(QThread):
     """
-    Composites individual tiles. For one tile,
+    Composites individual patches. For one patch,
     it requests the corresponding region for all the
     visible layers in the layer stack as QImage objects,
     and then uses alpha blending to arrive at a final
