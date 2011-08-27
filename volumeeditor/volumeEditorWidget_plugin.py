@@ -1,4 +1,5 @@
 from PyQt4.QtDesigner import QPyDesignerCustomWidgetPlugin
+from PyQt4.QtGui import QPixmap, QIcon
 
 import numpy
 
@@ -39,7 +40,7 @@ class PyVolumeEditorWidgetPlugin(QPyDesignerCustomWidgetPlugin):
 
         layerstack.append( GrayscaleLayer( source ) )
 
-        editor = VolumeEditor(shape, layerstack, labelsink=None, useGL=False)  
+        editor = VolumeEditor(shape, layerstack, labelsink=None)  
         widget = VolumeEditorWidget(parent=parent)
         widget.init(editor)
         return widget
@@ -49,6 +50,15 @@ class PyVolumeEditorWidgetPlugin(QPyDesignerCustomWidgetPlugin):
 
     def group(self):
         return "ilastik widgets"
+    
+    def icon(self):
+        return QIcon(QPixmap(16,16))
+                           
+    def toolTip(self):
+        return ""
+    
+    def whatsThis(self):
+        return ""
     
     def isContainer(self):
         return False

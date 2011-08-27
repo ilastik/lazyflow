@@ -1,4 +1,5 @@
 from PyQt4.QtDesigner import QPyDesignerCustomWidgetPlugin
+from PyQt4.QtGui import QPixmap, QIcon, QColor
 
 from volumeeditor.layerwidget.layerwidget import LayerWidget
 from volumeeditor.layerstack import LayerStackModel, Layer
@@ -56,6 +57,15 @@ class PyLayerWidgetPlugin(QPyDesignerCustomWidgetPlugin):
 
     def group(self):
         return "ilastik widgets"
+    
+    def icon(self):
+        return QIcon(QPixmap(16,16))
+                           
+    def toolTip(self):
+        return ""
+    
+    def whatsThis(self):
+        return ""
     
     def isContainer(self):
         return False
