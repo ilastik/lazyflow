@@ -30,7 +30,7 @@
 from PyQt4.QtCore import Qt, QTimer
 from PyQt4.QtGui import QApplication, QWidget, QShortcut, QKeySequence, \
                         QSplitter, QVBoxLayout, QHBoxLayout, QPushButton, \
-                        QColor
+                        QColor, QSizePolicy
 
 import numpy, copy
 from functools import partial
@@ -49,17 +49,19 @@ from volumeEditor import VolumeEditor
 class VolumeEditorWidget(QWidget):
     def __init__( self, parent=None, editor=None ):
         super(VolumeEditorWidget, self).__init__(parent=parent)
+        
+        self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        self.setFocusPolicy(Qt.StrongFocus)
+        
         if editor!=None:
             self.init(editor)
     
     def init(self, volumeeditor):
         self._ve = volumeeditor
 
-        self.setFocusPolicy(Qt.StrongFocus)
-        
         self.layout = QHBoxLayout()
         self.setLayout(self.layout)
-
+        
         # setup quadview
         axisLabels = ["X:", "Y:", "Z:"]
         axisColors = [QColor("#dc143c"), QColor("green"), QColor("blue")]
@@ -99,7 +101,6 @@ class VolumeEditorWidget(QWidget):
 
         def toggleSliceIntersection(state):
             self._ve.navCtrl.indicateSliceIntersection = (state == Qt.Checked)
-#        self.indicateSliceIntersectionButton.toggled.connect(toggleSliceIntersection)
         self.quadview.statusBar.positionCheckBox.stateChanged.connect(toggleSliceIntersection)
 
         #Enabling this makes cursor movement too slow...

@@ -27,8 +27,8 @@
 #    authors and should not be interpreted as representing official policies, either expressed
 #    or implied, of their employers.
 
-from PyQt4.QtCore import *
-from PyQt4.QtGui import *
+from PyQt4.QtCore import Qt, pyqtSignal
+from PyQt4.QtGui import QSizePolicy, QWidget, QVBoxLayout, QSplitter
             
 class ImageView2DFloatingWindow(QWidget):
     onCloseClick = pyqtSignal()
@@ -119,6 +119,8 @@ class QuadView(QWidget):
     def __init__(self, parent, view1, view2, view3, view4 = None):
         QWidget.__init__(self, parent)
         
+        self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        
         self.dockableContainer = []
         
         self.layout = QVBoxLayout()
@@ -132,8 +134,8 @@ class QuadView(QWidget):
         self.splitHorizontal1.setObjectName("splitter1")
         self.splitHorizontal2 = QSplitter(Qt.Horizontal, self.splitVertical)
         self.splitHorizontal2.setObjectName("splitter2")
-        self.connect( self.splitHorizontal1, SIGNAL( 'splitterMoved( int, int )'), self.horizontalSplitterMoved)
-        self.connect( self.splitHorizontal2, SIGNAL( 'splitterMoved( int, int )'), self.horizontalSplitterMoved)
+        self.splitHorizontal1.splitterMoved.connect(self.horizontalSplitterMoved)
+        self.splitHorizontal2.splitterMoved.connect(self.horizontalSplitterMoved)
         
         self.imageView2D_1 = view1
         
@@ -173,16 +175,20 @@ class QuadView(QWidget):
 
         self.splitHorizontal2.addWidget(self.dock2_ofSplitHorizontal2)  
         
-        QTimer.singleShot(0, self.synchronizeSplitter)
+        #QTimer.singleShot(0, self.synchronizeSplitter)
         
-    def synchronizeSplitter(self):
+    def _synchronizeSplitter(self):
         sizes1 = self.splitHorizontal1.sizes()
         sizes2 = self.splitHorizontal2.sizes()        
         if sizes1[0] > sizes2[0]:
             self.splitHorizontal1.setSizes(sizes2)
         else:
             self.splitHorizontal2.setSizes(sizes1) 
-        
+    
+    def resizeEvent(self, event):
+        QWidget.resizeEvent(self, event)
+        self._synchronizeSplitter()
+    
     def horizontalSplitterMoved(self, x, y):
         sizes = self.splitHorizontal1.sizes()
         if self.splitHorizontal2.closestLegalPosition(x, y) < self.splitHorizontal2.closestLegalPosition(x, y):
@@ -206,7 +212,6 @@ class QuadView(QWidget):
     def setMouseCoordsToQuadStatusBar(self, x, y, z):
         self.quadViewStatusBar.setMouseCoords(x, y, z) 
         
-        
     def on_dock(self, dockWidget):
         if dockWidget._isDocked:
             dockWidget.undockView()
@@ -215,7 +220,6 @@ class QuadView(QWidget):
         else:
             dockWidget.dockView()
    
-    
     def on_max(self, dockWidget):
         for dock in self.dockableContainer:
             if not dockWidget == dock:
