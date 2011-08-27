@@ -243,7 +243,7 @@ if __name__ == "__main__":
         return s
 
     class Test(QObject):
-        def __init__(self, useGL, argv):
+        def __init__(self, argv):
             QObject.__init__(self)
             
             layerstack = LayerStackModel()
@@ -484,10 +484,10 @@ if __name__ == "__main__":
                 layerstack.append(layer)
 
             if "label" in argv or "l" in argv:
-                self.editor = VolumeEditor(shape, layerstack, labelsink=labelsrc, useGL=useGL)
+                self.editor = VolumeEditor(shape, layerstack, labelsink=labelsrc)
                 self.editor.setDrawingEnabled(True)
             else:
-                self.editor = VolumeEditor(shape, layerstack, useGL=useGL)
+                self.editor = VolumeEditor(shape, layerstack)
 
             self.widget = VolumeEditorWidget(parent=None, editor=self.editor)
             
@@ -520,7 +520,7 @@ if __name__ == "__main__":
     
     s = QSplitter()
 
-    t2 = Test(False, sys.argv)
+    t2 = Test(sys.argv)
 
     s.addWidget(t2.widget)
 

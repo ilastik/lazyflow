@@ -73,7 +73,7 @@ class VolumeEditor( QObject ):
     zoomInFactor  = 1.1
     zoomOutFactor = 0.9
 
-    def __init__( self, shape, layerStackModel, labelsink=None, useGL = False, showDebugTiles=False):
+    def __init__( self, shape, layerStackModel, labelsink=None, showDebugTiles=False):
         super(VolumeEditor, self).__init__()
         assert(len(shape) == 5)
         self._shape = shape
@@ -117,9 +117,9 @@ class VolumeEditor( QObject ):
 
         # three ortho image views
         self.imageViews = []
-        self.imageViews.append(ImageView2D(self.imageScenes[0], useGL=useGL))
-        self.imageViews.append(ImageView2D(self.imageScenes[1], useGL=useGL))
-        self.imageViews.append(ImageView2D(self.imageScenes[2], useGL=useGL))
+        self.imageViews.append(ImageView2D(self.imageScenes[0]))
+        self.imageViews.append(ImageView2D(self.imageScenes[1]))
+        self.imageViews.append(ImageView2D(self.imageScenes[2]))
 
         if useVTK:
             self.view3d = OverviewScene(shape=self._shape[1:4])
