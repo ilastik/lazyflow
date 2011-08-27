@@ -239,33 +239,6 @@ class NavigationControler(QObject):
     def _updateCrossHairCursor(self):
         y,x = posView2D(self._model.cursorPos, axis=self._model.activeView)
         self._views[self._model.activeView]._crossHairCursor.showXYPosition(x,y)
-        
-        '''
-        if self._model.activeView == 0: # x-axis
-            yView = self._views[1]._crossHairCursor
-            zView = self._views[2]._crossHairCursor
-            
-            #in case of the x-view, yViewYpos and zViewYpos has to be updated
-            #adding 0.5 to make line snap into middle of pixels, like the croshair
-            #yView.showYPosition(x, y)
-            #zView.showYPosition(y, x)
-        elif self._model.activeView == 1: # y-axis
-            xView = self._views[0]._crossHairCursor
-            zView = self._views[2]._crossHairCursor
-            
-            #in case of the y-view, yViewYpos and zViewXpos has to be updated
-            #adding 0.5 to make line snap into middle of pixels, like the croshair
-            #xView.showYPosition(y, x)
-            #zView.showXPosition(x, y)
-        else: # z-axis
-            xView = self._views[0]._crossHairCursor
-            yView = self._views[1]._crossHairCursor
-                
-            #in case of the z-view, xViewYpos and yViewXpos has to be updated
-            #no adding required in this case   
-            #xView.showXPosition(x, y)
-            #yView.showXPosition(x, y)
-        '''
     
     def _updateSliceIntersection(self):
         for axis, v in enumerate(self._views):
