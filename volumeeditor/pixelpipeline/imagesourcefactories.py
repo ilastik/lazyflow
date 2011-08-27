@@ -23,4 +23,4 @@ def createImageSource( layer, datasources2d ):
             ds[i] = ConstantSource(layer.color_missing_value)
     if datasources2d[3] == None:
         ds[3] = ConstantSource(layer.alpha_missing_value)
-    return RGBAImageSource( ds[0], ds[1], ds[2], ds[3] )
+    return RGBAImageSource( ds[0], ds[1], ds[2], ds[3], *layer._normalize )

@@ -54,7 +54,7 @@ class Layer( QObject ):
 #*******************************************************************************
 
 class GrayscaleLayer( Layer ):
-    def __init__( self, datasource, normalize = (0.0,255.0) ):
+    def __init__( self, datasource, normalize = None ):
         super(GrayscaleLayer, self).__init__()
         self._datasources = [datasource]
         self._normalize = normalize
@@ -85,8 +85,10 @@ class RGBALayer( Layer ):
         return self._alpha_missing_value
 
     def __init__( self, red = None, green = None, blue = None, alpha = None, \
-                  color_missing_value = 0, alpha_missing_value = 255):
+                  color_missing_value = 0, alpha_missing_value = 255,
+                  normalizeR=None, normalizeG=None, normalizeB=None, normalizeA=None):
         super(RGBALayer, self).__init__()
         self._datasources = [red,green,blue,alpha]
+        self._normalize   = [normalizeR, normalizeG, normalizeB, normalizeA]
         self._color_missing_value = color_missing_value
         self._alpha_missing_value = alpha_missing_value

@@ -50,15 +50,16 @@ assert issubclass(ImageSource, SourceABC)
 #*******************************************************************************
 
 class GrayscaleImageRequest( object ):
-    def __init__( self, arrayrequest, normalize ):
+    def __init__( self, arrayrequest, normalize=None ):
         self._mutex = QMutex()
         self._canceled = False
         self._arrayreq = arrayrequest
         self._normalize = normalize
 
     def wait( self ):
-        a = self._arrayreq.wait()
-        a = (a.squeeze() - self._normalize[0])*255 / (self._normalize[1]-self._normalize[0])
+        a = self._arrayreq.wait().squeeze()
+        if self._normalize is not None:
+            a = (a - self._normalize[0])*255 / (self._normalize[1]-self._normalize[0])
         img = gray2qimage(a)
         return img.convertToFormat(QImage.Format_ARGB32_Premultiplied)
             
@@ -136,7 +137,7 @@ assert issubclass(ColortableImageRequest, RequestABC)
 #*******************************************************************************
 
 class GrayscaleImageSource( ImageSource ):
-    def __init__( self, arraySource2D, normalize ):
+    def __init__( self, arraySource2D, normalize=None ):
         assert isinstance(arraySource2D, SourceABC), 'wrong type: %s' % str(type(arraySource2D))
         super(GrayscaleImageSource, self).__init__()
         self._arraySource2D = arraySource2D
@@ -178,10 +179,12 @@ assert issubclass(ColortableImageSource, SourceABC)
 #*******************************************************************************
 
 class RGBAImageRequest( object ):
-    def __init__( self, r, g, b, a, shape ):
+    def __init__( self, r, g, b, a, shape,
+                  normalizeR=None, normalizeG=None, normalizeB=None, normalizeA=None ):
         self._mutex = QMutex()
         self._canceled = False
         self._requests = r, g, b, a
+        self._normalize = [normalizeR, normalizeG, normalizeB, normalizeA]
         shape.append(4)
         self._data = np.empty(shape, dtype=np.uint8)
         self._requestsFinished = 4 * [False,]
@@ -190,6 +193,8 @@ class RGBAImageRequest( object ):
         for i, req in enumerate(self._requests):
             a = self._requests[i].wait()
             a = a.squeeze()
+            if self._normalize[i] is not None:
+                a = (a - self._normalize[i][0])*255 / (self._normalize[i][1]-self._normalize[i][0])
             self._data[:,:,i] = a
         img = array2qimage(self._data)
         return img.convertToFormat(QImage.Format_ARGB32_Premultiplied)        
@@ -227,7 +232,8 @@ assert issubclass(RGBAImageRequest, RequestABC)
 #*******************************************************************************
 
 class RGBAImageSource( ImageSource ):
-    def __init__( self, red, green, blue, alpha ):
+    def __init__( self, red, green, blue, alpha,
+                  normalizeR=None, normalizeG=None, normalizeB=None, normalizeA=None ):
         '''
         If you don't want to set all the channels,
         a ConstantSource may be used as a replacement for
@@ -236,6 +242,7 @@ class RGBAImageSource( ImageSource ):
         red, green, blue, alpha - 2d array sources
 
         '''
+        self._normalize = [normalizeR, normalizeG, normalizeB, normalizeA]
         channels = [red, green, blue, alpha]
         for channel in channels: 
                 assert isinstance(channel, SourceABC) , 'channel has wrong type: %s' % str(type(channel))
@@ -257,7 +264,7 @@ class RGBAImageSource( ImageSource ):
             if t > 1:
                 shape.append(t)
         assert len(shape) == 2
-        return RGBAImageRequest( r, g, b, a, shape )
+        return RGBAImageRequest( r, g, b, a, shape, *self._normalize )
 assert issubclass(RGBAImageSource, SourceABC)
 
 
