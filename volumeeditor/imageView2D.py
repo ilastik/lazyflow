@@ -27,10 +27,8 @@
 #    authors and should not be interpreted as representing official policies, either expressed
 #    or implied, of their employers.
 
-from PyQt4.QtCore import QPoint, QPointF, QTimer, pyqtSignal, Qt, \
-                         QString
-from PyQt4.QtGui import QCursor, QGraphicsView, QPainter, QImage, \
-                        QVBoxLayout, QApplication, QTransform
+from PyQt4.QtCore import QPoint, QPointF, QTimer, pyqtSignal, Qt
+from PyQt4.QtGui import QCursor, QGraphicsView, QPainter, QVBoxLayout, QApplication
 
 import numpy
 

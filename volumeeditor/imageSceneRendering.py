@@ -1,7 +1,7 @@
 from PyQt4.QtCore import QThread, pyqtSignal, Qt, QMutex
 from PyQt4.QtGui import QPainter
 
-import threading, copy
+import threading
 from collections import deque
 
 #*******************************************************************************
@@ -14,23 +14,23 @@ class Requests(object):
         self._id2r = dict()
         self._r = set()
 
-    def addRequest(self, id, request):
+    def addRequest(self, reqId, request):
         self._mutex.lock()
         
-        if not id in self._id2r:
-            self._id2r[id] = []
-        self._id2r[id].append(request)
+        if not reqId in self._id2r:
+            self._id2r[reqId] = []
+        self._id2r[reqId].append(request)
         self._r.add(request)
         
         self._mutex.unlock()
         
-    def removeById(self, id):
+    def removeById(self, reqId):
         self._mutex.lock()
         if id in self._id2r:
-            for req in self._id2r[id]:
+            for req in self._id2r[reqId]:
                 self._r.remove(req)
                 req.cancel()
-            del self._id2r[id]
+            del self._id2r[reqId]
         self._mutex.unlock()
     
     def cancelAll(self):
@@ -45,8 +45,8 @@ class Requests(object):
     def removeByRequest(self, req):
         self._mutex.lock()
         if req in self._r:
-            id = (id for id, r in self._id2r.items() if req in r).next()
-            self._id2r[id].remove(req)
+            reqId = (reqId for reqId, r in self._id2r.items() if req in r).next()
+            self._id2r[reqId].remove(req)
             self._r.remove(req)
             req.cancel()
         self._mutex.unlock()

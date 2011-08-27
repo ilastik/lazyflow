@@ -30,8 +30,7 @@
 from PyQt4.QtCore import QObject, QTimer
 from PyQt4.QtGui  import QColor
 
-import numpy
-import time, copy
+import  copy
 from functools import partial
 
 def posView2D(pos3d, axis):
@@ -241,6 +240,7 @@ class NavigationControler(QObject):
         y,x = posView2D(self._model.cursorPos, axis=self._model.activeView)
         self._views[self._model.activeView]._crossHairCursor.showXYPosition(x,y)
         
+        '''
         if self._model.activeView == 0: # x-axis
             yView = self._views[1]._crossHairCursor
             zView = self._views[2]._crossHairCursor
@@ -265,6 +265,7 @@ class NavigationControler(QObject):
             #no adding required in this case   
             #xView.showXPosition(x, y)
             #yView.showXPosition(x, y)
+        '''
     
     def _updateSliceIntersection(self):
         for axis, v in enumerate(self._views):

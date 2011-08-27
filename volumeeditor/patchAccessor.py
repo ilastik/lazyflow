@@ -27,14 +27,9 @@
 #    authors and should not be interpreted as representing official policies, either expressed
 #    or implied, of their employers.
 
-from PyQt4.QtCore import pyqtSignal, QObject, QThread, Qt, QSize, QPointF, QRectF, \
-                         QRect, QPoint
-from PyQt4.QtGui  import QWidget, QPen, QGraphicsScene, QColor, QGraphicsLineItem, \
-                         QImage, QPainter, QGraphicsLineItem
+from PyQt4.QtCore import QPointF, QRectF
 
 import numpy
-import threading
-import time
 
 #*******************************************************************************
 # P a t c h A c c e s s o r                                                    *

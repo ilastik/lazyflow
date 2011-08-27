@@ -27,18 +27,10 @@
 #    authors and should not be interpreted as representing official policies, either expressed
 #    or implied, of their employers.
 
-# TODO
-# TODO
-# TODO
-# port the following revisions:
-#    1f810747c21380eda916c2c5b7b5d1893f92663e
-#    e65f5bad2cd9fdaefbe7ceaafa0cce0e071b56e4
-
-from PyQt4.QtCore import Qt, pyqtSignal, QTimer
-from PyQt4.QtGui import QApplication, QWidget, QLabel, QSpinBox, \
-                        QShortcut, QKeySequence, QSplitter, \
-                        QVBoxLayout, QHBoxLayout, QPushButton, QToolButton, \
-                        QSizePolicy, QColor
+from PyQt4.QtCore import Qt, QTimer
+from PyQt4.QtGui import QApplication, QWidget, QShortcut, QKeySequence, \
+                        QSplitter, QVBoxLayout, QHBoxLayout, QPushButton, \
+                        QColor
 
 import numpy, copy
 from functools import partial
@@ -46,9 +38,7 @@ from functools import partial
 from quadsplitter import QuadView
       
 from sliceSelectorHud import imageView2DHud, QuadStatusBar
-from positionModel import PositionModel
-from navigationControler import NavigationControler, NavigationInterpreter
-from pixelpipeline.datasources import ArraySource, ArraySinkSource, LazyflowSinkSource
+from pixelpipeline.datasources import ArraySource, LazyflowSinkSource
 
 from volumeEditor import VolumeEditor
 
@@ -61,9 +51,7 @@ class VolumeEditorWidget(QWidget):
         super(VolumeEditorWidget, self).__init__(parent=parent)
         if editor!=None:
             self.init(editor)
-            
-        
-        
+    
     def init(self, volumeeditor):
         self._ve = volumeeditor
 
@@ -196,14 +184,13 @@ if __name__ == "__main__":
     from PyQt4.QtGui import QColor
     
     from lazyflow.graph import Graph, Operator, InputSlot, OutputSlot
+    from lazyflow import operators
     from volumeeditor.pixelpipeline.datasources import LazyflowSource, ConstantSource
     from volumeeditor.pixelpipeline._testing import OpDataProvider
     from volumeeditor._testing.from_lazyflow import OpDataProvider5D, OpDelay
     from volumeeditor.layer import GrayscaleLayer, RGBALayer, ColortableLayer
     from volumeeditor.layerwidget.layerwidget import LayerWidget
     from volumeeditor.layerstack import LayerStackModel
-    
-    from testing import stripes
     
     def img(N):
         def meshgrid2(*arrs):
@@ -377,7 +364,6 @@ if __name__ == "__main__":
                 tintsrc = ArraySource(tint)
 
                 #new shit
-                from lazyflow import operators
                 opLabels = operators.OpSparseLabelArray(g)                                
                 opLabels.inputs["shape"].setValue(raw.shape[:-1] + (1,))
                 opLabels.inputs["eraser"].setValue(100)                

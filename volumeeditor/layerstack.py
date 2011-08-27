@@ -1,5 +1,5 @@
 from PyQt4.QtCore import QAbstractListModel, pyqtSignal, QModelIndex, Qt, \
-                         QTimer, pyqtSignature
+                         QTimer, pyqtSignature, QString
 from PyQt4.QtGui import QItemSelectionModel
 
 from layer import Layer
@@ -133,7 +133,7 @@ class LayerStackModel(QAbstractListModel):
         self.dataChanged.emit(index, index)
         return True
     
-    def headerData(section, orientation, role = Qt.DisplayRole):
+    def headerData(self, section, orientation, role = Qt.DisplayRole):
         if role != Qt.DisplayRole:
             return None
         if orientation == Qt.Horizontal:

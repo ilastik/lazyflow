@@ -295,7 +295,6 @@ if __name__ == "__main__":
     signal.signal(signal.SIGINT, signal.SIG_DFL)
 
     import sys, numpy
-    from volumeeditor.layerstack import LayerStackModel, Layer
 
     from PyQt4.QtGui import QApplication, QPushButton, QHBoxLayout, QVBoxLayout
 

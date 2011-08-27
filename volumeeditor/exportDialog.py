@@ -27,8 +27,8 @@
 #    authors and should not be interpreted as representing official policies, either expressed
 #    or implied, of their employers.
 
-from PyQt4.QtCore import QFileInfo, QString, SIGNAL
-from PyQt4.QtGui import QComboBox, QDialog, QFileDialog, QHBoxLayout, QLabel,\
+from PyQt4.QtCore import QString, SIGNAL
+from PyQt4.QtGui import QComboBox, QDialog, QHBoxLayout, QLabel,\
                         QLineEdit, QPushButton, QSpinBox, QVBoxLayout
 
 #*******************************************************************************

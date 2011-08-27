@@ -27,14 +27,12 @@
 #    authors and should not be interpreted as representing official policies, either expressed
 #    or implied, of their employers.
 
-from PyQt4.QtCore import pyqtSignal, QObject, QThread, Qt, QSize, QPointF, QRectF, \
+from PyQt4.QtCore import pyqtSignal, QObject, Qt, QSize, QPointF, QRectF, \
                          QRect, QPoint, QSizeF
-from PyQt4.QtGui  import QWidget, QPen, QGraphicsScene, QColor, QGraphicsLineItem, \
+from PyQt4.QtGui  import QPen, QGraphicsScene, QColor, \
                          QImage, QPainter, QGraphicsLineItem
 
 import numpy
-import threading
-import time
 import qimage2ndarray
 
 #*******************************************************************************

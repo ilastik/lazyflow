@@ -64,7 +64,7 @@ class SourceABC:
         pass
 
     @abstractmethod
-    def setDirty( slicing ):
+    def setDirty( self, slicing ):
         pass
 
     @classmethod

@@ -176,17 +176,17 @@ class SliceProjection( object ):
         slicing = range(self.domainDim)
         slicing[self.abscissa] = abscissa_range
         slicing[self.ordinate] = ordinate_range
-        for i,a in enumerate(self.along):
+        for i in range(len(self.along)):
             slicing[self.along[i]] = slice(through[i], through[i]+1)
         return tuple(slicing)
 
     def __call__( self, domainArray ):
         assert domainArray.ndim == self.domainDim
-        slice = np.squeeze(domainArray)
-        assert slice.ndim == 2, "dim %d != 2" % slice.ndim
+        slicing = np.squeeze(domainArray)
+        assert slicing.ndim == 2, "dim %d != 2" % slicing.ndim
         if self.handednessSwitched():
-            slice = np.swapaxes(slice,0,1)
-        return slice
+            slicing = np.swapaxes(slicing,0,1)
+        return slicing
 
 #*******************************************************************************
 # T e s t                                                                      *

@@ -28,9 +28,10 @@
 #    or implied, of their employers.
 
 from PyQt4.QtCore import pyqtSignal, Qt, QPointF, QSize
-from PyQt4.QtGui import QLabel, QPen, QPainter, QPixmap, QColor, QHBoxLayout, QVBoxLayout, QFont, QPainterPath, QBrush, QPolygonF, QSpinBox, QAbstractSpinBox, QCheckBox
-import sys, random
-import numpy, qimage2ndarray
+from PyQt4.QtGui import QLabel, QPen, QPainter, QPixmap, QColor, QHBoxLayout, QVBoxLayout, QFont, \
+                        QPainterPath, QBrush, QPolygonF, QSpinBox, QAbstractSpinBox, QCheckBox
+
+import sys
 
 class LabelButtons(QLabel):
     clicked = pyqtSignal()
@@ -188,8 +189,8 @@ class SpinBoxImageView(QHBoxLayout):
         self.spinBox.setFont(font)
         self.spinBox.setStyleSheet("QSpinBox { color: " + str(foregroundColor.name()) + "; font: bold; background-color: " + str(backgroundColor.name()) + "; border:0;}")
     
-    def spinBoxValueChanged(self, int):
-        self.valueChanged.emit(int)    
+    def spinBoxValueChanged(self, value):
+        self.valueChanged.emit(value)    
     
     def setValue(self, value):
         self.spinBox.setValue(value)
@@ -458,11 +459,10 @@ class QuadStatusBar(QHBoxLayout):
         
         
 if __name__ == "__main__":
+    from PyQt4.QtGui import QDialog, QApplication
     #make the program quit on Ctrl+C
-    from PyQt4.QtGui import QWidget, QDialog
     import signal
     signal.signal(signal.SIGINT, signal.SIG_DFL)
-    from PyQt4.QtGui import QApplication
     
     app = QApplication(sys.argv)
     widget = QDialog()
