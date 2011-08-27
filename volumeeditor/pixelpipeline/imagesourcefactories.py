@@ -1,8 +1,15 @@
 import copy
 from volumeeditor.pixelpipeline.multimethods import multimethod
-from volumeeditor.layer import GrayscaleLayer, RGBALayer, ColortableLayer
-from imagesources import GrayscaleImageSource, ColortableImageSource,RGBAImageSource
+from volumeeditor.layer import GrayscaleLayer, RGBALayer, ColortableLayer, \
+                               AlphaModulatedLayer
+from imagesources import GrayscaleImageSource, ColortableImageSource, \
+                         RGBAImageSource, AlphaModulatedImageSource
 from datasources import ConstantSource
+
+@multimethod(AlphaModulatedLayer, list)
+def createImageSource( layer, datasources2d ):
+    assert len(datasources2d) == 1
+    return AlphaModulatedImageSource( datasources2d[0], layer.tintColor, layer._normalize )
 
 @multimethod(GrayscaleLayer, list)
 def createImageSource( layer, datasources2d ):

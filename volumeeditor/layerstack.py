@@ -41,11 +41,14 @@ class LayerStackModel(QAbstractListModel):
         self.wantsUpdate()
     
     def append(self, data):
-        self.insertRow(0)
-        self.setData(self.index(0), data)
-        if self.selectedRow() > 0:
+        self.insert(0, data)
+    
+    def insert(self, index, data):
+        self.insertRow(index)
+        self.setData(self.index(index), data)
+        if self.selectedRow() >= 0:
             self.selectionModel.select(self.index(self.selectedRow()), QItemSelectionModel.Deselect)
-        self.selectionModel.select(self.index(0), QItemSelectionModel.Select)
+        self.selectionModel.select(self.index(index), QItemSelectionModel.Select)
         self.updateGUI()
     
     def selectedRow(self):

@@ -100,7 +100,72 @@ class GrayscaleImageRequest( object ):
 assert issubclass(GrayscaleImageRequest, RequestABC)
 
 #*******************************************************************************
-# C o l o r t a b l e I m a g e S o u r c e                                      *
+# A l p h a M o d u l a t e d I m a g e S o u r c e                            *
+#*******************************************************************************
+
+class AlphaModulatedImageSource( ImageSource ):
+    def __init__( self, arraySource2D, tintColor, normalize=None ):
+        assert isinstance(arraySource2D, SourceABC), 'wrong type: %s' % str(type(arraySource2D))
+        super(AlphaModulatedImageSource, self).__init__()
+        self._arraySource2D = arraySource2D
+        self._normalize = normalize
+        self._tintColor = tintColor
+        self._arraySource2D.isDirty.connect(self.setDirty)
+
+    def request( self, qrect ):
+        assert isinstance(qrect, QRect)
+        s = rect2slicing(qrect)
+        req = self._arraySource2D.request(s)
+        return AlphaModulatedImageRequest( req, self._tintColor, self._normalize )
+assert issubclass(AlphaModulatedImageSource, SourceABC)
+
+class AlphaModulatedImageRequest( object ):
+    def __init__( self, arrayrequest, tintColor, normalize=None ):
+        self._mutex = QMutex()
+        self._canceled = False
+        self._arrayreq = arrayrequest
+        self._normalize = normalize
+        self._tintColor = tintColor
+
+    def wait( self ):
+        a = self._arrayreq.wait().squeeze()
+        if self._normalize is not None:
+            a = (a - self._normalize[0])*255 / (self._normalize[1]-self._normalize[0])
+        
+        shape = a.shape + (4,)
+        d = np.empty(shape, dtype=np.uint8)
+        d[:,:,0] = a[:,:]*self._tintColor.redF()
+        d[:,:,1] = a[:,:]*self._tintColor.greenF()
+        d[:,:,2] = a[:,:]*self._tintColor.blueF()
+        d[:,:,3] = a[:,:]
+        img = array2qimage(d)
+        return img.convertToFormat(QImage.Format_ARGB32_Premultiplied)        
+            
+    def notify( self, callback, **kwargs ):
+        self._arrayreq.notify(self._onNotify, package = (callback, kwargs))
+    
+    def cancelLock(self):
+        self._mutex.lock()
+    def cancelUnlock(self):
+        self._mutex.unlock()
+    def canceled(self):
+        return self._canceled
+    
+    def cancel( self ):
+        self.cancelLock()
+        self._arrayreq.cancel()
+        self._canceled = True
+        self.cancelUnlock()
+    
+    def _onNotify( self, result, package ):
+        img = self.wait()
+        callback = package[0]
+        kwargs = package[1]
+        callback( img, **kwargs )
+assert issubclass(AlphaModulatedImageRequest, RequestABC)
+
+#*******************************************************************************
+# C o l o r t a b l e I m a g e S o u r c e                                    *
 #*******************************************************************************
 
 class ColortableImageSource( ImageSource ):

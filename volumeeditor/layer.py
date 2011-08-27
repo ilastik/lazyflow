@@ -1,4 +1,5 @@
 from PyQt4.QtCore import QObject, pyqtSignal
+from PyQt4.QtGui import QColor
 
 #*******************************************************************************
 # L a y e r                                                                    *
@@ -59,9 +60,19 @@ class GrayscaleLayer( Layer ):
         self._datasources = [datasource]
         self._normalize = normalize
 
+#*******************************************************************************
+# A l p h a M o d u l a t e d L a y e r                                        *
+#*******************************************************************************
+
+class AlphaModulatedLayer( Layer ):
+    def __init__( self, datasource, tintColor = QColor(255,0,0), normalize = None ):
+        super(AlphaModulatedLayer, self).__init__()
+        self._datasources = [datasource]
+        self._normalize = normalize
+        self.tintColor = tintColor
 
 #*******************************************************************************
-# C o l o r t a b l e L a y e r                                                  *
+# C o l o r t a b l e L a y e r                                                *
 #*******************************************************************************
 
 class ColortableLayer( Layer ):
