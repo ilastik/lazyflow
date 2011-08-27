@@ -116,6 +116,14 @@ class ImageScene2D(QGraphicsScene):
         print "</_onAboutToResize, %r>" % self
 
     @property
+    def showDebugPatches(self):
+        return self._showDebugPatches
+    @showDebugPatches.setter
+    def showDebugPatches(self, show):
+        self._showDebugPatches = show
+        self._invalidateRect()
+
+    @property
     def sceneShape(self):
         """
         The shape of the scene in QGraphicsView's coordinate system.
@@ -166,7 +174,7 @@ class ImageScene2D(QGraphicsScene):
     def setBrush(self, b):
         self._brush = b
 
-    def __init__( self , showDebugTiles=False):
+    def __init__( self ):
         QGraphicsScene.__init__(self)
         self._updatableTiles = []
 
@@ -175,6 +183,7 @@ class ImageScene2D(QGraphicsScene):
         self._renderThread = None
         self._stackedImageSources = None
         self._numLayers = 0 #current number of 'layers'
+        self._showDebugPatches = False
     
         self.data2scene = QTransform(0,1,1,0,0,0) 
         self.scene2data = self.data2scene.transposed()
@@ -182,8 +191,6 @@ class ImageScene2D(QGraphicsScene):
         def cleanup():
             self._renderThread.stop()
         self.destroyed.connect(cleanup)
-        
-        self._showTiles=showDebugTiles
     
     def _initializePatches(self):
         if self.stackedImageSources is None or self.sceneShape == (0.0, 0.0):
@@ -250,6 +257,6 @@ class ImageScene2D(QGraphicsScene):
             painter.drawImage(compositePatch.rectF.topLeft(), compositePatch.image)
             compositePatch.mutex.unlock()
 
-            if self._showTiles:
+            if self._showDebugPatches:
                 painter.drawRect(compositePatch.rectF.adjusted(5,5,-5,-5))
                 painter.drawText(compositePatch.rectF.topLeft()+QPointF(20,20), "%d" % patchNr)

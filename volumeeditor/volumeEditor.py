@@ -62,10 +62,12 @@ class VolumeEditor( QObject ):
     zoomInFactor  = 1.1
     zoomOutFactor = 0.9
 
-    def __init__( self, shape, layerStackModel, labelsink=None, showDebugTiles=False):
+    def __init__( self, shape, layerStackModel, labelsink=None):
         super(VolumeEditor, self).__init__()
         assert(len(shape) == 5)
         self._shape = shape
+        
+        self._showDebugPatches = False
 
         #this setting controls the rescaling of the displayed _data to the full 0-255 range
         self.normalizeData = False
@@ -95,9 +97,9 @@ class VolumeEditor( QObject ):
 
         # three ortho image scenes
         self.imageScenes = []
-        self.imageScenes.append(ImageScene2D(showDebugTiles=showDebugTiles))
-        self.imageScenes.append(ImageScene2D(showDebugTiles=showDebugTiles))
-        self.imageScenes.append(ImageScene2D(showDebugTiles=showDebugTiles))
+        self.imageScenes.append(ImageScene2D())
+        self.imageScenes.append(ImageScene2D())
+        self.imageScenes.append(ImageScene2D())
         for i in xrange(3):
             self.imageScenes[i].stackedImageSources = imagepumps[i].stackedImageSources
 
@@ -157,6 +159,15 @@ class VolumeEditor( QObject ):
         self.brushingModel.brushColorChanged.connect(onBrushColor)
         
         self._initConnects()
+
+    @property
+    def showDebugPatches(self):
+        return self._showDebugPatches
+    @showDebugPatches.setter
+    def showDebugPatches(self, show):
+        for s in self.imageScenes:
+            s.showDebugPatches = show
+        self._showDebugPatches = show
 
     def scheduleSlicesRedraw(self):
         for s in self.imageScenes:
