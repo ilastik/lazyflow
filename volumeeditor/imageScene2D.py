@@ -98,9 +98,10 @@ class ImageScene2D(QGraphicsScene):
 
     def _onAboutToResize(self, newSize):
         print "<_onAboutToResize(newSize=%d), %r>" % (newSize, self)
-        self._renderThread.cancelAll()
+        self._renderThread.stop()
         self._numLayers = newSize
         self._initializePatches()
+        self._renderThread.start()
         print "</_onAboutToResize, %r>" % self
 
     @property
