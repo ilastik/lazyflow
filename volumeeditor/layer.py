@@ -140,3 +140,38 @@ class RGBALayer( Layer ):
         self._normalize   = [normalizeR, normalizeG, normalizeB, normalizeA]
         self._color_missing_value = color_missing_value
         self._alpha_missing_value = alpha_missing_value
+        
+    def contextMenu(self, parent, pos):
+        from widgets.layerDialog import RGBALayerDialog
+        from PyQt4.QtGui import QMenu, QAction
+         
+        menu = QMenu("Menu", parent)
+        
+        title = QAction("%s" % self.name, menu)
+        title.setEnabled(False)
+        menu.addAction(title)
+        menu.addSeparator()
+        
+        adjThresholdAction = QAction("Adjust thresholds", menu)
+        menu.addAction(adjThresholdAction)
+
+        ret = menu.exec_(pos)
+        if ret == adjThresholdAction:
+            
+            dlg = RGBALayerDialog(parent)
+            dlg.setLayername(self.name)
+            if self._datasources[0] == None:
+                dlg.showRedThresholds(False)
+            if self._datasources[1] == None:
+                dlg.showGreenThresholds(False)
+            if self._datasources[2] == None:
+                dlg.showBlueThresholds(False)
+            if self._datasources[3] == None:
+                dlg.showAlphaThresholds(False)
+             
+            #def dbgPrint(a, b):
+            #    self.thresholding = (a,b)
+            #    print "range changed to [%d, %d]" % (a,b)
+            #dlg.grayChannelThresholdingWidget.rangeChanged.connect(dbgPrint)
+            dlg.resize(dlg.minimumSize())
+            dlg.show()
