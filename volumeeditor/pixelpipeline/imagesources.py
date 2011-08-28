@@ -74,7 +74,11 @@ class GrayscaleImageRequest( object ):
     def wait( self ):
         a = self._arrayreq.wait().squeeze()
         if self._normalize is not None:
-            a = (a - self._normalize[0])*255 / (self._normalize[1]-self._normalize[0])
+            a = a.astype(np.float32)
+            a = (a - self._normalize[0])*255.0 / (self._normalize[1]-self._normalize[0])
+            a[a > 255] = 255
+            a[a < 0]   = 0
+            a = a.astype(np.uint8)
         img = gray2qimage(a)
         return img.convertToFormat(QImage.Format_ARGB32_Premultiplied)
             
@@ -228,8 +232,7 @@ assert issubclass(ColortableImageRequest, RequestABC)
 #*******************************************************************************
 
 class RGBAImageSource( ImageSource ):
-    def __init__( self, red, green, blue, alpha,
-                  normalizeR=None, normalizeG=None, normalizeB=None, normalizeA=None ):
+    def __init__( self, red, green, blue, alpha, layer ):
         '''
         If you don't want to set all the channels,
         a ConstantSource may be used as a replacement for
@@ -238,7 +241,7 @@ class RGBAImageSource( ImageSource ):
         red, green, blue, alpha - 2d array sources
 
         '''
-        self._normalize = [normalizeR, normalizeG, normalizeB, normalizeA]
+        self._layer = layer
         channels = [red, green, blue, alpha]
         for channel in channels: 
                 assert isinstance(channel, SourceABC) , 'channel has wrong type: %s' % str(type(channel))
@@ -260,7 +263,7 @@ class RGBAImageSource( ImageSource ):
             if t > 1:
                 shape.append(t)
         assert len(shape) == 2
-        return RGBAImageRequest( r, g, b, a, shape, *self._normalize )
+        return RGBAImageRequest( r, g, b, a, shape, *self._layer._normalize )
 assert issubclass(RGBAImageSource, SourceABC)
 
 class RGBAImageRequest( object ):
@@ -279,7 +282,11 @@ class RGBAImageRequest( object ):
             a = self._requests[i].wait()
             a = a.squeeze()
             if self._normalize[i] is not None:
-                a = (a - self._normalize[i][0])*255 / (self._normalize[i][1]-self._normalize[i][0])
+                a = a.astype(np.float32)
+                a = (a - self._normalize[i][0])*255.0 / (self._normalize[i][1]-self._normalize[i][0])
+                a[a > 255] = 255
+                a[a < 0]   = 0
+                a = a.astype(np.uint8)
             self._data[:,:,i] = a
         img = array2qimage(self._data)
         return img.convertToFormat(QImage.Format_ARGB32_Premultiplied)        

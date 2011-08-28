@@ -1,5 +1,6 @@
 from PyQt4.QtCore import QObject, pyqtSignal
 from PyQt4.QtGui import QColor
+from functools import partial
 
 #*******************************************************************************
 # L a y e r                                                                    *
@@ -118,12 +119,19 @@ class ColortableLayer( Layer ):
         self._datasources = [datasource]
         self.colorTable = colorTable
 
-
 #*******************************************************************************
 # R G B A L a y e r                                                            *
 #*******************************************************************************
 
 class RGBALayer( Layer ):
+    """
+    signal thresholdingChanged:
+    int -- index from 0 to 4 (RGBA)
+    int -- lower threshold
+    int -- upper threshold
+    """
+    thresholdingChanged = pyqtSignal(int, int, int)
+    
     @property
     def color_missing_value( self ):
         return self._color_missing_value
@@ -140,7 +148,72 @@ class RGBALayer( Layer ):
         self._normalize   = [normalizeR, normalizeG, normalizeB, normalizeA]
         self._color_missing_value = color_missing_value
         self._alpha_missing_value = alpha_missing_value
+        self._ranges = 4*[(0,255)]
+    
+    @property
+    def rangeRed(self):
+        return self._ranges[0]
+    @rangeRed.setter
+    def rangeRed(self, r):
+        self._ranges[0] = r
         
+    @property
+    def rangeGreen(self):
+        return self._ranges[1]
+    @rangeGreen.setter
+    def rangeGreen(self, r):
+        self._ranges[1] = r
+        
+    @property
+    def rangeBlue(self):
+        return self._ranges[2]
+    @rangeBlue.setter
+    def rangeBlue(self, r):
+        self._ranges[2] = r
+        
+    @property
+    def rangeAlpha(self):
+        return self._ranges[3]
+    @rangeAlpha.setter
+    def rangeAlpha(self, r):
+        self._ranges[3] = r
+    
+    @property
+    def thresholdingRed(self):
+        return self._normalize[0]
+    @thresholdingRed.setter
+    def thresholdingRed(self, t):
+        self._normalize[0] = t
+        self.thresholdingChanged.emit(0, t[0], t[1])
+        
+    @property
+    def thresholdingGreen(self):
+        return self._normalize[1]
+    @thresholdingGreen.setter
+    def thresholdingGreen(self, t):
+        self._normalize[1] = t
+        self.thresholdingChanged.emit(1, t[0], t[1])
+    
+    @property
+    def thresholdingBlue(self):
+        return self._normalize[2]
+    @thresholdingBlue.setter
+    def thresholdingBlue(self, t):
+        self._normalize[2] = t
+        self.thresholdingChanged.emit(2, t[0], t[1])
+    
+    @property
+    def thresholdingAlpha(self):
+        return self._normalize[3]
+    @thresholdingAlpha.setter
+    def thresholdingAlpha(self, t):
+        self._normalize[3] = t
+        self.thresholdingChanged.emit(3, t[0], t[1])
+    
+    def setThresholding(self, channel, lower, upper):
+        self._normalize[channel] = (lower, upper)
+        self.thresholdingChanged.emit(channel, lower, upper)
+            
     def contextMenu(self, parent, pos):
         from widgets.layerDialog import RGBALayerDialog
         from PyQt4.QtGui import QMenu, QAction
@@ -169,9 +242,18 @@ class RGBALayer( Layer ):
             if self._datasources[3] == None:
                 dlg.showAlphaThresholds(False)
              
-            #def dbgPrint(a, b):
-            #    self.thresholding = (a,b)
-            #    print "range changed to [%d, %d]" % (a,b)
-            #dlg.grayChannelThresholdingWidget.rangeChanged.connect(dbgPrint)
+            def dbgPrint(layer, a, b):
+                self.setThresholding(layer, a, b)
+                print "range changed for channel=%d to [%d, %d]" % (layer, a,b)
+            dlg.redChannelThresholdingWidget.rangeChanged.connect(  partial(dbgPrint, 0))
+            dlg.greenChannelThresholdingWidget.rangeChanged.connect(partial(dbgPrint, 1))
+            dlg.blueChannelThresholdingWidget.rangeChanged.connect( partial(dbgPrint, 2))
+            dlg.alphaChannelThresholdingWidget.rangeChanged.connect(partial(dbgPrint, 3))
+            
+            dlg.redChannelThresholdingWidget.setRange(self.rangeRed[0], self.rangeRed[1])
+            dlg.greenChannelThresholdingWidget.setRange(self.rangeGreen[0], self.rangeGreen[1])
+            dlg.blueChannelThresholdingWidget.setRange(self.rangeBlue[0], self.rangeBlue[1])
+            dlg.alphaChannelThresholdingWidget.setRange(self.rangeAlpha[0], self.rangeAlpha[1])
+            
             dlg.resize(dlg.minimumSize())
             dlg.show()
