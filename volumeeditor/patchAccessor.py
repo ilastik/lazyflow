@@ -74,6 +74,9 @@ class PatchAccessor():
 
         self.patchCount = self._cX * self._cY
 
+    def __len__(self):
+        return self.patchCount
+
     def getPatchBounds(self, blockNum, overlap = 0):
         rest = blockNum % (self._cX*self._cY)
         y = int(numpy.floor(rest / self._cX))

@@ -68,10 +68,10 @@ class ImageSceneRenderThread(QThread):
     
     patchAvailable = pyqtSignal(int)
     
-    def __init__(self, imagePatches, stackedImageSources, parent=None):
+    def __init__(self, stackedImageSources, parent=None):
         #assert hasattr(stackedImageSources, '__iter__')
         QThread.__init__(self, parent)
-        self._imagePatches = imagePatches
+        self._imagePatches = None
 
         self._queue = deque()
         
@@ -90,9 +90,14 @@ class ImageSceneRenderThread(QThread):
             self._dataPending.set()
 
     def stop(self):
+        self.cancelAll()
         self._stopped = True
         self._dataPending.set()
         self.wait()
+        
+    def start(self):
+        self._stopped = False
+        QThread.start(self)
 
     def cancelAll(self):
         self._dataPending.clear()
@@ -121,14 +126,14 @@ class ImageSceneRenderThread(QThread):
             return
         #no one will cancel this request before we release the lock...
         
-        thisPatch = self._imagePatches[patchNumber][patchLayer]
+        thisPatch = self._imagePatches[patchLayer][patchNumber]
         
         ### one layer of this patch is done, just assign the newly arrived image
         thisPatch.image = image
         ### ...done
         
-        numLayers = len(self._imagePatches[patchNumber]) - 2
-        compositePatch = self._imagePatches[patchNumber][numLayers]
+        numLayers = len(self._imagePatches) - 2
+        compositePatch = self._imagePatches[numLayers][patchNumber]
     
         ### render the composite patch ######             
         compositePatch.lock()
@@ -140,11 +145,12 @@ class ImageSceneRenderThread(QThread):
         for layerNr in range(numLayers-1, -1, -1):
             if not self._stackedIms[layerNr].visible:
                 continue
-            patch = self._imagePatches[patchNumber][layerNr]
+            patch = self._imagePatches[layerNr][patchNumber]
             p.setOpacity(self._stackedIms[layerNr].opacity)
             p.drawImage(0, 0, patch.image)
         p.end()
         compositePatch.dirty = False
+        
         compositePatch.unlock()
         ### ...done rendering ################
         
@@ -159,7 +165,7 @@ class ImageSceneRenderThread(QThread):
     def _takeJob(self):
         patchNr = self._queue.pop()
         
-        rect = self._imagePatches[patchNr][0].rect
+        rect = self._imagePatches[0][patchNr].rect
         
         for layerNr in range(len(self._stackedIms)):
             layer = self._stackedIms[layerNr]
