@@ -24,7 +24,7 @@ class LayerPainter( object ):
         
         self.fm = QFontMetrics(QFont())
         
-        self.iconSize = 22
+        self.iconSize = 20
         self.iconXOffset = 5
         self.textXOffset = 5
         self.progressXOffset = 15
@@ -71,10 +71,10 @@ class LayerPainter( object ):
         else:
             if self.layer.visible:
                 painter.drawImage(QRect(self.iconXOffset,0,self.iconSize,self.iconSize), \
-                                  QImage(path.join(_icondir, "layer-visible-on.png")))
+                                  QImage(path.join(_icondir, "stock-eye-20.png")))
             else:
                 painter.drawImage(QRect(self.iconXOffset,0,self.iconSize,self.iconSize), \
-                                  QImage(path.join(_icondir, "layer-visible-off.png")))
+                                  QImage(path.join(_icondir, "stock-eye-20-gray.png")))
             text = "%s" % self.layer.name
             painter.drawText(QPoint(self.iconXOffset+self.iconSize+self.textXOffset,\
                                     max(self.fm.height()-self.iconSize,0)/2.0+self.fm.height()),\
