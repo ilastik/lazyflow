@@ -42,8 +42,8 @@ class LayerPainter( object ):
     def overEyeIcon(self, x, y):
         return QPoint(x,y) in QRect(self.iconXOffset,0,self.iconSize,self.iconSize)
 
-    def percentForPosition(self, x, y):
-        if y < self.progressYOffset or y > self.progressYOffset + self.progressHeight:
+    def percentForPosition(self, x, y, checkBoundaries=True):
+        if checkBoundaries and (y < self.progressYOffset or y > self.progressYOffset + self.progressHeight):
             return -1
         
         percent = (x-self.progressXOffset)/float(self.rect.width()-2*self.progressXOffset)
@@ -200,7 +200,7 @@ class LayerEditor(QWidget):
         
     def mouseMoveEvent(self, event):
         if self.lmbDown:
-            opacity = self._layerPainter.percentForPosition(event.x(), event.y())
+            opacity = self._layerPainter.percentForPosition(event.x(), event.y(), checkBoundaries=False)
             if opacity >= 0:
                 self.layer.opacity = opacity
                 self.update()
