@@ -41,6 +41,9 @@ class Layer( QObject ):
     def datasources( self ):
         return self._datasources
 
+    def contextMenu(self, parent, pos):
+        print "no context menu implemented"
+
     def __init__( self, opacity = 1.0, visible = True ):
         super(Layer, self).__init__()
         self.name    = "Unnamed Layer"
@@ -68,6 +71,31 @@ class GrayscaleLayer( Layer ):
     def thresholding(self, t):
         self._thresholding = t
         self.thresholdingChanged.emit(t[0], t[1])
+    
+    def contextMenu(self, parent, pos):
+        from widgets.layerDialog import GrayscaleLayerDialog
+        from PyQt4.QtGui import QMenu, QAction
+         
+        menu = QMenu("Menu", parent)
+        
+        title = QAction("%s" % self.name, menu)
+        title.setEnabled(False)
+        menu.addAction(title)
+        menu.addSeparator()
+        
+        adjThresholdAction = QAction("Adjust thresholds", menu)
+        menu.addAction(adjThresholdAction)
+
+        ret = menu.exec_(pos)
+        if ret == adjThresholdAction:
+            
+            dlg = GrayscaleLayerDialog(parent)
+            dlg.setLayername(self.name)
+            def dbgPrint(a, b):
+                self.thresholding = (a,b)
+                print "range changed to [%d, %d]" % (a,b)
+            dlg.grayChannelThresholdingWidget.rangeChanged.connect(dbgPrint)
+            dlg.show()
 
 #*******************************************************************************
 # A l p h a M o d u l a t e d L a y e r                                        *

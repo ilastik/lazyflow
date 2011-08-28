@@ -264,27 +264,12 @@ class LayerWidget(QListView):
         self.updateGUI()
         QListView.resizeEvent(self, e)
     
-    def onContext(self, point):        
-        idx = self.indexAt(point)
+    def onContext(self, pos):        
+        idx = self.indexAt(pos)
         layer = self.model()[idx.row()]
         print "Context menu for layer '%s'" % layer.name
         
-        menu = QMenu("Menu", self)
-        menu.setTitle(layer.name)
-        
-        adjThresholdAction = QAction("Adjust thresholds", menu)
-        menu.addAction(adjThresholdAction)
-
-        ret = menu.exec_(self.mapToGlobal(point))
-        if ret == adjThresholdAction:
-            from widgets.layerDialog import LayerDialog
-            
-            dlg = LayerDialog(self)
-            def dbgPrint(a, b):
-                layer.thresholding = (a,b)
-                print "range changed to [%d, %d]" % (a,b)
-            dlg.rangeChanged.connect(dbgPrint)
-            dlg.show()
+        layer.contextMenu(self, self.mapToGlobal(pos))
             
     def selectFirstEntry(self):
         #self.setEditTriggers(QAbstractItemView.DoubleClicked)
