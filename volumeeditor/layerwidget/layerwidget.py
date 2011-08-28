@@ -1,7 +1,7 @@
 from PyQt4.QtGui import QStyledItemDelegate, QWidget, QListView, QStyle, \
                         QAbstractItemView, QPainter, QItemSelectionModel, \
                         QColor, QMenu, QAction, QFontMetrics, QFont, QImage, \
-                        QBrush
+                        QBrush, QPalette
 from PyQt4.QtCore import pyqtSignal, Qt, QEvent, QRect, QSize, QTimer, \
                          QPoint 
                          
@@ -62,16 +62,16 @@ class LayerPainter( object ):
         return self.rect.width()-self.progressXOffset-10
 
     def paint(self, painter, rect, palette, mode):
+        if not self.layer.visible:
+            palette.setCurrentColorGroup(QPalette.Disabled)
+        
         self.rect = rect
         painter.save()
         painter.setRenderHint(QPainter.Antialiasing, True)
         painter.translate(rect.x(), rect.y())
         painter.setFont(QFont())
         
-        if self.layer.visible:
-            painter.setPen(QColor(0,0,0))
-        else:
-            painter.setPen(QColor(0,0,0,90))
+        painter.setBrush(palette.text())
         
         if mode != 'ReadOnly':
             painter.save()
@@ -97,13 +97,14 @@ class LayerPainter( object ):
         
         if mode != 'ReadOnly':  
             #frame around percentage indicator
+            painter.setBrush(palette.dark())
+            painter.save()
+            #no fill color
+            b = painter.brush(); b.setStyle(Qt.NoBrush); painter.setBrush(b)
             painter.drawRect(QRect(QPoint(self.progressXOffset, self.progressYOffset), \
                                           QSize(self._progressWidth, self.progressHeight)))
-            
-            if self.layer.visible:
-                painter.setBrush(palette.dark())
-            else:
-                painter.setBrush(QBrush(QColor(0,0,0,30)))
+            painter.restore()
+        
             #percentage indicator
             painter.drawRect(QRect(QPoint(self.progressXOffset, self.progressYOffset), \
                                           QSize(self._progressWidth*self.layer.opacity, self.progressHeight)))
