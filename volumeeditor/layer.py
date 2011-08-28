@@ -54,10 +54,20 @@ class Layer( QObject ):
 #*******************************************************************************
 
 class GrayscaleLayer( Layer ):
-    def __init__( self, datasource, normalize = None ):
+    thresholdingChanged = pyqtSignal(int, int)
+    
+    def __init__( self, datasource, thresholding = None ):
         super(GrayscaleLayer, self).__init__()
         self._datasources = [datasource]
-        self._normalize = normalize
+        self._thresholding = thresholding
+    @property
+    def thresholding(self):
+        """returns a tuple witht the range [minimum value, maximum value]"""
+        return self._thresholding
+    @thresholding.setter
+    def thresholding(self, t):
+        self._thresholding = t
+        self.thresholdingChanged.emit(t[0], t[1])
 
 #*******************************************************************************
 # A l p h a M o d u l a t e d L a y e r                                        *

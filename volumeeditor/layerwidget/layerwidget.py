@@ -281,6 +281,7 @@ class LayerWidget(QListView):
             
             dlg = LayerDialog(self)
             def dbgPrint(a, b):
+                layer.thresholding = (a,b)
                 print "range changed to [%d, %d]" % (a,b)
             dlg.rangeChanged.connect(dbgPrint)
             dlg.show()

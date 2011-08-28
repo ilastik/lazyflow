@@ -14,7 +14,9 @@ def createImageSource( layer, datasources2d ):
 @multimethod(GrayscaleLayer, list)
 def createImageSource( layer, datasources2d ):
     assert len(datasources2d) == 1
-    return GrayscaleImageSource( datasources2d[0], layer._normalize )
+    src = GrayscaleImageSource( datasources2d[0], layer )
+    layer.thresholdingChanged.connect(lambda: src.setDirty((slice(None,None), slice(None,None))))
+    return src
 
 @multimethod(ColortableLayer, list)
 def createImageSource( layer, datasources2d ):

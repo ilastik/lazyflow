@@ -48,18 +48,20 @@ assert issubclass(ImageSource, SourceABC)
 #*******************************************************************************
 
 class GrayscaleImageSource( ImageSource ):
-    def __init__( self, arraySource2D, normalize=None ):
+    def __init__( self, arraySource2D, layer ):
         assert isinstance(arraySource2D, SourceABC), 'wrong type: %s' % str(type(arraySource2D))
         super(GrayscaleImageSource, self).__init__()
         self._arraySource2D = arraySource2D
-        self._normalize = normalize
+        
+        self._layer = layer
+        
         self._arraySource2D.isDirty.connect(self.setDirty)
 
     def request( self, qrect ):
         assert isinstance(qrect, QRect)
         s = rect2slicing(qrect)
         req = self._arraySource2D.request(s)
-        return GrayscaleImageRequest( req, self._normalize )
+        return GrayscaleImageRequest( req, self._layer.thresholding )
 assert issubclass(GrayscaleImageSource, SourceABC)
 
 class GrayscaleImageRequest( object ):
