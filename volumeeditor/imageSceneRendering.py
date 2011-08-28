@@ -131,7 +131,7 @@ class ImageSceneRenderThread(QThread):
         compositePatch = self._imagePatches[patchNumber][numLayers]
     
         ### render the composite patch ######             
-        compositePatch.mutex.lock()
+        compositePatch.lock()
         compositePatch.dirty = True
         p = QPainter(compositePatch.image)
         r = compositePatch.rect
@@ -145,7 +145,7 @@ class ImageSceneRenderThread(QThread):
             p.drawImage(0, 0, patch.image)
         p.end()
         compositePatch.dirty = False
-        compositePatch.mutex.unlock()
+        compositePatch.unlock()
         ### ...done rendering ################
         
         self.patchAvailable.emit(patchNumber)

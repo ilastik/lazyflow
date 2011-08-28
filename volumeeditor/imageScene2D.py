@@ -55,27 +55,14 @@ class ImagePatch(object):
         self.rectF  = rectF
         self.rect   = QRect(round(rectF.x()),     round(rectF.y()), \
                             round(rectF.width()), round(rectF.height()))
-        self._image  = QImage(self.rect.width(), self.rect.height(), QImage.Format_ARGB32_Premultiplied)
-        self._image.fill(0)
+        self.image  = QImage(self.rect.width(), self.rect.height(), QImage.Format_ARGB32_Premultiplied)
+        self.image.fill(0)
         self.dirty = True
-        self.mutex = QMutex()
-
-    @property
-    def height(self):
-        return self.rect.height()
-    
-    @property
-    def width(self):
-        return self.rect.width()
-
-    @property
-    def image(self):
-        return self._image
-    
-    @image.setter
-    def image(self, img):
-        self._image = img
-        self.dirty = False
+        self._mutex = QMutex()
+    def lock(self):
+        self._mutex.lock()
+    def unlock(self):
+        self._mutex.unlock()
 
 #*******************************************************************************
 # I m a g e S c e n e 2 D                                                      *
@@ -161,12 +148,12 @@ class ImageScene2D(QGraphicsScene):
         self._renderThread = ImageSceneRenderThread(self.imagePatches, self.stackedImageSources, parent=self)
         self._renderThread.start()
         def onPatchAvailable(patchNr):
-            drawPatch = self.imagePatches[self._numLayers+1].mutex.lock()
+            drawPatch = self.imagePatches[self._numLayers+1].lock()
             if drawPatch.dirty:
-                self.drawPatch.mutex.lock()
+                self.drawPatch.lock()
                 self.drawPatch.image.fill(0)
                 self.drawPatch.dirty = False
-                self.drawPatch.mutex.unlock()
+                self.drawPatch.unlock()
         self._renderThread.patchAvailable.connect(self._schedulePatchRedraw)
         
         self._initializePatches()
@@ -217,10 +204,10 @@ class ImageScene2D(QGraphicsScene):
             
             for patches in self.imagePatches:
                 drawPatch = patches[self._numLayers+1]
-                drawPatch.mutex.lock()
+                drawPatch.lock()
                 drawPatch.image.fill(0)
                 drawPatch.dirty = False
-                drawPatch.mutex.unlock()
+                drawPatch.unlock()
         
         for i,patch in enumerate(self.imagePatches):
             if not rect.isValid() or rect.intersects(patch[self._numLayers].rect):
@@ -236,9 +223,9 @@ class ImageScene2D(QGraphicsScene):
         for patches in self.imagePatches:
             patch = patches[self._numLayers+1]
             if not patch.dirty or not patch.rectF.intersect(rect): continue
-            patch.mutex.lock()
+            patch.lock()
             painter.drawImage(patch.rectF.topLeft(), patch.image)
-            patch.mutex.unlock()
+            patch.unlock()
     
     def drawBackground(self, painter, rect):
         #Find all patches that intersect the given 'rect'.
@@ -253,9 +240,9 @@ class ImageScene2D(QGraphicsScene):
             if not compositePatch.rectF.intersect(rect):
                 continue
             
-            compositePatch.mutex.lock()
+            compositePatch.lock()
             painter.drawImage(compositePatch.rectF.topLeft(), compositePatch.image)
-            compositePatch.mutex.unlock()
+            compositePatch.unlock()
 
             if self._showDebugPatches:
                 painter.drawRect(compositePatch.rectF.adjusted(5,5,-5,-5))
