@@ -27,9 +27,12 @@ class LayerPainter( object ):
         self.iconSize = 20
         self.iconXOffset = 5
         self.textXOffset = 5
-        self.progressXOffset = 15
+        self.progressXOffset = self.iconXOffset+self.iconSize+self.textXOffset
         self.progressYOffset = self.iconSize+5
         self.progressHeight = 10
+        
+        self.alphaTextWidth = self.fm.boundingRect(u"\u03B1=100.0%").width()
+        
 
     def sizeHint(self):
         if self.layer.mode == 'ReadOnly':
@@ -43,15 +46,20 @@ class LayerPainter( object ):
         return QPoint(x,y) in QRect(self.iconXOffset,0,self.iconSize,self.iconSize)
 
     def percentForPosition(self, x, y, checkBoundaries=True):
-        if checkBoundaries and (y < self.progressYOffset or y > self.progressYOffset + self.progressHeight):
+        if checkBoundaries and (y < self.progressYOffset or y > self.progressYOffset + self.progressHeight) \
+                           or  (x < self.progressXOffset):
             return -1
         
-        percent = (x-self.progressXOffset)/float(self.rect.width()-2*self.progressXOffset)
+        percent = (x-self.progressXOffset)/float(self._progressWidth)
         if percent < 0:
             return 0.0
         if percent > 1:
             return 1.0
         return percent
+
+    @property
+    def _progressWidth(self):
+        return self.rect.width()-self.progressXOffset-10
 
     def paint(self, painter, rect, palette, mode):
         self.rect = rect
@@ -65,37 +73,40 @@ class LayerPainter( object ):
         else:
             painter.setPen(QColor(0,0,0,90))
         
-        if mode == 'ReadOnly':
-            text = "[%3d%%] %s" % (int(100.0 * self.layer.opacity), self.layer.name)
-            painter.drawText(QPoint(5, self.fm.height()), text)
+        if mode != 'ReadOnly':
+            painter.save()
+            painter.setBrush(palette.highlight())
+            painter.drawRect(rect)
+            painter.restore()
+        
+        textOffsetX = self.progressXOffset
+        textOffsetY = max(self.fm.height()-self.iconSize,0)/2.0+self.fm.height()
+        
+        if self.layer.visible:
+            painter.drawImage(QRect(self.iconXOffset,0,self.iconSize,self.iconSize), \
+                              QImage(path.join(_icondir, "stock-eye-20.png")))
         else:
+            painter.drawImage(QRect(self.iconXOffset,0,self.iconSize,self.iconSize), \
+                              QImage(path.join(_icondir, "stock-eye-20-gray.png")))
+
+        #layer name text
+        painter.drawText(QPoint(textOffsetX, textOffsetY), "%s" % self.layer.name)
+        
+        text = u"\u03B1=%0.1f%%" % (100.0*(1.0-self.layer.opacity))
+        painter.drawText(QPoint(textOffsetX+self._progressWidth-self.alphaTextWidth, textOffsetY), text)
+        
+        if mode != 'ReadOnly':  
+            #frame around percentage indicator
+            painter.drawRect(QRect(QPoint(self.progressXOffset, self.progressYOffset), \
+                                          QSize(self._progressWidth, self.progressHeight)))
+            
             if self.layer.visible:
-                painter.drawImage(QRect(self.iconXOffset,0,self.iconSize,self.iconSize), \
-                                  QImage(path.join(_icondir, "stock-eye-20.png")))
+                painter.setBrush(palette.dark())
             else:
-                painter.drawImage(QRect(self.iconXOffset,0,self.iconSize,self.iconSize), \
-                                  QImage(path.join(_icondir, "stock-eye-20-gray.png")))
-            text = "%s" % self.layer.name
-            painter.drawText(QPoint(self.iconXOffset+self.iconSize+self.textXOffset,\
-                                    max(self.fm.height()-self.iconSize,0)/2.0+self.fm.height()),\
-                             text)
-            
-            w = rect.width()-2*self.progressXOffset
-            
-            painter.drawRoundedRect(QRect(QPoint(self.progressXOffset, self.progressYOffset), \
-                                          QSize(w, self.progressHeight)), self.progressHeight/2, self.progressHeight/2)
-            painter.setBrush(QBrush(QColor(0,0,0)))
-            
-            if not self.layer.visible: painter.setBrush(QBrush(QColor(0,0,0,80)))
-            painter.drawEllipse(QRect(self.progressXOffset+(w-self.progressHeight)*self.layer.opacity, \
-                                      self.progressYOffset, self.progressHeight, self.progressHeight))
-            
-            painter.setPen(Qt.NoPen)
-            if self.layer.visible: painter.setBrush(QBrush(QColor(0,0,255,50))) 
-            else: painter.setBrush(QBrush(QColor(0,0,0,20)))
-            painter.drawRoundedRect(QRect(QPoint(self.progressXOffset, self.progressYOffset), \
-                                          QSize(w*self.layer.opacity, self.progressHeight)), \
-                                                self.progressHeight/2, self.progressHeight/2)
+                painter.setBrush(QBrush(QColor(0,0,0,30)))
+            #percentage indicator
+            painter.drawRect(QRect(QPoint(self.progressXOffset, self.progressYOffset), \
+                                          QSize(self._progressWidth*self.layer.opacity, self.progressHeight)))
             
         painter.restore()
 
