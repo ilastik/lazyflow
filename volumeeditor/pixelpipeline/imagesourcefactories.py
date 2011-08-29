@@ -1,13 +1,24 @@
 import copy
 from volumeeditor.pixelpipeline.multimethods import multimethod
-from volumeeditor.layer import GrayscaleLayer, RGBALayer, ColortableLayer
-from imagesources import GrayscaleImageSource, ColortableImageSource,RGBAImageSource
+from volumeeditor.layer import GrayscaleLayer, RGBALayer, ColortableLayer, \
+                               AlphaModulatedLayer
+from imagesources import GrayscaleImageSource, ColortableImageSource, \
+                         RGBAImageSource, AlphaModulatedImageSource
 from datasources import ConstantSource
+
+@multimethod(AlphaModulatedLayer, list)
+def createImageSource( layer, datasources2d ):
+    assert len(datasources2d) == 1
+    src = AlphaModulatedImageSource( datasources2d[0], layer )
+    layer.tintColorChanged.connect(lambda: src.setDirty((slice(None,None), slice(None,None))))
+    return src
 
 @multimethod(GrayscaleLayer, list)
 def createImageSource( layer, datasources2d ):
     assert len(datasources2d) == 1
-    return GrayscaleImageSource( datasources2d[0], layer._normalize )
+    src = GrayscaleImageSource( datasources2d[0], layer )
+    layer.thresholdingChanged.connect(lambda: src.setDirty((slice(None,None), slice(None,None))))
+    return src
 
 @multimethod(ColortableLayer, list)
 def createImageSource( layer, datasources2d ):
@@ -23,4 +34,6 @@ def createImageSource( layer, datasources2d ):
             ds[i] = ConstantSource(layer.color_missing_value)
     if datasources2d[3] == None:
         ds[3] = ConstantSource(layer.alpha_missing_value)
-    return RGBAImageSource( ds[0], ds[1], ds[2], ds[3] )
+    src = RGBAImageSource( ds[0], ds[1], ds[2], ds[3], layer )
+    layer.thresholdingChanged.connect(lambda: src.setDirty((slice(None,None), slice(None,None))))
+    return src

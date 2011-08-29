@@ -27,14 +27,9 @@
 #    authors and should not be interpreted as representing official policies, either expressed
 #    or implied, of their employers.
 
-from PyQt4.QtCore import pyqtSignal, QObject, QThread, Qt, QSize, QPointF, QRectF, \
-                         QRect, QPoint
-from PyQt4.QtGui  import QWidget, QPen, QGraphicsScene, QColor, QGraphicsLineItem, \
-                         QImage, QPainter, QGraphicsLineItem
+from PyQt4.QtCore import QPointF, QRectF
 
 import numpy
-import threading
-import time
 
 #*******************************************************************************
 # P a t c h A c c e s s o r                                                    *
@@ -42,16 +37,16 @@ import time
 
 class PatchAccessor():
     """
-    Cut a given 2D shape into tiles of given rectangular size
+    Cut a given 2D shape into patches of given rectangular size
     """
     
     def __init__(self, size_x, size_y, blockSize = 128):
         """
         (size_x, size_y) -- 2D shape
-        blockSize        -- maximum width/height of tiles
+        blockSize        -- maximum width/height of patches
         
         Constructs a PatchAccessor that while divide the given shape
-        into tiles that have a maximum given size.
+        into patches that have a maximum given size.
         """
         
         self._blockSize = blockSize
@@ -78,6 +73,9 @@ class PatchAccessor():
 
 
         self.patchCount = self._cX * self._cY
+
+    def __len__(self):
+        return self.patchCount
 
     def getPatchBounds(self, blockNum, overlap = 0):
         rest = blockNum % (self._cX*self._cY)

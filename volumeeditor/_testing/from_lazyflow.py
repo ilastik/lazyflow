@@ -1,6 +1,4 @@
-from volumeeditor.pixelpipeline.datasources import LazyflowSource
-
-from lazyflow.graph import Graph, Operator, InputSlot, OutputSlot
+from lazyflow.graph import  Operator, InputSlot, OutputSlot
 from lazyflow import operators
 
 import numpy as np

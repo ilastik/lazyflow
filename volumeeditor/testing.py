@@ -1,4 +1,4 @@
-import scipy, numpy
+import numpy
 
 def meshgrid2(*arrs):
     #This function is copied from:

@@ -27,20 +27,13 @@
 #    authors and should not be interpreted as representing official policies, either expressed
 #    or implied, of their employers.
 
-from PyQt4.QtCore import QPoint, QPointF, QTimer, pyqtSignal, Qt, \
-                         QString
-from PyQt4.QtGui import QColor, QCursor, QGraphicsView, QPainter, QImage, \
-                        QVBoxLayout, QApplication, QTransform, QBrush, QPen
-from PyQt4.QtOpenGL import QGLWidget
+from PyQt4.QtCore import QPoint, QPointF, QTimer, pyqtSignal, Qt
+from PyQt4.QtGui import QCursor, QGraphicsView, QPainter, QVBoxLayout, QApplication
 
 import numpy
-import time
 
 from crossHairCursor import CrossHairCursor
 from sliceIntersectionMarker import SliceIntersectionMarker
-from imageScene2D import ImageScene2D
-
-from interactionLogger import InteractionLogger
 
 #*******************************************************************************
 # I m a g e V i e w 2 D                                                        *
@@ -122,16 +115,14 @@ class ImageView2D(QGraphicsView):
     def drawingEnabled(self, enable):
         self._drawingEnabled = enable 
     
-    def __init__(self, imagescene2d, useGL=False):
+    def __init__(self, imagescene2d):
         """
         Constructs a view upon a ImageScene2D
         
         imagescene2d -- a ImgeScene2D instance
-        useGL        -- wether to enable OpenGL rendering
         """
         
         QGraphicsView.__init__(self)
-        self._useGL = useGL
         self.setScene(imagescene2d)
         
         self.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
@@ -150,37 +141,24 @@ class ImageView2D(QGraphicsView):
         #
         # Setup the Viewport for fast painting
         #
-        if self._useGL:
-            self.openglWidget = QGLWidget(self)
-            self.setViewport(self.openglWidget)
-            #we clear the background ourselves
-            self.viewport().setAutoFillBackground(False)
-            #QGraphicsView cannot use partial updates when using 
-            #an OpenGL widget as a viewport
-            #http://doc.qt.nokia.com/qq/qq26-openglcanvas.html
-            self.setViewportUpdateMode(QGraphicsView.FullViewportUpdate)
-        else:
-            #Unfortunately, setting these flags has no effect when
-            #Cache background is turned on.
-            #With these flags turned on we could handle the drawing of the
-            #white background ourselves thus removing the flicker
-            #when scrolling fast through the slices
-            #self.viewport().setAttribute(Qt.WA_OpaquePaintEvent)
-            #self.viewport().setAttribute(Qt.WA_NoSystemBackground)
-            #self.viewport().setAttribute(Qt.WA_PaintOnScreen)
-            #self.viewport().setAutoFillBackground(False)
-            
-            self.setViewportUpdateMode(QGraphicsView.MinimalViewportUpdate)
-            #as rescaling images is slow if done in software,
-            #we use Qt's built-in background caching mode so that the cached
-            #image need only be blitted on the screen when we only move
-            #the cursor
-            self.setCacheMode(QGraphicsView.CacheBackground)
-        self.setRenderHint(QPainter.Antialiasing, False)
         
-        #Intitialize the scene
-        if self._useGL:
-            self.scene().activateOpenGL( self.openglWidget )
+        #Unfortunately, setting these flags has no effect when
+        #Cache background is turned on.
+        #With these flags turned on we could handle the drawing of the
+        #white background ourselves thus removing the flicker
+        #when scrolling fast through the slices
+        #self.viewport().setAttribute(Qt.WA_OpaquePaintEvent)
+        #self.viewport().setAttribute(Qt.WA_NoSystemBackground)
+        #self.viewport().setAttribute(Qt.WA_PaintOnScreen)
+        #self.viewport().setAutoFillBackground(False)
+        
+        self.setViewportUpdateMode(QGraphicsView.MinimalViewportUpdate)
+        #as rescaling images is slow if done in software,
+        #we use Qt's built-in background caching mode so that the cached
+        #image need only be blitted on the screen when we only move
+        #the cursor
+        self.setCacheMode(QGraphicsView.CacheBackground)
+        self.setRenderHint(QPainter.Antialiasing, False)
 
         self._crossHairCursor = CrossHairCursor(self.scene())
         self._crossHairCursor.setZValue(99)
@@ -238,25 +216,6 @@ class ImageView2D(QGraphicsView):
         widget's viewport in the scene's coordinates
         """
         return self.mapToScene(self.viewport().geometry()).boundingRect()
-
-    def saveSlice(self, filename):
-        """Legacy code."""
-        #print "Saving in ", filename, "slice #", self.sliceNumber, "axis", self._axis
-        result_image = QImage(self.scene().image.size(), self.scene().image.format())
-        p = QPainter(result_image)
-        for patchNr in range(self.patchAccessor.patchCount):
-            bounds = self.patchAccessor.getPatchBounds(patchNr)
-            if self.openglWidget is None:
-                p.drawImage(0, 0, self.scene().image)
-            else:
-                p.drawImage(bounds[0], bounds[2], self.imagePatches[patchNr])
-        p.end()
-        #horrible way to transpose an image. but it works.
-        transform = QTransform()
-        transform.rotate(90)
-        result_image = result_image.mirrored()
-        result_image = result_image.transformed(transform)
-        result_image.save(QString(filename))
    
     def mapScene2Data(self, pos):
         return self.scene().scene2data.map(pos)
@@ -271,8 +230,7 @@ class ImageView2D(QGraphicsView):
         self._isDrawing  = True
         self.beginDraw.emit(pos, self.sliceShape)
         
-    def endDrawing(self, pos):
-        InteractionLogger.log("%f: endDrawing()" % (time.clock()))     
+    def endDrawing(self, pos): 
         self._drawTimer.stop()
         self._isDrawing = False
         self.endDraw.emit(pos)
@@ -469,9 +427,6 @@ class ImageView2D(QGraphicsView):
         
         self.changeSliceDelta.emit(delta)
         
-        #FIXME resurrect
-        #InteractionLogger.log("%f: changeSliceDelta(axis, num) %d, %d" % (time.clock(), self._axis, delta))
-        
     def zoomOut(self):
         self.doScale(0.9)
 
@@ -483,7 +438,6 @@ class ImageView2D(QGraphicsView):
 
     def doScale(self, factor):
         self._zoomFactor = self._zoomFactor * factor
-        InteractionLogger.log("%f: zoomFactor(factor) %f" % (time.clock(), self._zoomFactor))     
         self.scale(factor, factor)
 
 #*******************************************************************************
@@ -518,7 +472,7 @@ if __name__ == '__main__':
         return c
     
     class ImageView2DTest(QMainWindow):    
-        def __init__(self, useGL):
+        def __init__(self):
             assert False, "I'm broken. Please fixme."
             QMainWindow.__init__(self)
             
@@ -526,7 +480,7 @@ if __name__ == '__main__':
             self.checkerboard = checkerboard(self.lena.shape, 20)
             self.cross = cross(self.lena.shape, 30)
 
-            self.imageView2D = ImageView2D(useGL=useGL)
+            self.imageView2D = ImageView2D()
             self.imageView2D.drawingEnabled = True
             self.imageView2D.name = 'ImageView2D:'
             self.imageView2D.shape = self.lena.shape
@@ -538,14 +492,8 @@ if __name__ == '__main__':
             #crossSlice = OverlaySlice(self.cross, color = QColor("blue"), alpha = 0.5, colorTable = None, min = None, max = None, autoAlphaChannel = False)
             
             self.imageView2D.scene().setContent(self.imageView2D.viewportRect(), None, (imageSlice, cbSlice, crossSlice))
-
-    if not 'gl' in sys.argv and not 's' in sys.argv:
-        print "Usage: python imageView2D.py mode"
-        print "  mode = 's' software rendering"
-        print "  mode = 'gl OpenGL rendering'"
-        sys.exit(0)
          
     app = QApplication(sys.argv)
-    i = ImageView2DTest('gl' in sys.argv)
+    i = ImageView2DTest()
     i.show()
     app.exec_()

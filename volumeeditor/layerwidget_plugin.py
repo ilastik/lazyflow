@@ -1,31 +1,24 @@
-from PyQt4 import QtGui, QtDesigner
+from PyQt4.QtDesigner import QPyDesignerCustomWidgetPlugin
+from PyQt4.QtGui import QPixmap, QIcon, QColor
 
 from volumeeditor.layerwidget.layerwidget import LayerWidget
 from volumeeditor.layerstack import LayerStackModel, Layer
 
-from PyQt4.QtGui import QApplication, QPushButton, QHBoxLayout, QVBoxLayout
-
-class PyLayerWidgetPlugin(QtDesigner.QPyDesignerCustomWidgetPlugin):
+class PyLayerWidgetPlugin(QPyDesignerCustomWidgetPlugin):
 
     def __init__(self, parent = None):
-    
-        QtDesigner.QPyDesignerCustomWidgetPlugin.__init__(self)
-
+        QPyDesignerCustomWidgetPlugin.__init__(self)
         self.initialized = False
         
     def initialize(self, core):
-
         if self.initialized:
             return
-
         self.initialized = True
 
     def isInitialized(self):
-
         return self.initialized
     
-    def createWidget(self, parent):
-               
+    def createWidget(self, parent):      
         model = LayerStackModel()
         
         o1 = Layer()
@@ -65,6 +58,15 @@ class PyLayerWidgetPlugin(QtDesigner.QPyDesignerCustomWidgetPlugin):
     def group(self):
         return "ilastik widgets"
     
+    def icon(self):
+        return QIcon(QPixmap(16,16))
+                           
+    def toolTip(self):
+        return ""
+    
+    def whatsThis(self):
+        return ""
+    
     def isContainer(self):
         return False
     
@@ -76,5 +78,3 @@ class PyLayerWidgetPlugin(QtDesigner.QPyDesignerCustomWidgetPlugin):
     
     def includeFile(self):
         return "volumeeditor.layerwidget.layerwidget"
-    
-    

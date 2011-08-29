@@ -1,33 +1,29 @@
-from PyQt4 import QtGui, QtDesigner
-from volumeeditor.volumeEditorWidget import *
-from volumeeditor.layerstack import LayerStackModel
+from PyQt4.QtDesigner import QPyDesignerCustomWidgetPlugin
+from PyQt4.QtGui import QPixmap, QIcon
 
-from lazyflow.graph import Graph, Operator, InputSlot, OutputSlot
-from volumeeditor.pixelpipeline.datasources import LazyflowSource, ConstantSource
+import numpy
+
+from lazyflow.graph import Graph
+from volumeeditor.volumeEditor import VolumeEditor
+from volumeeditor.volumeEditorWidget import VolumeEditorWidget
+from volumeeditor.pixelpipeline.datasources import LazyflowSource
 from volumeeditor.pixelpipeline._testing import OpDataProvider
-from volumeeditor._testing.from_lazyflow import OpDataProvider5D, OpDelay
-from volumeeditor.layer import GrayscaleLayer, RGBALayer, ColortableLayer
-from volumeeditor.layerwidget.layerwidget import LayerWidget
+from volumeeditor._testing.from_lazyflow import OpDelay
 from volumeeditor.layerstack import LayerStackModel
+from volumeeditor.layer import GrayscaleLayer
 
-
-class PyVolumeEditorWidgetPlugin(QtDesigner.QPyDesignerCustomWidgetPlugin):
+class PyVolumeEditorWidgetPlugin(QPyDesignerCustomWidgetPlugin):
 
     def __init__(self, parent = None):
-    
-        QtDesigner.QPyDesignerCustomWidgetPlugin.__init__(self)
-
+        QPyDesignerCustomWidgetPlugin.__init__(self)
         self.initialized = False
         
     def initialize(self, core):
-
         if self.initialized:
             return
-
         self.initialized = True
 
     def isInitialized(self):
-
         return self.initialized
     
     def createWidget(self, parent):
@@ -41,11 +37,10 @@ class PyVolumeEditorWidgetPlugin(QtDesigner.QPyDesignerCustomWidgetPlugin):
         op2 = OpDelay(g, 0.000003)
         op2.inputs["Input"].connect(op1.outputs["Data"])
         source = LazyflowSource(op2.outputs["Output"])
-        layers = [GrayscaleLayer( source )]
-        
+
         layerstack.append( GrayscaleLayer( source ) )
 
-        editor = VolumeEditor(shape, layerstack, labelsink=None, useGL=False)  
+        editor = VolumeEditor(shape, layerstack, labelsink=None)  
         widget = VolumeEditorWidget(parent=parent)
         widget.init(editor)
         return widget
@@ -55,6 +50,15 @@ class PyVolumeEditorWidgetPlugin(QtDesigner.QPyDesignerCustomWidgetPlugin):
 
     def group(self):
         return "ilastik widgets"
+    
+    def icon(self):
+        return QIcon(QPixmap(16,16))
+                           
+    def toolTip(self):
+        return ""
+    
+    def whatsThis(self):
+        return ""
     
     def isContainer(self):
         return False
@@ -67,5 +71,3 @@ class PyVolumeEditorWidgetPlugin(QtDesigner.QPyDesignerCustomWidgetPlugin):
     
     def includeFile(self):
         return "volumeeditor.volumeEditorWidget"
-    
-    

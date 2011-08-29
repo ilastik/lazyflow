@@ -1,5 +1,5 @@
 from PyQt4.QtCore import QAbstractListModel, pyqtSignal, QModelIndex, Qt, \
-                         QTimer, pyqtSignature
+                         QTimer, pyqtSignature, QString
 from PyQt4.QtGui import QItemSelectionModel
 
 from layer import Layer
@@ -21,15 +21,18 @@ class LayerStackModel(QAbstractListModel):
         self.selectionModel = QItemSelectionModel(self)
         self.selectionModel.selectionChanged.connect(self.onSelectionChanged)
         QTimer.singleShot(0, self.updateGUI)
+    
+    def __len__(self):
+        return self.rowCount()
         
     def __repr__(self):
         return "<LayerStackModel: layerStack='%r'>" % (self._layerStack,)  
     
     def __getitem__(self, i):
-        return self._layerStack[-i-1]
+        return self._layerStack[i]
     
     def __iter__(self):
-        return reversed(self._layerStack)
+        return self._layerStack.__iter__()
         
     def updateGUI(self):
         self.canMoveSelectedUp.emit(self.selectedRow()>0)
@@ -38,10 +41,23 @@ class LayerStackModel(QAbstractListModel):
         self.wantsUpdate()
     
     def append(self, data):
-        #self.insertRow(self.rowCount())
-        #self.setData(self.index(self.rowCount()-1), data)
-        self.insertRow(0)
-        self.setData(self.index(0), data)
+        self.insert(0, data)
+    
+    def insert(self, index, data):
+        self.insertRow(index)
+        self.setData(self.index(index), data)
+        if self.selectedRow() >= 0:
+            self.selectionModel.select(self.index(self.selectedRow()), QItemSelectionModel.Deselect)
+        self.selectionModel.select(self.index(index), QItemSelectionModel.Select)
+        
+        def onChanged():
+            #assumes that data is unique!
+            idx = self.index(self._layerStack.index(data))
+            self.dataChanged.emit(idx, idx)
+            self.updateGUI()
+        data.changed.connect(onChanged)
+        
+        self.updateGUI()
     
     def selectedRow(self):
         selected = self.selectionModel.selectedRows()
@@ -128,7 +144,7 @@ class LayerStackModel(QAbstractListModel):
         self.dataChanged.emit(index, index)
         return True
     
-    def headerData(section, orientation, role = Qt.DisplayRole):
+    def headerData(self, section, orientation, role = Qt.DisplayRole):
         if role != Qt.DisplayRole:
             return None
         if orientation == Qt.Horizontal:

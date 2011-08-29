@@ -27,18 +27,10 @@
 #    authors and should not be interpreted as representing official policies, either expressed
 #    or implied, of their employers.
 
-# TODO
-# TODO
-# TODO
-# port the following revisions:
-#    1f810747c21380eda916c2c5b7b5d1893f92663e
-#    e65f5bad2cd9fdaefbe7ceaafa0cce0e071b56e4
-
-from PyQt4.QtCore import Qt, pyqtSignal, QTimer
-from PyQt4.QtGui import QApplication, QWidget, QLabel, QSpinBox, \
-                        QShortcut, QKeySequence, QSplitter, \
-                        QVBoxLayout, QHBoxLayout, QPushButton, QToolButton, \
-                        QSizePolicy, QColor
+from PyQt4.QtCore import Qt, QTimer
+from PyQt4.QtGui import QApplication, QWidget, QShortcut, QKeySequence, \
+                        QSplitter, QVBoxLayout, QHBoxLayout, QPushButton, \
+                        QColor, QSizePolicy
 
 import numpy, copy
 from functools import partial
@@ -46,9 +38,7 @@ from functools import partial
 from quadsplitter import QuadView
       
 from sliceSelectorHud import imageView2DHud, QuadStatusBar
-from positionModel import PositionModel
-from navigationControler import NavigationControler, NavigationInterpreter
-from pixelpipeline.datasources import ArraySource, ArraySinkSource, LazyflowSinkSource
+from pixelpipeline.datasources import ArraySource, LazyflowSinkSource
 
 from volumeEditor import VolumeEditor
 
@@ -59,19 +49,19 @@ from volumeEditor import VolumeEditor
 class VolumeEditorWidget(QWidget):
     def __init__( self, parent=None, editor=None ):
         super(VolumeEditorWidget, self).__init__(parent=parent)
+        
+        self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        self.setFocusPolicy(Qt.StrongFocus)
+        
         if editor!=None:
             self.init(editor)
-            
-        
-        
+    
     def init(self, volumeeditor):
         self._ve = volumeeditor
 
-        self.setFocusPolicy(Qt.StrongFocus)
-        
         self.layout = QHBoxLayout()
         self.setLayout(self.layout)
-
+        
         # setup quadview
         axisLabels = ["X:", "Y:", "Z:"]
         axisColors = [QColor("#dc143c"), QColor("green"), QColor("blue")]
@@ -111,7 +101,6 @@ class VolumeEditorWidget(QWidget):
 
         def toggleSliceIntersection(state):
             self._ve.navCtrl.indicateSliceIntersection = (state == Qt.Checked)
-#        self.indicateSliceIntersectionButton.toggled.connect(toggleSliceIntersection)
         self.quadview.statusBar.positionCheckBox.stateChanged.connect(toggleSliceIntersection)
 
         #Enabling this makes cursor movement too slow...
@@ -196,14 +185,13 @@ if __name__ == "__main__":
     from PyQt4.QtGui import QColor
     
     from lazyflow.graph import Graph, Operator, InputSlot, OutputSlot
+    from lazyflow import operators
     from volumeeditor.pixelpipeline.datasources import LazyflowSource, ConstantSource
     from volumeeditor.pixelpipeline._testing import OpDataProvider
     from volumeeditor._testing.from_lazyflow import OpDataProvider5D, OpDelay
     from volumeeditor.layer import GrayscaleLayer, RGBALayer, ColortableLayer
     from volumeeditor.layerwidget.layerwidget import LayerWidget
     from volumeeditor.layerstack import LayerStackModel
-    
-    from testing import stripes
     
     def img(N):
         def meshgrid2(*arrs):
@@ -243,7 +231,7 @@ if __name__ == "__main__":
         return s
 
     class Test(QObject):
-        def __init__(self, useGL, argv):
+        def __init__(self, argv):
             QObject.__init__(self)
             
             layerstack = LayerStackModel()
@@ -377,7 +365,6 @@ if __name__ == "__main__":
                 tintsrc = ArraySource(tint)
 
                 #new shit
-                from lazyflow import operators
                 opLabels = operators.OpSparseLabelArray(g)                                
                 opLabels.inputs["shape"].setValue(raw.shape[:-1] + (1,))
                 opLabels.inputs["eraser"].setValue(100)                
@@ -484,10 +471,10 @@ if __name__ == "__main__":
                 layerstack.append(layer)
 
             if "label" in argv or "l" in argv:
-                self.editor = VolumeEditor(shape, layerstack, labelsink=labelsrc, useGL=useGL)
+                self.editor = VolumeEditor(shape, layerstack, labelsink=labelsrc)
                 self.editor.setDrawingEnabled(True)
             else:
-                self.editor = VolumeEditor(shape, layerstack, useGL=useGL)
+                self.editor = VolumeEditor(shape, layerstack)
 
             self.widget = VolumeEditorWidget(parent=None, editor=self.editor)
             
@@ -520,7 +507,7 @@ if __name__ == "__main__":
     
     s = QSplitter()
 
-    t2 = Test(False, sys.argv)
+    t2 = Test(sys.argv)
 
     s.addWidget(t2.widget)
 

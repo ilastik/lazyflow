@@ -28,16 +28,8 @@
 #    or implied, of their employers.
 
 from functools import partial
-from PyQt4.QtCore import QRect, QRectF, QTimer, pyqtSignal, QMutex, QPointF
-from PyQt4.QtGui import QGraphicsScene, QImage, QTransform, QPen, QColor, QBrush
-from PyQt4.QtOpenGL import QGLWidget
-from OpenGL.GL import GL_CLAMP_TO_EDGE, GL_COLOR_BUFFER_BIT, GL_DEPTH_TEST, \
-                      GL_NEAREST, GL_QUADS, GL_TEXTURE_2D, \
-                      GL_TEXTURE_MAG_FILTER, GL_TEXTURE_MIN_FILTER, \
-                      GL_TEXTURE_WRAP_S, GL_TEXTURE_WRAP_T, \
-                      glBegin, glEnd, glBindTexture, glClearColor, glDisable, \
-                      glEnable, glRectf, glClear, glTexCoord2f, \
-                      glTexParameteri, glVertex2f, glColor4f
+from PyQt4.QtCore import QRect, QRectF, QMutex, QPointF
+from PyQt4.QtGui import QGraphicsScene, QImage, QTransform, QPen, QColor
 
 from patchAccessor import PatchAccessor
 from imageSceneRendering import ImageSceneRenderThread
@@ -48,66 +40,30 @@ from imageSceneRendering import ImageSceneRenderThread
 
 class ImagePatch(object):    
     """
-    A tile/patch that makes up the whole 2D scene as displayed in ImageScene2D.
+    A patch that makes up the whole 2D scene as displayed in ImageScene2D.
    
     An ImagePatch has a bounding box (self.rect, self.rectF) and
-    its image content is either represented by a QImage (in software rendering)
-    or via an OpenGL texture.
+    its image content is either represented by a QImage
     
     When the current image content becomes invalid or is currently
     being overwritten, the patch becomes dirty.
     """ 
     
-    def __init__(self, rectF):
+    def __init__(self, rectF, id):
         assert(type(rectF) == QRectF)
         
         self.rectF  = rectF
         self.rect   = QRect(round(rectF.x()),     round(rectF.y()), \
                             round(rectF.width()), round(rectF.height()))
-        self._image  = QImage(self.rect.width(), self.rect.height(), QImage.Format_ARGB32_Premultiplied)
-        self._image.fill(0)
-        self.texture = -1
+        self.image  = QImage(self.rect.width(), self.rect.height(), QImage.Format_ARGB32_Premultiplied)
+        self.image.fill(0)
         self.dirty = True
-        self.mutex = QMutex()
-
-    @property
-    def height(self):
-        return self.rect.height()
-    
-    @property
-    def width(self):
-        return self.rect.width()
-
-    def drawTexture(self):
-        """
-        Renders the current context as a texture. 
-        Precondition: OpenGL mode and OpenGL context active.
-        """
-        
-        tx = self.rect.x()
-        ty = self.rect.y()
-        w = self.rect.width()
-        h = self.rect.height()
-        glBindTexture(GL_TEXTURE_2D, self.texture)
-        glBegin(GL_QUADS)
-        glTexCoord2f(0.0, 1.0)
-        glVertex2f(tx, ty)
-        glTexCoord2f(1.0, 1.0)
-        glVertex2f(tx + w, ty)
-        glTexCoord2f(1.0, 0.0)
-        glVertex2f(tx + w, ty + h)
-        glTexCoord2f(0.0, 0.0)
-        glVertex2f(tx, ty + h)
-        glEnd()
-
-    @property
-    def image(self):
-        return self._image
-    
-    @image.setter
-    def image(self, img):
-        self._image = img
-        self.dirty = False
+        self.id = id
+        self._mutex = QMutex()
+    def lock(self):
+        self._mutex.lock()
+    def unlock(self):
+        self._mutex.unlock()
 
 #*******************************************************************************
 # I m a g e S c e n e 2 D                                                      *
@@ -126,9 +82,6 @@ class ImageScene2D(QGraphicsScene):
     # increases the base blockSize 
     overlap = 1 
     
-    # update delay when a new patch arrives in ms
-    glUpdateDelay = 10
-    
     @property
     def stackedImageSources(self):
         return self._stackedImageSources
@@ -139,6 +92,25 @@ class ImageScene2D(QGraphicsScene):
         s.isDirty.connect(self._invalidateRect)
         self._initializePatches()
         s.stackChanged.connect(partial(self._invalidateRect, QRect()))
+        s.aboutToResize.connect(self._onAboutToResize)
+        self._numLayers = len(s)
+        self._initializePatches()
+
+    def _onAboutToResize(self, newSize):
+        print "<_onAboutToResize(newSize=%d), %r>" % (newSize, self)
+        self._renderThread.stop()
+        self._numLayers = newSize
+        self._initializePatches()
+        self._renderThread.start()
+        print "</_onAboutToResize, %r>" % self
+
+    @property
+    def showDebugPatches(self):
+        return self._showDebugPatches
+    @showDebugPatches.setter
+    def showDebugPatches(self, show):
+        self._showDebugPatches = show
+        self._invalidateRect()
 
     @property
     def sceneShape(self):
@@ -170,20 +142,13 @@ class ImageScene2D(QGraphicsScene):
         sliceShape = (r.width(), r.height())
         
         del self._renderThread
-        del self.imagePatches
+        del self._imagePatches
         
         self._patchAccessor = PatchAccessor(sliceShape[0], sliceShape[1], blockSize=self.blockSize)
-        self.imagePatches = [[] for i in range(self._patchAccessor.patchCount)]
             
-        self._renderThread = ImageSceneRenderThread(self.imagePatches, self.stackedImageSources, parent=self)
+        self._renderThread = ImageSceneRenderThread(self.stackedImageSources, parent=self)
         self._renderThread.start()
-        def onPatchAvailable(patchNr):
-            drawPatch = self.imagePatches[self._numLayers+1].mutex.lock()
-            if drawPatch.dirty:
-                self.drawPatch.mutex.lock()
-                self.drawPatch.image.fill(0)
-                self.drawPatch.dirty = False
-                self.drawPatch.mutex.unlock()
+        
         self._renderThread.patchAvailable.connect(self._schedulePatchRedraw)
         
         self._initializePatches()
@@ -191,17 +156,16 @@ class ImageScene2D(QGraphicsScene):
     def setBrush(self, b):
         self._brush = b
 
-    def __init__( self , showDebugTiles=False):
+    def __init__( self ):
         QGraphicsScene.__init__(self)
-        self._glWidget = None
-        self._useGL = False
         self._updatableTiles = []
 
-        # tile rendering
-        self.imagePatches = None
+        # tiled rendering of patches
+        self._imagePatches = None
         self._renderThread = None
         self._stackedImageSources = None
         self._numLayers = 0 #current number of 'layers'
+        self._showDebugPatches = False
     
         self.data2scene = QTransform(0,1,1,0,0,0) 
         self.scene2data = self.data2scene.transposed()
@@ -209,36 +173,36 @@ class ImageScene2D(QGraphicsScene):
         def cleanup():
             self._renderThread.stop()
         self.destroyed.connect(cleanup)
-        
-        self._showTiles=showDebugTiles
-
-    def activateOpenGL( self, qglwidget ):
-        self._useGL = True
-        self._glWidget = qglwidget
-
-        glDisable(GL_DEPTH_TEST)
-        glEnable(GL_TEXTURE_2D)
-        glClearColor(0.0, 0.0, 0.0, 0.0);
-        glClear(GL_COLOR_BUFFER_BIT)
     
     def _initializePatches(self):
-        if self.stackedImageSources is None or self.sceneShape == (0.0, 0.0):
+        if not self._renderThread:
             return
+              
+        self._renderThread.stop()
         
-        if len(self.stackedImageSources) != self._numLayers:
-            self._numLayers = len(self.stackedImageSources)
-            #add an additional layer for the final composited image patch
-            for i in range(self._patchAccessor.patchCount):
-                rect = self._patchAccessor.patchRectF(i, self.overlap)
+        self._imagePatches = []
+        #add an additional layer for the final composited image patch
+        for layerNr in range(self._numLayers+2):
+            self._imagePatches.append(list())
+            for patchNr in range(self._patchAccessor.patchCount):
+                rect = self._patchAccessor.patchRectF(patchNr, self.overlap)
                 sceneRect = self.data2scene.mapRect(rect)
                 #the patch accessor uses the data coordinate system
                 #
                 #because the patch is drawn on the screen, its holds coordinates
                 #corresponding to Qt's QGraphicsScene's system
                 #convert to scene coordinates
-                patches = [ImagePatch(sceneRect) for j in range(self._numLayers+2)]
-                self.imagePatches[i] = patches
+                self._imagePatches[layerNr].append( ImagePatch(sceneRect, patchNr ))
+        
+        self._renderThread._imagePatches = self._imagePatches
+        
+        self._renderThread.start()
     
+    def compositePatches(self):
+        return self._imagePatches[self._numLayers]
+    def _brushingPatches(self):
+        return self._imagePatches[self._numLayers+1]
+            
     def _invalidateRect(self, rect = QRect()):
         if not rect.isValid():
             #everything is invalidated
@@ -246,95 +210,44 @@ class ImageScene2D(QGraphicsScene):
             self._renderThread.cancelAll()
             self._updatableTiles = []
             
-            for patches in self.imagePatches:
-                drawPatch = patches[self._numLayers+1]
-                drawPatch.mutex.lock()
-                drawPatch.image.fill(0)
-                drawPatch.dirty = False
-                drawPatch.mutex.unlock()
+            for p in self._brushingPatches():
+                p.lock()
+                p.image.fill(0)
+                p.dirty = False
+                p.unlock()
         
-        if self._stackedImageSources is not None and self._numLayers != len(self._stackedImageSources):
-            self._initializePatches()
-        
-        for i,patch in enumerate(self.imagePatches):
-            if not rect.isValid() or rect.intersects(patch[self._numLayers].rect):
+        for p in self.compositePatches():
+            if not rect.isValid() or rect.intersects(p.rect):
                 #convention: if a rect is invalid, it is infinitely large
-                patch[self._numLayers].dirty = True
-                self._schedulePatchRedraw(i)
+                p.dirty = True
+                self._schedulePatchRedraw(p.id)
 
     def _schedulePatchRedraw(self, patchNr):
-        p = self.imagePatches[patchNr][self._numLayers]
-        if not self._useGL:
-            p = self.imagePatches[patchNr][self._numLayers]
-            self.invalidate(p.rectF, QGraphicsScene.BackgroundLayer)
-        else:
-            self._updatableTiles.append(patchNr)
-            QTimer.singleShot(self.glUpdateDelay, self.update)
+        p =  self.compositePatches()[patchNr]
+        self.invalidate(p.rectF, QGraphicsScene.BackgroundLayer)
 
     def drawForeground(self, painter, rect):
-        for patches in self.imagePatches:
-            patch = patches[self._numLayers+1]
-            if not patch.dirty or not patch.rectF.intersect(rect): continue
-            patch.mutex.lock()
-            painter.drawImage(patch.rectF.topLeft(), patch.image)
-            patch.mutex.unlock()
-
-    def drawBackgroundSoftware(self, painter, rect):
-        for patchNr, patches in enumerate(self.imagePatches):
-            
-            compositePatch = patches[self._numLayers]
-            drawPatch      = patches[self._numLayers+1]
-            
-            if not compositePatch.rectF.intersect(rect):
-                continue
-            
-            compositePatch.mutex.lock()
-            painter.drawImage(compositePatch.rectF.topLeft(), compositePatch.image)
-            compositePatch.mutex.unlock()
-
-            if self._showTiles:
-                painter.drawRect(compositePatch.rectF.adjusted(5,5,-5,-5))
-                painter.drawText(compositePatch.rectF.topLeft()+QPointF(20,20), "%d" % patchNr)
+        for p in self._brushingPatches():
+            if not p.dirty or not p.rectF.intersect(rect): continue
+            p.lock()
+            painter.drawImage(p.rectF.topLeft(), p.image)
+            p.unlock()
     
-    def drawBackgroundGL(self, painter, rect):
-        painter.beginNativePainting()
-        
-        #This will clear the screen, but also introduce flickering
-        glClearColor(0.0, 1.0, 0.0, 1.0);
-        glClear(GL_COLOR_BUFFER_BIT);
-        
-        #update the textures of those patches that were updated
-        for t in self._updatableTiles:
-            patch = self.imagePatches[t][self._numLayers]
-            if patch.texture > -1:
-                self._glWidget.deleteTexture(patch.texture)
-            patch.texture = self._glWidget.bindTexture(patch.image)
-            #see 'backingstore' example by Ariya Hidayat
-            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST)
-            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST)
-            #this ensures a seamless transition between tiles
-            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE)
-            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE)
-        self._updatableTiles = []
-        
-        drawnTiles = 0
-        for patches in self.imagePatches:
-            patch = patches[self._numLayers]
-            if not patch.rectF.intersect(rect): continue
-            patch.drawTexture()
-            drawnTiles +=1
-
-        #print "ImageView2D.drawBackgroundGL: drew %d of %d tiles" % (drawnTiles, len(self.imagePatches))
-        painter.endNativePainting()
-
     def drawBackground(self, painter, rect):
         #Find all patches that intersect the given 'rect'.
-        for i,patch in enumerate(self.imagePatches):
-            patch = patch[self._numLayers]
-            if patch.dirty and rect.intersects(patch.rectF):
-                self._renderThread.requestPatch(i)
+        for p in self.compositePatches():
+            if p.dirty and rect.intersects(p.rectF):
+                self._renderThread.requestPatch(p.id)
         
-        if self._useGL:
-            self.drawBackgroundGL(painter, rect)
-        else:
-            self.drawBackgroundSoftware(painter, rect)
+        for p in self.compositePatches():
+            
+            if not p.rectF.intersect(rect):
+                continue
+            
+            p.lock()
+            painter.drawImage(p.rectF.topLeft(), p.image)
+            p.unlock()
+
+            if self._showDebugPatches:
+                painter.drawRect(p.rectF.adjusted(5,5,-5,-5))
+                painter.drawText(p.rectF.topLeft()+QPointF(20,20), "%d" % p.id)

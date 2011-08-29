@@ -1,7 +1,7 @@
 from PyQt4.QtGui import QStyledItemDelegate, QWidget, QListView, QStyle, \
                         QAbstractItemView, QPainter, QItemSelectionModel, \
                         QColor, QMenu, QAction, QFontMetrics, QFont, QImage, \
-                        QBrush
+                        QBrush, QPalette
 from PyQt4.QtCore import pyqtSignal, Qt, QEvent, QRect, QSize, QTimer, \
                          QPoint 
                          
@@ -24,12 +24,15 @@ class LayerPainter( object ):
         
         self.fm = QFontMetrics(QFont())
         
-        self.iconSize = 22
+        self.iconSize = 20
         self.iconXOffset = 5
         self.textXOffset = 5
-        self.progressXOffset = 15
+        self.progressXOffset = self.iconXOffset+self.iconSize+self.textXOffset
         self.progressYOffset = self.iconSize+5
         self.progressHeight = 10
+        
+        self.alphaTextWidth = self.fm.boundingRect(u"\u03B1=100.0%").width()
+        
 
     def sizeHint(self):
         if self.layer.mode == 'ReadOnly':
@@ -42,60 +45,69 @@ class LayerPainter( object ):
     def overEyeIcon(self, x, y):
         return QPoint(x,y) in QRect(self.iconXOffset,0,self.iconSize,self.iconSize)
 
-    def percentForPosition(self, x, y):
-        if y < self.progressYOffset or y > self.progressYOffset + self.progressHeight:
+    def percentForPosition(self, x, y, checkBoundaries=True):
+        if checkBoundaries and (y < self.progressYOffset or y > self.progressYOffset + self.progressHeight) \
+                           or  (x < self.progressXOffset):
             return -1
         
-        percent = (x-self.progressXOffset)/float(self.rect.width()-2*self.progressXOffset)
+        percent = (x-self.progressXOffset)/float(self._progressWidth)
         if percent < 0:
             return 0.0
         if percent > 1:
             return 1.0
         return percent
 
+    @property
+    def _progressWidth(self):
+        return self.rect.width()-self.progressXOffset-10
+
     def paint(self, painter, rect, palette, mode):
+        if not self.layer.visible:
+            palette.setCurrentColorGroup(QPalette.Disabled)
+        
         self.rect = rect
         painter.save()
         painter.setRenderHint(QPainter.Antialiasing, True)
         painter.translate(rect.x(), rect.y())
         painter.setFont(QFont())
         
-        if self.layer.visible:
-            painter.setPen(QColor(0,0,0))
-        else:
-            painter.setPen(QColor(0,0,0,90))
+        painter.setBrush(palette.text())
         
-        if mode == 'ReadOnly':
-            text = "[%3d%%] %s" % (int(100.0 * self.layer.opacity), self.layer.name)
-            painter.drawText(QPoint(5, self.fm.height()), text)
+        if mode != 'ReadOnly':
+            painter.save()
+            painter.setBrush(palette.highlight())
+            painter.drawRect(rect)
+            painter.restore()
+        
+        textOffsetX = self.progressXOffset
+        textOffsetY = max(self.fm.height()-self.iconSize,0)/2.0+self.fm.height()
+        
+        if self.layer.visible:
+            painter.drawImage(QRect(self.iconXOffset,0,self.iconSize,self.iconSize), \
+                              QImage(path.join(_icondir, "stock-eye-20.png")))
         else:
-            if self.layer.visible:
-                painter.drawImage(QRect(self.iconXOffset,0,self.iconSize,self.iconSize), \
-                                  QImage(path.join(_icondir, "layer-visible-on.png")))
-            else:
-                painter.drawImage(QRect(self.iconXOffset,0,self.iconSize,self.iconSize), \
-                                  QImage(path.join(_icondir, "layer-visible-off.png")))
-            text = "%s" % self.layer.name
-            painter.drawText(QPoint(self.iconXOffset+self.iconSize+self.textXOffset,\
-                                    max(self.fm.height()-self.iconSize,0)/2.0+self.fm.height()),\
-                             text)
-            
-            w = rect.width()-2*self.progressXOffset
-            
-            painter.drawRoundedRect(QRect(QPoint(self.progressXOffset, self.progressYOffset), \
-                                          QSize(w, self.progressHeight)), self.progressHeight/2, self.progressHeight/2)
-            painter.setBrush(QBrush(QColor(0,0,0)))
-            
-            if not self.layer.visible: painter.setBrush(QBrush(QColor(0,0,0,80)))
-            painter.drawEllipse(QRect(self.progressXOffset+(w-self.progressHeight)*self.layer.opacity, \
-                                      self.progressYOffset, self.progressHeight, self.progressHeight))
-            
-            painter.setPen(Qt.NoPen)
-            if self.layer.visible: painter.setBrush(QBrush(QColor(0,0,255,50))) 
-            else: painter.setBrush(QBrush(QColor(0,0,0,20)))
-            painter.drawRoundedRect(QRect(QPoint(self.progressXOffset, self.progressYOffset), \
-                                          QSize(w*self.layer.opacity, self.progressHeight)), \
-                                                self.progressHeight/2, self.progressHeight/2)
+            painter.drawImage(QRect(self.iconXOffset,0,self.iconSize,self.iconSize), \
+                              QImage(path.join(_icondir, "stock-eye-20-gray.png")))
+
+        #layer name text
+        painter.drawText(QPoint(textOffsetX, textOffsetY), "%s" % self.layer.name)
+        
+        text = u"\u03B1=%0.1f%%" % (100.0*(1.0-self.layer.opacity))
+        painter.drawText(QPoint(textOffsetX+self._progressWidth-self.alphaTextWidth, textOffsetY), text)
+        
+        if mode != 'ReadOnly':  
+            #frame around percentage indicator
+            painter.setBrush(palette.dark())
+            painter.save()
+            #no fill color
+            b = painter.brush(); b.setStyle(Qt.NoBrush); painter.setBrush(b)
+            painter.drawRect(QRect(QPoint(self.progressXOffset, self.progressYOffset), \
+                                          QSize(self._progressWidth, self.progressHeight)))
+            painter.restore()
+        
+            #percentage indicator
+            painter.drawRect(QRect(QPoint(self.progressXOffset, self.progressYOffset), \
+                                          QSize(self._progressWidth*self.layer.opacity, self.progressHeight)))
             
         painter.restore()
 
@@ -185,7 +197,10 @@ class LayerEditor(QWidget):
         return self._layer
     @layer.setter
     def layer(self, layer):
+        if self._layer:
+            self._layer.changed.disconnect()
         self._layer = layer
+        self._layer.changed.connect(lambda: self.repaint())
         self._layerPainter.layer = layer
     
     def minimumSize(self):
@@ -200,7 +215,7 @@ class LayerEditor(QWidget):
         
     def mouseMoveEvent(self, event):
         if self.lmbDown:
-            opacity = self._layerPainter.percentForPosition(event.x(), event.y())
+            opacity = self._layerPainter.percentForPosition(event.x(), event.y(), checkBoundaries=False)
             if opacity >= 0:
                 self.layer.opacity = opacity
                 self.update()
@@ -252,14 +267,13 @@ class LayerWidget(QListView):
         self.updateGUI()
         QListView.resizeEvent(self, e)
     
-    def onContext(self, point):
-        menu = QMenu("Menu", self)
-        a = QAction("aaa", menu)
-        b = QAction("bbb", menu)
-        menu.addAction(a)
-        menu.addAction(b)
-        menu.exec_(self.mapToGlobal(point))
-    
+    def onContext(self, pos):        
+        idx = self.indexAt(pos)
+        layer = self.model()[idx.row()]
+        print "Context menu for layer '%s'" % layer.name
+        
+        layer.contextMenu(self, self.mapToGlobal(pos))
+            
     def selectFirstEntry(self):
         #self.setEditTriggers(QAbstractItemView.DoubleClicked)
         self.setEditTriggers(QAbstractItemView.CurrentChanged)
@@ -294,8 +308,7 @@ if __name__ == "__main__":
     import signal
     signal.signal(signal.SIGINT, signal.SIG_DFL)
 
-    import sys
-    from volumeeditor.layerstack import LayerStackModel, Layer
+    import sys, numpy
 
     from PyQt4.QtGui import QApplication, QPushButton, QHBoxLayout, QVBoxLayout
 
@@ -329,7 +342,7 @@ if __name__ == "__main__":
     o5.opacity = 0.65
     model.append(o5)
 
-    view = LayerWidget(model)
+    view = LayerWidget(None, model)
     view.show()
     view.updateGeometry()
 
@@ -340,12 +353,14 @@ if __name__ == "__main__":
     up   = QPushButton('Up')
     down = QPushButton('Down')
     delete = QPushButton('Delete')
+    add = QPushButton('Add')
     lv  = QVBoxLayout()
     lh.addLayout(lv)
     
     lv.addWidget(up)
     lv.addWidget(down)
     lv.addWidget(delete)
+    lv.addWidget(add)
     
     w.setGeometry(100, 100, 800,600)
     w.show()
@@ -356,5 +371,12 @@ if __name__ == "__main__":
     model.canMoveSelectedDown.connect(down.setEnabled)
     delete.clicked.connect(model.deleteSelected)
     model.canDeleteSelected.connect(delete.setEnabled)
+    def addRandomLayer():
+        o = Layer()
+        o.name = "Layer %d" % (model.rowCount()+1)
+        o.opacity = numpy.random.rand()
+        o.visible = bool(numpy.random.randint(0,2))
+        model.append(o)
+    add.clicked.connect(addRandomLayer)
 
     app.exec_()

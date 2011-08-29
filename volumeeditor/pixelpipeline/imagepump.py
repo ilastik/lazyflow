@@ -6,6 +6,7 @@ from imagesourcefactories import createImageSource
 class StackedImageSources( QObject ):
     isDirty      = pyqtSignal( QRect )
     stackChanged = pyqtSignal()
+    aboutToResize = pyqtSignal(int)
 
     def __init__( self, layerStackModel ):
         super(StackedImageSources, self).__init__()
@@ -17,12 +18,12 @@ class StackedImageSources( QObject ):
     def __len__( self ):
         return self._layerStackModel.rowCount()
 
-    def __iter__( self ):
-        for layer in self._layerStackModel:
-            yield (layer.opacity, layer.visible, self._layerToIms[layer])
+#    def __iter__( self ):
+#        for layer in reversed(self._layerStackModel):
+#            yield (layer.opacity, layer.visible, self._layerToIms[layer])
 
     def __getitem__(self, i):
-        return self._layerStackModel[i] 
+        return self._layerStackModel[i]
 
     def register( self, layer, imageSource ):
         #print "<StackedImageSources.register(self=%r, layer=%r, imageSource=%r)>" % (self, layer, imageSource)
@@ -86,22 +87,24 @@ class ImagePump( object ):
 
         ## handle layers removed from layerStackModel
         def onRowsAboutToBeRemoved( parent, start, end):
-            #print "ImagePump.onRowsAboutToBeRemoved"
+            print "ImagePump.onRowsAboutToBeRemoved"
+            self._stackedImageSources.aboutToResize.emit(len(self._layerStackModel)-(end-start+1))
             for i in xrange(start, end + 1):
                 layer = self._layerStackModel[i]
                 self._removeLayer( layer )
         layerStackModel.rowsAboutToBeRemoved.connect(onRowsAboutToBeRemoved)
 
+        def onRowsAboutToBeInserted(parent, start, end):
+            print "ImagePump.onwRowsAboutToBeInserted"
+            self._stackedImageSources.aboutToResize.emit(len(self._layerStackModel)+(end-start+1))
+        layerStackModel.rowsAboutToBeInserted.connect(onRowsAboutToBeInserted)
+
         ## handle new layers in layerStackModel
         def onDataChanged( startIndexItem, endIndexItem):
             start = startIndexItem.row()
             stop = endIndexItem.row() + 1
-            #FIXME: the layerstackmodel seems to be wrongly implemented
-            #       (we need a reverse sorting of the layer list, for which
-            #        some hacks were introduced)
-            #        the following loop is a necessary workaround for now.
-            #for i in xrange(start, stop):
-            for i in range(self._layerStackModel.rowCount()):
+
+            for i in xrange(start, stop):
                 layer = self._layerStackModel[i]
                 # model implementation removes and adds the same layer instance to move selections up/down
                 # therefore, check if the layer is already registered before adding as new

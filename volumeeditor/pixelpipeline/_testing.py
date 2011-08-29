@@ -5,7 +5,7 @@ except ImportError:
     has_lazyflow = False
 
 if has_lazyflow:
-    from lazyflow.graph import Graph, Operator, InputSlot, OutputSlot
+    from lazyflow.graph import Operator, InputSlot, OutputSlot
     from lazyflow import operators
     import time
 
