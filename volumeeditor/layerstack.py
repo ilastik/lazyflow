@@ -53,8 +53,8 @@ class LayerStackModel(QAbstractListModel):
         def onChanged():
             #assumes that data is unique!
             idx = self.index(self._layerStack.index(data))
-            print "**********", idx.row()
             self.dataChanged.emit(idx, idx)
+            self.updateGUI()
         data.changed.connect(onChanged)
         
         self.updateGUI()
