@@ -17,8 +17,10 @@ class Layer( QObject ):
     opacity -- float; range 0.0 - 1.0
 
     '''
+    changed        = pyqtSignal()
     visibleChanged = pyqtSignal(bool)
     opacityChanged = pyqtSignal(float)
+    nameChanged    = pyqtSignal(object)
 
     @property
     def visible( self ):
@@ -28,6 +30,7 @@ class Layer( QObject ):
         if value != self._visible:
             self._visible = value
             self.visibleChanged.emit( value )
+            self.changed.emit()
 
     @property
     def opacity( self ):
@@ -37,6 +40,17 @@ class Layer( QObject ):
         if value != self._opacity:
             self._opacity = value
             self.opacityChanged.emit( value )
+            self.changed.emit()
+            
+    @property
+    def name( self ):
+        return self._name
+    @name.setter
+    def name( self, n ):
+        if self._name != n:
+            self._name = n
+            self.nameChanged.emit(n)
+            self.changed.emit()
 
     @property
     def datasources( self ):
@@ -47,7 +61,7 @@ class Layer( QObject ):
 
     def __init__( self, opacity = 1.0, visible = True ):
         super(Layer, self).__init__()
-        self.name    = "Unnamed Layer"
+        self._name    = "Unnamed Layer"
         self.mode = "ReadOnly"
         self._visible = visible
         self._opacity = opacity
@@ -66,7 +80,7 @@ class GrayscaleLayer( Layer ):
         self._thresholding = thresholding
     @property
     def thresholding(self):
-        """returns a tuple witht the range [minimum value, maximum value]"""
+        """returns a tuple with the range [minimum value, maximum value]"""
         return self._thresholding
     @thresholding.setter
     def thresholding(self, t):
@@ -103,11 +117,21 @@ class GrayscaleLayer( Layer ):
 #*******************************************************************************
 
 class AlphaModulatedLayer( Layer ):
+    tintColorChanged = pyqtSignal(QColor)
+    
     def __init__( self, datasource, tintColor = QColor(255,0,0), normalize = None ):
         super(AlphaModulatedLayer, self).__init__()
         self._datasources = [datasource]
         self._normalize = normalize
-        self.tintColor = tintColor
+        self._tintColor = tintColor
+    @property
+    def tintColor(self):
+        return self._tintColor
+    @tintColor.setter
+    def tintColor(self, c):
+        if self._tintColor != c:
+            self._tintColor = c
+            self.tintColorChanged.emit(c)
 
 #*******************************************************************************
 # C o l o r t a b l e L a y e r                                                *

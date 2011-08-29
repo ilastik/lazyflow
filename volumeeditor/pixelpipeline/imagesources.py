@@ -110,19 +110,18 @@ assert issubclass(GrayscaleImageRequest, RequestABC)
 #*******************************************************************************
 
 class AlphaModulatedImageSource( ImageSource ):
-    def __init__( self, arraySource2D, tintColor, normalize=None ):
+    def __init__( self, arraySource2D, layer ):
         assert isinstance(arraySource2D, SourceABC), 'wrong type: %s' % str(type(arraySource2D))
         super(AlphaModulatedImageSource, self).__init__()
         self._arraySource2D = arraySource2D
-        self._normalize = normalize
-        self._tintColor = tintColor
+        self._layer = layer
         self._arraySource2D.isDirty.connect(self.setDirty)
 
     def request( self, qrect ):
         assert isinstance(qrect, QRect)
         s = rect2slicing(qrect)
         req = self._arraySource2D.request(s)
-        return AlphaModulatedImageRequest( req, self._tintColor, self._normalize )
+        return AlphaModulatedImageRequest( req, self._layer.tintColor, self._layer._normalize )
 assert issubclass(AlphaModulatedImageSource, SourceABC)
 
 class AlphaModulatedImageRequest( object ):

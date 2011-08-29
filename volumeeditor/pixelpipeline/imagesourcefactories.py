@@ -9,7 +9,9 @@ from datasources import ConstantSource
 @multimethod(AlphaModulatedLayer, list)
 def createImageSource( layer, datasources2d ):
     assert len(datasources2d) == 1
-    return AlphaModulatedImageSource( datasources2d[0], layer.tintColor, layer._normalize )
+    src = AlphaModulatedImageSource( datasources2d[0], layer )
+    layer.tintColorChanged.connect(lambda: src.setDirty((slice(None,None), slice(None,None))))
+    return src
 
 @multimethod(GrayscaleLayer, list)
 def createImageSource( layer, datasources2d ):

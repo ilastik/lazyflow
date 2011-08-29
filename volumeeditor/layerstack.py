@@ -49,6 +49,14 @@ class LayerStackModel(QAbstractListModel):
         if self.selectedRow() >= 0:
             self.selectionModel.select(self.index(self.selectedRow()), QItemSelectionModel.Deselect)
         self.selectionModel.select(self.index(index), QItemSelectionModel.Select)
+        
+        def onChanged():
+            #assumes that data is unique!
+            idx = self.index(self._layerStack.index(data))
+            print "**********", idx.row()
+            self.dataChanged.emit(idx, idx)
+        data.changed.connect(onChanged)
+        
         self.updateGUI()
     
     def selectedRow(self):
