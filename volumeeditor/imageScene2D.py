@@ -200,7 +200,7 @@ class ImageScene2D(QGraphicsScene):
     
     def compositePatches(self):
         return self._imagePatches[self._numLayers]
-    def _brushingPatches(self):
+    def brushingPatches(self):
         return self._imagePatches[self._numLayers+1]
             
     def _invalidateRect(self, rect = QRect()):
@@ -210,7 +210,7 @@ class ImageScene2D(QGraphicsScene):
             self._renderThread.cancelAll()
             self._updatableTiles = []
             
-            for p in self._brushingPatches():
+            for p in self.brushingPatches():
                 p.lock()
                 p.image.fill(0)
                 p.dirty = False
@@ -227,7 +227,7 @@ class ImageScene2D(QGraphicsScene):
         self.invalidate(p.rectF, QGraphicsScene.BackgroundLayer)
 
     def drawForeground(self, painter, rect):
-        for p in self._brushingPatches():
+        for p in self.brushingPatches():
             if not p.dirty or not p.rectF.intersect(rect): continue
             p.lock()
             painter.drawImage(p.rectF.topLeft(), p.image)
