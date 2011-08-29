@@ -28,7 +28,9 @@
 #    or implied, of their employers.
 
 from PyQt4.QtCore import pyqtSignal, Qt, QPointF, QSize
-from PyQt4.QtGui import QLabel, QPen, QPainter, QPixmap, QColor, QHBoxLayout, QVBoxLayout, QFont, QPainterPath, QBrush, QPolygonF, QSpinBox, QAbstractSpinBox, QCheckBox
+from PyQt4.QtGui import QLabel, QPen, QPainter, QPixmap, QColor, QHBoxLayout, QVBoxLayout, \
+                        QFont, QPainterPath, QBrush, QPolygonF, QSpinBox, QAbstractSpinBox, \
+                        QCheckBox
 import sys, random
 import numpy, qimage2ndarray
 
@@ -127,7 +129,9 @@ class LabelButtons(QLabel):
         pen = QPen(self.foregroundColor)
         painter.setPen(pen)
         points = QPolygonF()
-        points  << QPointF(125.0, 50.0) << QPointF(200.0, 180.0) << QPointF(50.0, 180.0)
+        points.append(QPointF(125.0, 50.0))
+        points.append(QPointF(200.0, 180.0))
+        points.append(QPointF(125.0, 50.0))
         painter.drawPolygon(points)
         painter.end()
         pixmap = pixmap.scaled(QSize(self.pixmapWidth, self.pixmapHeight),Qt.KeepAspectRatio, Qt.SmoothTransformation)
@@ -145,7 +149,12 @@ class LabelButtons(QLabel):
         pen = QPen(self.foregroundColor)
         painter.setPen(pen)
         points = QPolygonF()
-        points  << QPointF(125.0, 200.0) << QPointF(200.0, 70.0) << QPointF(50.0, 70.0)
+        points.append(QPointF(125.0, 200.0))
+        points.append(QPointF(200.0, 70.0))
+        points.append(QPointF(50.0, 70.0))
+        
+        
+        #points  << QPointF(125.0, 200.0) << QPointF(200.0, 70.0) << QPointF(50.0, 70.0)
         painter.drawPolygon(points)
         painter.end()
         pixmap = pixmap.scaled(QSize(self.pixmapWidth, self.pixmapHeight),Qt.KeepAspectRatio, Qt.SmoothTransformation)
