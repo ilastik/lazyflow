@@ -200,7 +200,7 @@ class LayerEditor(QWidget):
         if self._layer:
             self._layer.changed.disconnect()
         self._layer = layer
-        self._layer.changed.connect(lambda: self.repaint())
+        self._layer.changed.connect(self.repaint)
         self._layerPainter.layer = layer
     
     def minimumSize(self):
