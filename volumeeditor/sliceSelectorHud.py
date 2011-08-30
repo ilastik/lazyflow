@@ -52,7 +52,6 @@ class LabelButtons(QLabel):
         self.pixmapWidth = width
         self.pixmapHeight = height
         
-        
     def setUndockIcon(self):
         self.setToolTip("Undock")
         pixmap = QPixmap(250, 250)
@@ -154,9 +153,6 @@ class LabelButtons(QLabel):
         points.append(QPointF(125.0, 200.0))
         points.append(QPointF(200.0, 70.0))
         points.append(QPointF(50.0, 70.0))
-        
-        
-        #points  << QPointF(125.0, 200.0) << QPointF(200.0, 70.0) << QPointF(50.0, 70.0)
         painter.drawPolygon(points)
         painter.end()
         pixmap = pixmap.scaled(QSize(self.pixmapWidth, self.pixmapHeight),Qt.KeepAspectRatio, Qt.SmoothTransformation)
@@ -251,8 +247,6 @@ class imageView2DHud(QHBoxLayout):
         self.addWidget(self.axisLabel)
         
         self.sliceSelector = SpinBoxImageView(backgroundColor, foregroundColor, value, height, 12)
-#        self.sliceSelector.valueChanged.connect(self.spinBoxChanged)
-        self.addSpacing(4)
         self.addLayout(self.sliceSelector)
       
         self.addStretch()

@@ -63,7 +63,7 @@ class VolumeEditorWidget(QWidget):
         self.setLayout(self.layout)
         
         # setup quadview
-        axisLabels = ["X:", "Y:", "Z:"]
+        axisLabels = ["X", "Y", "Z"]
         axisColors = [QColor("#dc143c"), QColor("green"), QColor("blue")]
         for i, v in enumerate(self._ve.imageViews):
             v.hud = imageView2DHud()
