@@ -60,6 +60,8 @@ class VolumeEditorWidget(QWidget):
         self._ve = volumeeditor
 
         self.layout = QHBoxLayout()
+        self.layout.setContentsMargins(0, 0, 0, 0)
+        
         self.setLayout(self.layout)
         
         # setup quadview
