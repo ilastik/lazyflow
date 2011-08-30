@@ -90,9 +90,15 @@ class LayerPainter( object ):
                               QImage(path.join(_icondir, "stock-eye-20-gray.png")))
 
         #layer name text
-        painter.drawText(QPoint(textOffsetX, textOffsetY), "%s" % self.layer.name)
+        if mode != 'ReadOnly':
+            painter.setBrush(palette.highlightedText())
+        else:
+            painter.setBrush(palette.text())
         
-        text = u"\u03B1=%0.1f%%" % (100.0*(1.0-self.layer.opacity))
+        #layer name
+        painter.drawText(QPoint(textOffsetX, textOffsetY), "%s" % self.layer.name)
+        #opacity
+        text = u"\u03B1=%0.1f%%" % (100.0*(self.layer.opacity))
         painter.drawText(QPoint(textOffsetX+self._progressWidth-self.alphaTextWidth, textOffsetY), text)
         
         if mode != 'ReadOnly':  
