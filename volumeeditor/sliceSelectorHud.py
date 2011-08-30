@@ -133,7 +133,7 @@ class LabelButtons(QLabel):
         points = QPolygonF()
         points.append(QPointF(125.0, 50.0))
         points.append(QPointF(200.0, 180.0))
-        points.append(QPointF(125.0, 50.0))
+        points.append(QPointF(50.0, 180.0))
         painter.drawPolygon(points)
         painter.end()
         pixmap = pixmap.scaled(QSize(self.pixmapWidth, self.pixmapHeight),Qt.KeepAspectRatio, Qt.SmoothTransformation)
