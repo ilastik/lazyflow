@@ -420,6 +420,8 @@ class QuadStatusBar(QHBoxLayout):
         painter.setFont(font)
         painter.end()
         pixmap = pixmap.scaled(QSize(61,20),Qt.KeepAspectRatio, Qt.SmoothTransformation)
+        
+        """
         self.grayScaleLabel.setPixmap(pixmap)
         self.grayScaleSpinBox = QSpinBox()
         self.grayScaleSpinBox.setAttribute(Qt.WA_TransparentForMouseEvents, True)
@@ -435,6 +437,7 @@ class QuadStatusBar(QHBoxLayout):
         self.grayScaleSpinBox.setFont(font)
         self.grayScaleSpinBox.setStyleSheet("QSpinBox { color: " + str(grayforegroundColor.name()) + "; font: bold; background-color: " + str(graybackgroundColor.name()) + "; border:0;}")
         self.addWidget(self.grayScaleSpinBox)
+        """
         
         self.addStretch()
         
@@ -458,9 +461,10 @@ class QuadStatusBar(QHBoxLayout):
         
         self.timeSpinBox = QSpinBox()
         self.addWidget(self.timeSpinBox)
-        
+    """    
     def setGrayScale(self, gray):
         self.grayScaleSpinBox.setValue(gray)
+    """
         
     def setMouseCoords(self, x, y, z):
         self.xSpinBox.setValue(x)

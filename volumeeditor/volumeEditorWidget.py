@@ -103,8 +103,7 @@ class VolumeEditorWidget(QWidget):
             self._ve.navCtrl.indicateSliceIntersection = (state == Qt.Checked)
         self.quadview.statusBar.positionCheckBox.stateChanged.connect(toggleSliceIntersection)
 
-        #Enabling this makes cursor movement too slow...
-        #self._ve.posModel.cursorPositionChanged.connect(self._updateInfoLabels)
+        self._ve.posModel.cursorPositionChanged.connect(self._updateInfoLabels)
 
         # shortcuts
         self._initShortcuts()
@@ -164,10 +163,7 @@ class VolumeEditorWidget(QWidget):
             self.shortcuts.append(self._shortcutHelper("Ctrl+Shift+Down", "Navigation", "10 slices down", v, partial(sliceDelta, i, -10), Qt.WidgetShortcut))
 
     def _updateInfoLabels(self, pos):
-        if any((pos[i] < 0 or pos[i] >= self._ve.posModel.shape[i] for i in xrange(3))):
-            self._ve.posLabel.setText("")
-            return
-        self.posLabel.setText("<b>x:</b> %03i  <b>y:</b> %03i  <b>z:</b> %03i" % (pos[0], pos[1], pos[2]))
+        self.quadViewStatusBar.setMouseCoords(*pos)
              
 #*******************************************************************************
 # i f   _ _ n a m e _ _   = =   " _ _ m a i n _ _ "                            *
@@ -477,9 +473,6 @@ if __name__ == "__main__":
                 self.editor = VolumeEditor(shape, layerstack)
 
             self.widget = VolumeEditorWidget(parent=None, editor=self.editor)
-            
-            if "3dvol" in argv:
-                self.widget._ve.posModel.cursorPositionChanged.connect(self.widget._updateInfoLabels)
             
             if not 't' in sys.argv:
                 #show some initial position
