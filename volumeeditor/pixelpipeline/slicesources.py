@@ -20,6 +20,9 @@ class SliceRequest( object ):
     def wait( self ):
         return self._sp(self._ar.wait())
 
+    def getResult(self):
+        return self._ar.getResult()
+
     def notify( self, callback, **kwargs ):
         self._ar.notify(self._onNotify, package = (callback, kwargs))
 

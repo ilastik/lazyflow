@@ -14,6 +14,9 @@ class ArrayRequest( object ):
     def wait( self ):
         return self._result
     
+    def getResult(self):
+        return self._result
+    
     def cancel( self ):
         pass
         
@@ -78,6 +81,11 @@ class LazyflowRequest( object ):
 
     def wait( self ):
         return self._lazyflow_request.wait()
+        
+        
+    def getResult(self):
+        return self._lazyflow_request.getResult()
+        
 
     def cancel( self ):
         self._lazyflow_request.cancel()
@@ -136,6 +144,9 @@ class ConstantRequest( object ):
         self._result = result
 
     def wait( self ):
+        return self._result
+    
+    def getResult(self):
         return self._result
     
     def cancel( self ):

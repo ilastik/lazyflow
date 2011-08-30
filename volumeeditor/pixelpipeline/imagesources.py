@@ -71,8 +71,13 @@ class GrayscaleImageRequest( object ):
         self._arrayreq = arrayrequest
         self._normalize = normalize
 
-    def wait( self ):
-        a = self._arrayreq.wait().squeeze()
+
+    def wait(self):
+        self._arrayreq.wait()
+        return self.toImage()
+        
+    def toImage( self ):
+        a = self._arrayreq.getResult().squeeze()
         if self._normalize is not None:
             a = a.astype(np.float32)
             a = (a - self._normalize[0])*255.0 / (self._normalize[1]-self._normalize[0])
@@ -99,7 +104,7 @@ class GrayscaleImageRequest( object ):
         self.cancelUnlock()
     
     def _onNotify( self, result, package ):
-        img = self.wait()
+        img = self.toImage()
         callback = package[0]
         kwargs = package[1]
         callback( img, **kwargs )
@@ -132,8 +137,12 @@ class AlphaModulatedImageRequest( object ):
         self._normalize = normalize
         self._tintColor = tintColor
 
-    def wait( self ):
-        a = self._arrayreq.wait().squeeze()
+    def wait(self):
+        self._arrayreq.wait()
+        return self.toImage()
+
+    def toImage( self ):
+        a = self._arrayreq.getResult().squeeze()
         if self._normalize is not None:
             a = (a - self._normalize[0])*255 / (self._normalize[1]-self._normalize[0])
         
@@ -163,7 +172,7 @@ class AlphaModulatedImageRequest( object ):
         self.cancelUnlock()
     
     def _onNotify( self, result, package ):
-        img = self.wait()
+        img = self.toImage()
         callback = package[0]
         kwargs = package[1]
         callback( img, **kwargs )
@@ -194,9 +203,14 @@ class ColortableImageRequest( object ):
         self._canceled = False
         self._arrayreq = arrayrequest
         self._colorTable = colorTable
+
+
+    def wait(self):
+        self._arrayreq.wait()
+        return self.toImage()
         
-    def wait( self ):
-        a = self._arrayreq.wait()
+    def toImage( self ):
+        a = self._arrayreq.getResult()
         a = a.squeeze()
         img = gray2qimage(a)
         img.setColorTable(self._colorTable)# = img.convertToFormat(QImage.Format_ARGB32_Premultiplied, self._colorTable)
@@ -220,7 +234,7 @@ class ColortableImageRequest( object ):
         self.cancelUnlock()
     
     def _onNotify( self, result, package ):
-        img = self.wait()
+        img = self.toImage()
         callback = package[0]
         kwargs = package[1]
         callback( img, **kwargs )
@@ -276,9 +290,14 @@ class RGBAImageRequest( object ):
         self._data = np.empty(shape, dtype=np.uint8)
         self._requestsFinished = 4 * [False,]
 
-    def wait( self ):
+    def wait(self):
+        for req in requests:
+            req.wait()
+        return self.toImage()
+
+    def toImage( self ):
         for i, req in enumerate(self._requests):
-            a = self._requests[i].wait()
+            a = self._requests[i].getResult()
             a = a.squeeze()
             if self._normalize[i] is not None:
                 a = a.astype(np.float32)
@@ -311,7 +330,7 @@ class RGBAImageRequest( object ):
         channel = package[0]
         self._requestsFinished[channel] = True
         if all(self._requestsFinished):
-            img = self.wait()
+            img = self.toImage()
         
             callback = package[1]
             kwargs = package[2]
