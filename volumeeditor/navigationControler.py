@@ -239,6 +239,8 @@ class NavigationControler(QObject):
     def _updateCrossHairCursor(self):
         y,x = posView2D(self._model.cursorPos, axis=self._model.activeView)
         self._views[self._model.activeView]._crossHairCursor.showXYPosition(x,y)
+        for i, v in enumerate(self._views):
+            v._crossHairCursor.setVisible( self._model.activeView == i )
     
     def _updateSliceIntersection(self):
         for axis, v in enumerate(self._views):
