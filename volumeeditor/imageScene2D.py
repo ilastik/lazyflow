@@ -237,6 +237,8 @@ class ImageScene2D(QGraphicsScene):
         #Find all patches that intersect the given 'rect'.
         for p in self.compositePatches():
             if p.dirty and rect.intersects(p.rectF):
+                if self._showDebugPatches:
+                    print "ImageScene2D '%s' asks for patch=%d [%r]" % (self.objectName(), p.id, p.rect)
                 self._renderThread.requestPatch(p.id)
         
         for p in self.compositePatches():

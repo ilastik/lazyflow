@@ -100,8 +100,10 @@ class VolumeEditor( QObject ):
         self.imageScenes.append(ImageScene2D())
         self.imageScenes.append(ImageScene2D())
         self.imageScenes.append(ImageScene2D())
-        for i in xrange(3):
-            self.imageScenes[i].stackedImageSources = imagepumps[i].stackedImageSources
+        names = ['x', 'y', 'z']
+        for scene, name, pump in zip(self.imageScenes, names, imagepumps):
+            scene.setObjectName(name)
+            scene.stackedImageSources = pump.stackedImageSources
 
         # three ortho image views
         self.imageViews = []

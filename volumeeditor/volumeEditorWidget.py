@@ -473,6 +473,7 @@ if __name__ == "__main__":
                 self.editor.setDrawingEnabled(True)
             else:
                 self.editor = VolumeEditor(shape, layerstack)
+            self.editor.showDebugPatches = True
 
             self.widget = VolumeEditorWidget(parent=None, editor=self.editor)
             
