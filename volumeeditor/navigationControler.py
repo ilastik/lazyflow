@@ -83,6 +83,10 @@ class NavigationInterpreter(QObject):
         newPos = copy.copy(self._model.slicingPos)
         newPos[axis] = newSlice
         
+        cursorPos = copy.copy(self._model.cursorPos)
+        cursorPos[axis] = newSlice
+        self._model.cursorPos  = cursorPos  
+
         self._model.slicingPos = newPos
 
     def changeSliceAbsolute(self, value, axis):
@@ -99,6 +103,11 @@ class NavigationInterpreter(QObject):
         newPos[axis] = value
         if not self._positionValid(newPos):
             return
+        
+        cursorPos = copy.copy(self._model.cursorPos)
+        cursorPos[axis] = value
+        self._model.cursorPos  = cursorPos  
+        
         self._model.slicingPos = newPos
         
     def sliceIntersectionIndicatorToggle(self, show):
@@ -122,7 +131,7 @@ class NavigationInterpreter(QObject):
         self._model.activeView = axis
         
         newPos = [x,y]
-        newPos.insert(axis, self._model.cursorPos[axis])
+        newPos.insert(axis, self._model.slicingPos[axis])
 
         if newPos == self._model.cursorPos:
             return
