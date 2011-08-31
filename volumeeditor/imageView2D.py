@@ -335,7 +335,7 @@ class ImageView2D(QGraphicsView):
             
             painter.drawLine(o-tL, n-tL)
             painter.end()
-            p.dirty = True
+            p.dataVer += 1
             p.unlock()
             self.scene()._schedulePatchRedraw(patchNr)
             ### end FIXME

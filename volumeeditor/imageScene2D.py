@@ -236,7 +236,7 @@ class ImageScene2D(QGraphicsScene):
             for p in self.brushingPatches():
                 p.lock()
                 p.image.fill(0)
-                p.dirty = False
+                p.imgVer = p.dataVer
                 p.unlock()
         
         for p in self.compositePatches():
@@ -265,7 +265,7 @@ class ImageScene2D(QGraphicsScene):
 
     def drawForeground(self, painter, rect):
         for p in self.brushingPatches():
-            if not p.dirty or not p.rectF.intersect(rect): continue
+            if p.dataVer == p.imgVer or not p.rectF.intersect(rect): continue
             p.lock()
             painter.drawImage(p.rectF.topLeft(), p.image)
             p.unlock()
