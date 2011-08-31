@@ -79,8 +79,10 @@ class ImageScene2D(QGraphicsScene):
     blockSize = 128
     # overlap between patches 
     # positive number prevents rendering artifacts between patches for certain zoom levels
-    # increases the base blockSize 
-    overlap = 1 
+    # increases the base blockSize
+    #
+    # caution: an overlap will pull in multiple surrounding patches 
+    overlap = 0
     
     @property
     def stackedImageSources(self):
@@ -224,7 +226,22 @@ class ImageScene2D(QGraphicsScene):
 
     def _schedulePatchRedraw(self, patchNr):
         p =  self.compositePatches()[patchNr]
-        self.invalidate(p.rectF, QGraphicsScene.BackgroundLayer)
+        
+        #in QGraphicsScene::update, which is triggered by the
+        #invalidate call below, the code
+        #
+        #view->d_func()->updateRectF(view->viewportTransform().mapRect(rect))
+        #
+        #seems to introduce rounding errors to the mapped rectangle.
+        #
+        #While we invalidate only one patch's rect, the rounding errors
+        #enlarge the rect slightly, so that when update() is triggered
+        #the neighbouring patches are also affected.
+        #
+        #To compensate, adjust the rectangle slightly (less than one pixel,
+        #so it should not matter) 
+        
+        self.invalidate(p.rectF.adjusted(0.3,0.3,-0.3,-0.3), QGraphicsScene.BackgroundLayer)
 
     def drawForeground(self, painter, rect):
         for p in self.brushingPatches():
