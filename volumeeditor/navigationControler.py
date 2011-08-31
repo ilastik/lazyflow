@@ -206,12 +206,13 @@ class NavigationControler(QObject):
 
         self.axisColors = [QColor(255,0,0,255), QColor(0,255,0,255), QColor(0,0,255,255)]
     
-    def moveCrosshair(self, newPos):
+    def moveCrosshair(self, newPos, oldPos):
         self._updateCrossHairCursor()
     
-    def moveSlicingPosition(self, newPos):
+    def moveSlicingPosition(self, newPos, oldPos):
         for i in range(3):
-            self._updateSlice(self._model.slicingPos[i], i)
+            if newPos[i] != oldPos[i]:
+                self._updateSlice(self._model.slicingPos[i], i)
         self._updateSliceIntersection()
         
         #when scrolling fast through the stack, we don't want to update
