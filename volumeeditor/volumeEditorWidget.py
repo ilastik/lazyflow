@@ -236,12 +236,12 @@ if __name__ == "__main__":
             g = Graph()
             
             if "hugeslab" in argv:
-                N = 500
+                N = 1000
                 
                 hugeslab = (numpy.random.rand(1,N,2*N, 10,1)*255).astype(numpy.uint8)
                 
                 op1 = OpDataProvider(g, hugeslab)
-                op2 = OpDelay(g, 0.000003)
+                op2 = OpDelay(g, 0.000010)
                 op2.inputs["Input"].connect(op1.outputs["Data"])
                 source = LazyflowSource(op2.outputs["Output"])
                 layers = [GrayscaleLayer( source )]

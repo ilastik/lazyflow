@@ -28,8 +28,8 @@
 #    or implied, of their employers.
 
 from functools import partial
-from PyQt4.QtCore import QRect, QRectF, QMutex, QPointF
-from PyQt4.QtGui import QGraphicsScene, QImage, QTransform, QPen, QColor
+from PyQt4.QtCore import QRect, QRectF, QMutex, QPointF, Qt
+from PyQt4.QtGui import QGraphicsScene, QImage, QTransform, QPen, QColor, QBrush
 
 from patchAccessor import PatchAccessor
 from imageSceneRendering import ImageSceneRenderThread
@@ -268,5 +268,13 @@ class ImageScene2D(QGraphicsScene):
             p.unlock()
 
             if self._showDebugPatches:
-                painter.drawRect(p.rectF.adjusted(5,5,-5,-5))
+                if p.dirty:
+                    painter.setBrush(QBrush(QColor(255,0,0), Qt.DiagCrossPattern))
+                    painter.setPen(QColor(255,255,255))
+                else:
+                    painter.setBrush(QBrush(QColor(0,255,0), Qt.NoBrush))
+                    painter.setPen(QColor(0,255,0))
+                adjRect = p.rectF.adjusted(5,5,-5,-5)
+                painter.drawRect(adjRect)
                 painter.drawText(p.rectF.topLeft()+QPointF(20,20), "%d" % p.id)
+                    
