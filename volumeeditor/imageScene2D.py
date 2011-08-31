@@ -57,9 +57,30 @@ class ImagePatch(object):
                             round(rectF.width()), round(rectF.height()))
         self.image  = QImage(self.rect.width(), self.rect.height(), QImage.Format_ARGB32_Premultiplied)
         self.image.fill(0)
-        self.dirty = True
         self.id = id
         self._mutex = QMutex()
+        
+        #Whenever the underlying data changes, the data version is incremented.
+        #By comparing the data version to the image and request version, it can
+        #be determined if the content of this patch is recent or needs to be
+        #re-computed.
+        
+        #version of the data
+        self.dataVer = 0
+        
+        #version of self.image
+        #
+        #If self.imgVer < self.dataVer, the image needs to be re-computed
+        #from the new data.
+        self.imgVer  = -1
+        
+        #version of the request that has been generated to update the contents
+        #of self.image
+        #
+        #If self.reqVer == self.dataVer, a request is currently running that will
+        #eventually replace self.image with the new data.
+        self.reqVer  = -2
+        
     def lock(self):
         self._mutex.lock()
     def unlock(self):
@@ -221,12 +242,12 @@ class ImageScene2D(QGraphicsScene):
         for p in self.compositePatches():
             if not rect.isValid() or rect.intersects(p.rect):
                 #convention: if a rect is invalid, it is infinitely large
-                p.dirty = True
+                
+                p.dataVer += 1
                 self._schedulePatchRedraw(p.id)
-
-    def _schedulePatchRedraw(self, patchNr):
-        p =  self.compositePatches()[patchNr]
-        
+                
+    def _schedulePatchRedraw(self, patchNr) :
+        p = self.compositePatches()[patchNr]
         #in QGraphicsScene::update, which is triggered by the
         #invalidate call below, the code
         #
@@ -240,7 +261,6 @@ class ImageScene2D(QGraphicsScene):
         #
         #To compensate, adjust the rectangle slightly (less than one pixel,
         #so it should not matter) 
-        
         self.invalidate(p.rectF.adjusted(0.3,0.3,-0.3,-0.3), QGraphicsScene.BackgroundLayer)
 
     def drawForeground(self, painter, rect):
@@ -253,10 +273,13 @@ class ImageScene2D(QGraphicsScene):
     def drawBackground(self, painter, rect):
         #Find all patches that intersect the given 'rect'.
         for p in self.compositePatches():
-            if p.dirty and rect.intersects(p.rectF):
+            p.lock()
+            if p.imgVer != p.dataVer and p.reqVer != p.dataVer and rect.intersects(p.rectF):
                 if self._showDebugPatches:
                     print "ImageScene2D '%s' asks for patch=%d [%r]" % (self.objectName(), p.id, p.rect)
                 self._renderThread.requestPatch(p.id)
+                p.reqVer = p.dataVer
+            p.unlock()
         
         for p in self.compositePatches():
             
@@ -268,7 +291,7 @@ class ImageScene2D(QGraphicsScene):
             p.unlock()
 
             if self._showDebugPatches:
-                if p.dirty:
+                if p.imgVer != p.dataVer:
                     painter.setBrush(QBrush(QColor(255,0,0), Qt.DiagCrossPattern))
                     painter.setPen(QColor(255,255,255))
                 else:

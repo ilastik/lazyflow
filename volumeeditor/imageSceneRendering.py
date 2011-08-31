@@ -149,7 +149,7 @@ class ImageSceneRenderThread(QThread):
             p.setOpacity(self._stackedIms[layerNr].opacity)
             p.drawImage(0, 0, patch.image)
         p.end()
-        compositePatch.dirty = False
+        compositePatch.imgVer = compositePatch.reqVer
         
         compositePatch.unlock()
         ### ...done rendering ################
