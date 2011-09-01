@@ -49,15 +49,21 @@ class ImagePatch(object):
     being overwritten, the patch becomes dirty.
     """ 
     
-    def __init__(self, rectF, id):
-        assert(type(rectF) == QRectF)
+    def __init__(self, patchRectF, imageRectF, patchNr):
+        #the bounding boxes (rectangles) of all patches in one layer do not overlap
+        self.patchRectF = patchRectF
         
-        self.rectF  = rectF
-        self.rect   = QRect(round(rectF.x()),     round(rectF.y()), \
-                            round(rectF.width()), round(rectF.height()))
-        self.image  = QImage(self.rect.width(), self.rect.height(), QImage.Format_ARGB32_Premultiplied)
+        #the image rectangles of neighboring patches can overlap slightly, to account
+        #for inaccuracies in sub-pixel rendering of many ImagePatch objects
+        self.imageRectF = imageRectF
+        self.imageRect   = QRect(round(imageRectF.x()),     round(imageRectF.y()), \
+                                 round(imageRectF.width()), round(imageRectF.height()))
+        
+        self.image  = QImage(round(self.imageRectF.width()), round(self.imageRectF.height()), QImage.Format_ARGB32_Premultiplied)
         self.image.fill(0)
-        self.id = id
+        
+        self.patchNr = patchNr
+        
         self._mutex = QMutex()
         
         #Whenever the underlying data changes, the data version is incremented.
@@ -98,12 +104,10 @@ class ImageScene2D(QGraphicsScene):
     
     # base patch size: blockSize x blockSize
     blockSize = 128
+    #
     # overlap between patches 
     # positive number prevents rendering artifacts between patches for certain zoom levels
-    # increases the base blockSize
-    #
-    # caution: an overlap will pull in multiple surrounding patches 
-    overlap = 0
+    overlap = 1
     
     @property
     def stackedImageSources(self):
@@ -208,14 +212,21 @@ class ImageScene2D(QGraphicsScene):
         for layerNr in range(self._numLayers+2):
             self._imagePatches.append(list())
             for patchNr in range(self._patchAccessor.patchCount):
-                rect = self._patchAccessor.patchRectF(patchNr, self.overlap)
-                sceneRect = self.data2scene.mapRect(rect)
                 #the patch accessor uses the data coordinate system
                 #
                 #because the patch is drawn on the screen, its holds coordinates
-                #corresponding to Qt's QGraphicsScene's system
-                #convert to scene coordinates
-                self._imagePatches[layerNr].append( ImagePatch(sceneRect, patchNr ))
+                #corresponding to Qt's QGraphicsScene's system, which need to be
+                #converted to scene coordinates
+                
+                #the image rectangle includes an overlap margin
+                imageRectF = self.data2scene.mapRect(self._patchAccessor.patchRectF(patchNr, self.overlap))
+                
+                #the patch rectangle has no overlap
+                patchRectF = self.data2scene.mapRect(self._patchAccessor.patchRectF(patchNr, 0))
+                
+                p = ImagePatch(patchRectF, imageRectF, patchNr)
+                
+                self._imagePatches[layerNr].append(p)
         
         self._renderThread._imagePatches = self._imagePatches
         
@@ -244,7 +255,7 @@ class ImageScene2D(QGraphicsScene):
                 #convention: if a rect is invalid, it is infinitely large
                 
                 p.dataVer += 1
-                self._schedulePatchRedraw(p.id)
+                self._schedulePatchRedraw(p.patchNr)
                 
     def _schedulePatchRedraw(self, patchNr) :
         p = self.compositePatches()[patchNr]
@@ -261,33 +272,33 @@ class ImageScene2D(QGraphicsScene):
         #
         #To compensate, adjust the rectangle slightly (less than one pixel,
         #so it should not matter) 
-        self.invalidate(p.rectF.adjusted(0.3,0.3,-0.3,-0.3), QGraphicsScene.BackgroundLayer)
+        self.invalidate(p.patchRectF.adjusted(0.3,0.3,-0.3,-0.3), QGraphicsScene.BackgroundLayer)
 
     def drawForeground(self, painter, rect):
         for p in self.brushingPatches():
-            if p.dataVer == p.imgVer or not p.rectF.intersect(rect): continue
+            if p.dataVer == p.imgVer or not p.patchRectF.intersect(rect): continue
             p.lock()
-            painter.drawImage(p.rectF.topLeft(), p.image)
+            painter.drawImage(p.imageRectF.topLeft(), p.image)
             p.unlock()
     
     def drawBackground(self, painter, rect):
         #Find all patches that intersect the given 'rect'.
         for p in self.compositePatches():
             p.lock()
-            if p.imgVer != p.dataVer and p.reqVer != p.dataVer and rect.intersects(p.rectF):
+            if p.imgVer != p.dataVer and p.reqVer != p.dataVer and rect.intersects(p.patchRectF):
                 if self._showDebugPatches:
-                    print "ImageScene2D '%s' asks for patch=%d [%r]" % (self.objectName(), p.id, p.rect)
-                self._renderThread.requestPatch(p.id)
+                    print "ImageScene2D '%s' asks for patch=%d [%r]" % (self.objectName(), p.patchNr, p.patchRectF)
+                self._renderThread.requestPatch(p.patchNr)
                 p.reqVer = p.dataVer
             p.unlock()
         
         for p in self.compositePatches():
             
-            if not p.rectF.intersect(rect):
+            if not p.patchRectF.intersect(rect):
                 continue
             
             p.lock()
-            painter.drawImage(p.rectF.topLeft(), p.image)
+            painter.drawImage(p.imageRectF.topLeft(), p.image)
             p.unlock()
 
             if self._showDebugPatches:
@@ -297,7 +308,7 @@ class ImageScene2D(QGraphicsScene):
                 else:
                     painter.setBrush(QBrush(QColor(0,255,0), Qt.NoBrush))
                     painter.setPen(QColor(0,255,0))
-                adjRect = p.rectF.adjusted(5,5,-5,-5)
+                adjRect = p.patchRectF.adjusted(5,5,-5,-5)
                 painter.drawRect(adjRect)
-                painter.drawText(p.rectF.topLeft()+QPointF(20,20), "%d" % p.id)
+                painter.drawText(p.patchRectF.topLeft()+QPointF(20,20), "%d" % p.patchNr)
                     

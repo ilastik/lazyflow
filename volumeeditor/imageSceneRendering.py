@@ -139,8 +139,8 @@ class ImageSceneRenderThread(QThread):
         compositePatch.lock()
         compositePatch.dirty = True
         p = QPainter(compositePatch.image)
-        r = compositePatch.rect
-        p.fillRect(0, 0, r.width(), r.height(), Qt.white)
+        r = compositePatch.imageRectF
+        p.fillRect(0, 0, round(r.width()), round(r.height()), Qt.white)
 
         for layerNr in range(numLayers-1, -1, -1):
             if not self._stackedIms[layerNr].visible:
@@ -165,7 +165,7 @@ class ImageSceneRenderThread(QThread):
     def _takeJob(self):
         patchNr = self._queue.pop()
         
-        rect = self._imagePatches[0][patchNr].rect
+        rect = self._imagePatches[0][patchNr].imageRect
         
         for layerNr in range(len(self._stackedIms)):
             layer = self._stackedIms[layerNr]
