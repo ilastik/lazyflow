@@ -52,6 +52,8 @@ class ImagePatch(object):
     def __init__(self, patchRectF, imageRectF, patchNr):
         #the bounding boxes (rectangles) of all patches in one layer do not overlap
         self.patchRectF = patchRectF
+        self.patchRect  = QRect(round(patchRectF.x()),     round(patchRectF.y()), \
+                                round(patchRectF.width()), round(patchRectF.height()))
         
         #the image rectangles of neighboring patches can overlap slightly, to account
         #for inaccuracies in sub-pixel rendering of many ImagePatch objects
@@ -251,7 +253,7 @@ class ImageScene2D(QGraphicsScene):
                 p.unlock()
         
         for p in self.compositePatches():
-            if not rect.isValid() or rect.intersects(p.rect):
+            if not rect.isValid() or rect.intersects(p.patchRect):
                 #convention: if a rect is invalid, it is infinitely large
                 
                 p.dataVer += 1
