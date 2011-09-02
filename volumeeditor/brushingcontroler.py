@@ -40,7 +40,15 @@ class BrushingControler(QObject):
         slicing.insert(activeView, slicingPos[activeView])
         slicing = (t,) + tuple(slicing) + (c,)
         
-        self._dataSink.put(slicing, labels)
+        #make the labels 5d for correct graph compatibility
+        newshape = list(labels.shape)
+        newshape.insert(activeView, 1)
+        newshape.insert(0, 1)
+        newshape.append(1)
+        
+        #newlabels = numpy.zeros
+        
+        self._dataSink.put(slicing, labels.reshape(tuple(newshape)))
         
 #*******************************************************************************
 # B r u s h i n g I n t e r p r e t e r                                        *
