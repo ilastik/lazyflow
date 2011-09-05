@@ -101,16 +101,17 @@ assert issubclass(LazyflowRequest, RequestABC)
 class LazyflowSource( QObject ):
     isDirty = pyqtSignal( object )
 
-    def __init__( self, outslot ):
+    def __init__( self, outslot, priority = 0 ):
         super(LazyflowSource, self).__init__()
         self._outslot = outslot
+        self._priority = priority
         self._outslot.registerDirtyCallback(self.setDirty)
 
     def request( self, slicing ):
         print "LazyflowSource.request(%r)" % (slicing,)
         if not is_pure_slicing(slicing):
             raise Exception('ArraySource: slicing is not pure')
-        reqobj = self._outslot[slicing].allocate()        
+        reqobj = self._outslot[slicing].allocate(priority = self._priority)        
         return LazyflowRequest( reqobj )
 
     def setDirty( self, slicing ):
@@ -124,10 +125,11 @@ assert issubclass(LazyflowSource, SourceABC)
 
 
 class LazyflowSinkSource( LazyflowSource ):
-    def __init__( self, operator, outslot, inslot ):
+    def __init__( self, operator, outslot, inslot, priority = 0 ):
         LazyflowSource.__init__(self, outslot)
         self._outputSlot = outslot
         self._inputSlot = inslot
+        self._priority = priority
         self._outputSlot.registerDirtyCallback(self.setDirty)
         
 
