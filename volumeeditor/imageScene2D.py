@@ -158,7 +158,6 @@ class ImageScene2D(QGraphicsScene):
             
         assert len(sceneShape) == 2
         self.setSceneRect(0,0, *sceneShape)
-        self.addRect(QRectF(0,0,*sceneShape), pen=QPen(QColor(255,0,0)))
         
         #The scene shape is in Qt's QGraphicsScene coordinate system,
         #that is the origin is in the top left of the screen, and the
