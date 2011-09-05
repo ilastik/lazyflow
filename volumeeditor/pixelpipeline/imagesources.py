@@ -58,6 +58,7 @@ class GrayscaleImageSource( ImageSource ):
         self._arraySource2D.isDirty.connect(self.setDirty)
 
     def request( self, qrect ):
+        print "GrayscaleImageSource.request(%r)" % qrect
         assert isinstance(qrect, QRect)
         s = rect2slicing(qrect)
         req = self._arraySource2D.request(s)
@@ -123,6 +124,7 @@ class AlphaModulatedImageSource( ImageSource ):
         self._arraySource2D.isDirty.connect(self.setDirty)
 
     def request( self, qrect ):
+        print "AlphaModulatedImageSource.request(%r)" % qrect
         assert isinstance(qrect, QRect)
         s = rect2slicing(qrect)
         req = self._arraySource2D.request(s)
@@ -191,6 +193,7 @@ class ColortableImageSource( ImageSource ):
         self._colorTable = colorTable
         
     def request( self, qrect ):
+        print "ColortableImageSource.request(%r)" % qrect
         assert isinstance(qrect, QRect)
         s = rect2slicing(qrect)
         req = self._arraySource2D.request(s)
@@ -265,6 +268,7 @@ class RGBAImageSource( ImageSource ):
             arraySource.isDirty.connect(self.setDirty)
 
     def request( self, qrect ):
+        print "RGBAImageSource.request(%r)" % qrect
         assert isinstance(qrect, QRect)
         s = rect2slicing( qrect )
         r = self._channels[0].request(s)

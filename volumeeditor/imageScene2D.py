@@ -109,7 +109,7 @@ class ImageScene2D(QGraphicsScene):
     #
     # overlap between patches 
     # positive number prevents rendering artifacts between patches for certain zoom levels
-    overlap = 1
+    overlap = 0
     
     @property
     def stackedImageSources(self):

@@ -107,6 +107,7 @@ class LazyflowSource( QObject ):
         self._outslot.registerDirtyCallback(self.setDirty)
 
     def request( self, slicing ):
+        print "LazyflowSource.request(%r)" % (slicing,)
         if not is_pure_slicing(slicing):
             raise Exception('ArraySource: slicing is not pure')
         reqobj = self._outslot[slicing].allocate()        
@@ -131,7 +132,7 @@ class LazyflowSinkSource( LazyflowSource ):
         
 
     def put( self, slicing, array ):
-        print "slicing", slicing
+        print "LazyflowSinkSource.put(%r)" % (slicing,)
     
         self._inputSlot[slicing] = array
         print "array shape", array.shape
