@@ -163,8 +163,14 @@ class ImageSceneRenderThread(QThread):
         self._runningRequests.removeByRequest(request)
 
     def _takeJob(self):
-        patchNr = self._queue.pop()
-        
+        #the queue might have been emptied via cancelAll()
+        #fix this properly TODO
+        patchNr = None
+        try:
+            patchNr = self._queue.pop()
+        except:
+	        return
+			
         rect = self._imagePatches[0][patchNr].imageRect
         
         for layerNr in range(len(self._stackedIms)):
