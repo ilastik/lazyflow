@@ -6,3 +6,4 @@
 .pydevproject
 .settings/
 *.kate-swp
+*.DS_Store
