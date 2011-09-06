@@ -1,3 +1,6 @@
+import __builtin__
+from volumeeditor.colorama import Fore, Back, Style
+
 from PyQt4.QtCore import QObject, QRect, pyqtSignal, QMutex
 from PyQt4.QtGui import QImage
 from qimage2ndarray import gray2qimage, array2qimage, alpha_view, rgb_view
@@ -58,7 +61,10 @@ class GrayscaleImageSource( ImageSource ):
         self._arraySource2D.isDirty.connect(self.setDirty)
 
     def request( self, qrect ):
-        print "GrayscaleImageSource.request(%r)" % qrect
+        if __builtin__.verboseRequests:
+            print Fore.RED + "  GrayscaleImageSource '%s' requests (x=%d, y=%d, w=%d, h=%d)" \
+            % (self.objectName(), qrect.x(), qrect.y(), qrect.width(), qrect.height()) \
+            + Fore.RESET
         assert isinstance(qrect, QRect)
         s = rect2slicing(qrect)
         req = self._arraySource2D.request(s)
@@ -124,7 +130,10 @@ class AlphaModulatedImageSource( ImageSource ):
         self._arraySource2D.isDirty.connect(self.setDirty)
 
     def request( self, qrect ):
-        print "AlphaModulatedImageSource.request(%r)" % qrect
+        if __builtin__.verboseRequests:
+            print Fore.RED + "  AlphaModulatedImageSource '%s' requests (x=%d, y=%d, w=%d, h=%d)" \
+            % (self.objectName(), qrect.x(), qrect.y(), qrect.width(), qrect.height()) \
+            + Fore.RESET
         assert isinstance(qrect, QRect)
         s = rect2slicing(qrect)
         req = self._arraySource2D.request(s)
@@ -193,7 +202,10 @@ class ColortableImageSource( ImageSource ):
         self._colorTable = colorTable
         
     def request( self, qrect ):
-        print "ColortableImageSource.request(%r)" % qrect
+        if __builtin__.verboseRequests:
+            print Fore.RED + "  ColortableImageSource '%s' requests (x=%d, y=%d, w=%d, h=%d)" \
+            % (self.objectName(), qrect.x(), qrect.y(), qrect.width(), qrect.height()) \
+            + Fore.RESET
         assert isinstance(qrect, QRect)
         s = rect2slicing(qrect)
         req = self._arraySource2D.request(s)
@@ -268,7 +280,10 @@ class RGBAImageSource( ImageSource ):
             arraySource.isDirty.connect(self.setDirty)
 
     def request( self, qrect ):
-        print "RGBAImageSource.request(%r)" % qrect
+        if __builtin__.verboseRequests:
+            print Fore.RED + "  RGBAImageSource '%s' requests (x=%d, y=%d, w=%d, h=%d)" \
+            % (self.objectName(), qrect.x(), qrect.y(), qrect.width(), qrect.height()) \
+             + Fore.RESET 
         assert isinstance(qrect, QRect)
         s = rect2slicing( qrect )
         r = self._channels[0].request(s)

@@ -27,6 +27,9 @@
 #    authors and should not be interpreted as representing official policies, either expressed
 #    or implied, of their employers.
 
+import __builtin__
+from volumeeditor.colorama import Fore, Back, Style
+
 from functools import partial
 from PyQt4.QtCore import QRect, QRectF, QMutex, QPointF, Qt
 from PyQt4.QtGui import QGraphicsScene, QImage, QTransform, QPen, QColor, QBrush
@@ -287,8 +290,10 @@ class ImageScene2D(QGraphicsScene):
         for p in self.compositePatches():
             p.lock()
             if p.imgVer != p.dataVer and p.reqVer != p.dataVer and rect.intersects(p.patchRectF):
-                if self._showDebugPatches:
-                    print "ImageScene2D '%s' asks for patch=%d [%r]" % (self.objectName(), p.patchNr, p.patchRectF)
+                if __builtin__.verboseRequests:
+                    print Fore.RED + "ImageScene2D '%s' asks for patch %d = (x=%d, y=%d, w=%d, h=%d)" \
+                          % (self.objectName(), p.patchNr, p.patchRectF.x(), p.patchRectF.y(), \
+                             p.patchRectF.width(), p.patchRectF.height()) + Fore.RESET
                 self._renderThread.requestPatch(p.patchNr)
                 p.reqVer = p.dataVer
             p.unlock()
