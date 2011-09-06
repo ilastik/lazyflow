@@ -27,7 +27,7 @@
 #    authors and should not be interpreted as representing official policies, either expressed
 #    or implied, of their employers.
 
-import __builtin__
+import volumeeditor
 from volumeeditor.colorama import Fore, Back, Style
 
 from functools import partial
@@ -290,10 +290,12 @@ class ImageScene2D(QGraphicsScene):
         for p in self.compositePatches():
             p.lock()
             if p.imgVer != p.dataVer and p.reqVer != p.dataVer and rect.intersects(p.patchRectF):
-                if __builtin__.verboseRequests:
+                if volumeeditor.verboseRequests:
+                    volumeeditor.printLock.acquire()
                     print Fore.RED + "ImageScene2D '%s' asks for patch %d = (x=%d, y=%d, w=%d, h=%d)" \
                           % (self.objectName(), p.patchNr, p.patchRectF.x(), p.patchRectF.y(), \
                              p.patchRectF.width(), p.patchRectF.height()) + Fore.RESET
+                    volumeeditor.printLock.release()
                 self._renderThread.requestPatch(p.patchNr)
                 p.reqVer = p.dataVer
             p.unlock()

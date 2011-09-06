@@ -27,8 +27,22 @@
 #    authors and should not be interpreted as representing official policies, either expressed
 #    or implied, of their employers.
 
-import __builtin__
-__builtin__.verboseRequests = True
+verboseRequests = True
 
 import colorama
 colorama.init()
+
+import threading
+printLock = threading.Lock()
+
+def strSlicing(slicing):
+    str = "("
+    for i,s in enumerate(slicing):
+        str += "%d:%d" % (s.start, s.stop)
+        if i != len(slicing)-1:
+            str += ","
+    str += ")"
+    return str
+
+def strQRect(qrect):
+    return "(x=%d,y=%d,w=%d,h=%d)" % (qrect.x(),qrect.y(), qrect.width(), qrect.height())
