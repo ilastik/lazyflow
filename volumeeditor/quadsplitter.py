@@ -27,7 +27,7 @@
 #    authors and should not be interpreted as representing official policies, either expressed
 #    or implied, of their employers.
 
-from PyQt4.QtCore import Qt, pyqtSignal
+from PyQt4.QtCore import Qt, pyqtSignal, QEvent
 from PyQt4.QtGui import QSizePolicy, QWidget, QVBoxLayout, QSplitter
             
 class ImageView2DFloatingWindow(QWidget):
@@ -120,6 +120,7 @@ class QuadView(QWidget):
         QWidget.__init__(self, parent)
         
         self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        self.installEventFilter(self)
         
         self.dockableContainer = []
         
@@ -176,6 +177,12 @@ class QuadView(QWidget):
         self.splitHorizontal2.addWidget(self.dock2_ofSplitHorizontal2)  
         
         #QTimer.singleShot(0, self.synchronizeSplitter)
+        
+    def eventFilter(self, obj, event):
+        if(event.type()==QEvent.WindowActivate):
+            self._synchronizeSplitter()
+        return False
+            
         
     def _synchronizeSplitter(self):
         sizes1 = self.splitHorizontal1.sizes()
