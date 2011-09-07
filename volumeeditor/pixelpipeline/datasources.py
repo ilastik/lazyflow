@@ -86,6 +86,8 @@ class LazyflowRequest( object ):
     def getResult(self):
         return self._lazyflow_request.getResult()
         
+    def adjustPriority(self,delta):
+        self._lazyflow_request.adjustPriority(delta)
 
     def cancel( self ):
         self._lazyflow_request.cancel()
@@ -157,6 +159,9 @@ class ConstantRequest( object ):
     
     def cancel( self ):
         pass
+        
+    def adjustPriority(self, delta):
+        pass        
         
     # callback( result = result, **kwargs )
     def notify( self, callback, **kwargs ):

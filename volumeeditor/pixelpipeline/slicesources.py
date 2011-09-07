@@ -28,6 +28,9 @@ class SliceRequest( object ):
 
     def cancel( self ):
         self._ar.cancel()
+        
+    def adjustPriority(self, delta):
+        self._ar.adjustPriority(delta)
 
     def _onNotify( self, result, package ):
         callback, kwargs = package

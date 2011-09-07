@@ -106,11 +106,14 @@ class GrayscaleImageRequest( object ):
     
     def cancel( self ):
         self.cancelLock()
-        self._arrayreq.cancel()
+        #self._arrayreq.cancel()
+        self._arrayreq.adjustPriority(-50)        
         self._canceled = True
         self.cancelUnlock()
     
     def _onNotify( self, result, package ):
+        if self._canceled:
+            return
         img = self.toImage()
         callback = package[0]
         kwargs = package[1]
@@ -179,10 +182,13 @@ class AlphaModulatedImageRequest( object ):
     def cancel( self ):
         self.cancelLock()
         self._arrayreq.cancel()
+        self._arrayreq.adjustPriority(-50)   
         self._canceled = True
         self.cancelUnlock()
     
     def _onNotify( self, result, package ):
+        if self._canceled:
+            return        
         img = self.toImage()
         callback = package[0]
         kwargs = package[1]
@@ -245,10 +251,13 @@ class ColortableImageRequest( object ):
     def cancel( self ):
         self.cancelLock()
         self._arrayreq.cancel()
+        self._arrayreq.adjustPriority(-50)   
         self._canceled = True
         self.cancelUnlock()
     
     def _onNotify( self, result, package ):
+        if self._canceled:
+            return        
         img = self.toImage()
         callback = package[0]
         kwargs = package[1]
@@ -341,11 +350,14 @@ class RGBAImageRequest( object ):
     def cancel( self ):
         self.cancelLock()
         for r in self._requests:
-            r.cancel()
+            #r.cancel()
+            r.adjustPriority(-50)   
         self._canceled = True
         self.cancelUnlock()
 
     def _onNotify( self, result, package ):
+        if self._canceled:
+            return        
         channel = package[0]
         self._requestsFinished[channel] = True
         if all(self._requestsFinished):
