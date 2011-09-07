@@ -63,4 +63,5 @@ class BrushingInterpreter(QObject):
             self._imageViews[i].beginDraw.connect(self._brushingModel.beginDrawing)
             self._imageViews[i].endDraw.connect(self._brushingModel.endDrawing)
             self._imageViews[i].drawing.connect(self._brushingModel.moveTo)
+            self._imageViews[i].erasingToggled.connect(self._brushingModel.toggleErase)
     
