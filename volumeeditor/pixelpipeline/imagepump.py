@@ -87,7 +87,6 @@ class ImagePump( object ):
 
         ## handle layers removed from layerStackModel
         def onRowsAboutToBeRemoved( parent, start, end):
-            print "ImagePump.onRowsAboutToBeRemoved"
             self._stackedImageSources.aboutToResize.emit(len(self._layerStackModel)-(end-start+1))
             for i in xrange(start, end + 1):
                 layer = self._layerStackModel[i]
@@ -95,7 +94,6 @@ class ImagePump( object ):
         layerStackModel.rowsAboutToBeRemoved.connect(onRowsAboutToBeRemoved)
 
         def onRowsAboutToBeInserted(parent, start, end):
-            print "ImagePump.onwRowsAboutToBeInserted"
             self._stackedImageSources.aboutToResize.emit(len(self._layerStackModel)+(end-start+1))
         layerStackModel.rowsAboutToBeInserted.connect(onRowsAboutToBeInserted)
 

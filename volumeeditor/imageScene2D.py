@@ -129,12 +129,10 @@ class ImageScene2D(QGraphicsScene):
         self._initializePatches()
 
     def _onAboutToResize(self, newSize):
-        print "<_onAboutToResize(newSize=%d), %r>" % (newSize, self)
         self._renderThread.stop()
         self._numLayers = newSize
         self._initializePatches()
         self._renderThread.start()
-        print "</_onAboutToResize, %r>" % self
 
     @property
     def showDebugPatches(self):

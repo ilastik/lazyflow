@@ -140,10 +140,7 @@ class LazyflowSinkSource( LazyflowSource ):
         return LazyflowRequest( reqobj )
 
     def put( self, slicing, array ):
-        print "LazyflowSinkSource.put(%r)" % (slicing,)
-    
         self._inputSlot[slicing] = array
-        print "array shape", array.shape
         pure = index2slice(slicing)
         
 #*******************************************************************************

@@ -149,13 +149,11 @@ class VolumeEditor( QObject ):
         self.brushingControler = BrushingControler(self.brushingModel, self.posModel, labelsink)
         
         def onBrushSize(s):
-            print "onBrushSize"
             b = QPen(QBrush(self.brushingModel.drawColor), s)
             #b = QPen(QBrush(QColor(0,255,0)), 15) #for testing
             for s in self.imageScenes:
                 s.setBrush(b)
         def onBrushColor(c):
-            print "onBrushColor"
             b = QPen(QBrush(c), self.brushingModel.brushSize)
             #b = QPen(QBrush(QColor(0,255,0)), 15) #for testing
             for s in self.imageScenes:
