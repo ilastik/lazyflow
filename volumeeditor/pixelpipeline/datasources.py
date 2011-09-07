@@ -80,12 +80,10 @@ class LazyflowRequest( object ):
     def getResult(self):
         return self._lazyflow_request.getResult()
         
-<<<<<<< HEAD
+
     def adjustPriority(self,delta):
         self._lazyflow_request.adjustPriority(delta)
-
-=======
->>>>>>> 61d7f093a3bdedaf86de3073058d50b8bf80c495
+        
     def cancel( self ):
         self._lazyflow_request.cancel()
 
