@@ -1,5 +1,6 @@
 from PyQt4.QtCore import QObject, pyqtSignal
 from asyncabcs import RequestABC, SourceABC
+import volumeeditor
 from volumeeditor.slicingtools import is_pure_slicing, slicing2shape, is_bounded, index2slice
 import numpy as np
 
@@ -65,12 +66,6 @@ class ArraySinkSource( ArraySource ):
         pure = index2slice(slicing)
         self.setDirty(pure)
 
-
-
-
-
-
-
 #*******************************************************************************
 # L a z y f l o w R e q u e s t                                                *
 #*******************************************************************************
@@ -82,13 +77,15 @@ class LazyflowRequest( object ):
     def wait( self ):
         return self._lazyflow_request.wait()
         
-        
     def getResult(self):
         return self._lazyflow_request.getResult()
         
+<<<<<<< HEAD
     def adjustPriority(self,delta):
         self._lazyflow_request.adjustPriority(delta)
 
+=======
+>>>>>>> 61d7f093a3bdedaf86de3073058d50b8bf80c495
     def cancel( self ):
         self._lazyflow_request.cancel()
 
@@ -110,9 +107,12 @@ class LazyflowSource( QObject ):
         self._outslot.registerDirtyCallback(self.setDirty)
 
     def request( self, slicing ):
-        print "LazyflowSource.request(%r)" % (slicing,)
+        if volumeeditor.verboseRequests:
+            volumeeditor.printLock.acquire()
+            print "  LazyflowSource '%s' requests %s" % (self.objectName(), volumeeditor.strSlicing(slicing))
+            volumeeditor.printLock.release()
         if not is_pure_slicing(slicing):
-            raise Exception('ArraySource: slicing is not pure')
+            raise Exception('LazyflowSource: slicing is not pure')
         reqobj = self._outslot[slicing].allocate(priority = self._priority)        
         return LazyflowRequest( reqobj )
 
@@ -123,9 +123,6 @@ class LazyflowSource( QObject ):
         
 assert issubclass(LazyflowSource, SourceABC)
 
-
-
-
 class LazyflowSinkSource( LazyflowSource ):
     def __init__( self, operator, outslot, inslot, priority = 0 ):
         LazyflowSource.__init__(self, outslot)
@@ -133,7 +130,16 @@ class LazyflowSinkSource( LazyflowSource ):
         self._inputSlot = inslot
         self._priority = priority
         self._outputSlot.registerDirtyCallback(self.setDirty)
-        
+
+    def request( self, slicing ):
+        if volumeeditor.verboseRequests:
+            volumeeditor.printLock.acquire()
+            print "  LazyflowSinkSource '%s' requests %s" % (self.objectName(), volumeeditor.strSlicing(slicing))
+            volumeeditor.printLock.release()
+        if not is_pure_slicing(slicing):
+            raise Exception('LazyflowSinkSource: slicing is not pure')
+        reqobj = self._outslot[slicing].allocate(priority = self._priority)        
+        return LazyflowRequest( reqobj )
 
     def put( self, slicing, array ):
         print "LazyflowSinkSource.put(%r)" % (slicing,)
@@ -142,7 +148,6 @@ class LazyflowSinkSource( LazyflowSource ):
         print "array shape", array.shape
         pure = index2slice(slicing)
         
-
 #*******************************************************************************
 # C o n s t a n t R e q u e s t                                                *
 #*******************************************************************************
@@ -193,8 +198,6 @@ class ConstantSource( QObject ):
             raise Exception('dirty region: slicing is not pure')
         self.isDirty.emit( slicing )
 assert issubclass(ConstantSource, SourceABC)
-
-
 
 
 #*******************************************************************************

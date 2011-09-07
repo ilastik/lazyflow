@@ -1,6 +1,8 @@
 from PyQt4.QtCore import QThread, pyqtSignal, Qt, QMutex
 from PyQt4.QtGui import QPainter
 
+import volumeeditor
+
 import threading
 from collections import deque
 
@@ -177,7 +179,11 @@ class ImageSceneRenderThread(QThread):
             layer = self._stackedIms[layerNr]
             imageSource = self._stackedIms._layerToIms[layer]
             if layer.visible:
-                print "ImageSceneRenderThread._takeJob: requesting rect=%r" % rect
+                if volumeeditor.verboseRequests:
+                    volumeeditor.printLock.acquire()
+                    print "  ImageSceneRenderThread._takeJob: requesting rect=%s" % volumeeditor.strQRect(rect)
+                    volumeeditor.printLock.release()
+                    
                 request = imageSource.request(rect)
                 self._runningRequests.addRequest(patchNr, request)
                 request.notify(self._onPatchFinished, request=request, patchNumber=patchNr, patchLayer=layerNr)
