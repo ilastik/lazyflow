@@ -11,7 +11,7 @@ def createImageSource( layer, datasources2d ):
     assert len(datasources2d) == 1
     src = AlphaModulatedImageSource( datasources2d[0], layer )
     src.setObjectName(layer.name)
-    layer.nameChanged.connect(src.setObjectName)
+    layer.nameChanged.connect(lambda x: src.setObjectName(str(x)))
     layer.tintColorChanged.connect(lambda: src.setDirty((slice(None,None), slice(None,None))))
     return src
 
@@ -20,7 +20,7 @@ def createImageSource( layer, datasources2d ):
     assert len(datasources2d) == 1
     src = GrayscaleImageSource( datasources2d[0], layer )
     src.setObjectName(layer.name)
-    layer.nameChanged.connect(src.setObjectName)
+    layer.nameChanged.connect(lambda x: src.setObjectName(str(x)))
     layer.thresholdingChanged.connect(lambda: src.setDirty((slice(None,None), slice(None,None))))
     return src
 
@@ -29,7 +29,7 @@ def createImageSource( layer, datasources2d ):
     assert len(datasources2d) == 1
     src = ColortableImageSource( datasources2d[0], layer.colorTable )
     src.setObjectName(layer.name)
-    layer.nameChanged.connect(src.setObjectName)
+    layer.nameChanged.connect(lambda x: src.setObjectName(str(x)))
     return src
 
 @multimethod(RGBALayer, list)
@@ -43,6 +43,6 @@ def createImageSource( layer, datasources2d ):
         ds[3] = ConstantSource(layer.alpha_missing_value)
     src = RGBAImageSource( ds[0], ds[1], ds[2], ds[3], layer )
     src.setObjectName(layer.name)
-    layer.nameChanged.connect(src.setObjectName)
+    layer.nameChanged.connect(lambda x: src.setObjectName(str(x)))
     layer.thresholdingChanged.connect(lambda: src.setDirty((slice(None,None), slice(None,None))))
     return src
