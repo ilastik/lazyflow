@@ -12,8 +12,8 @@ class StackedImageSources( QObject ):
     LayerStackModel, and each Layer object has a corresponding ImageSource
     object that can be queried to produce images which adhere to the
     specification as defined in the Layer object. 
-    """
-    
+
+    """    
     layerDirty    = pyqtSignal(int, QRect)
     stackChanged  = pyqtSignal()
     aboutToResize = pyqtSignal(int)
@@ -34,18 +34,17 @@ class StackedImageSources( QObject ):
         return self._layerStackModel.rowCount()
 
     def __getitem__(self, i):
-        return self._layerToIms[self._layerStackModel[i]]
+        layer = self._layerStackModel[i]
+        return (layer.visible, layer.opacity, self._layerToIms[layer])
 
     def __iter__( self ):
-        for layerNr, layer in enumerate(self._layerStackModel):
-            if layer.visible:
-                yield (layerNr, layer.opacity, self._layerToIms[layer])
+        return ( (layer.visible, layer.opacity, self._layerToIms[layer]) for layer in self._layerStackModel )
                 
-    def __reversed__(self):
-        for layerNr in range(len(self._layerStackModel)-1, -1, -1):
-            layer = self._layerStackModel[layerNr]
-            if layer.visible:
-                yield (layerNr, layer.opacity, self._layerToIms[layer])
+    def __reversed__( self ):
+        return ( (layer.visible, layer.opacity, self._layerToIms[layer]) for layer in reversed(self._layerStackModel) )
+
+    def getImageSource( self, index ):
+        return self._layerToIms[self._layerStackModel[index]]
 
     def register( self, layer, imageSource ):
         assert not layer in self._layerToIms, "layer %s already registered" % str(layer)

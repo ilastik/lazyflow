@@ -149,14 +149,17 @@ class ImageSceneRenderThread(QThread):
         r = compositePatch.imageRectF
         p.fillRect(0, 0, round(r.width()), round(r.height()), Qt.white)
 
-        for layerNr, layerOpacity, layerImageSource in reversed(self._stackedIms):
-            patch = self._imagePatches[layerNr][patchNumber]
-            
-            if patch.imgVer != patch.dataVer:
-                continue
-            
-            p.setOpacity(layerOpacity)
-            p.drawImage(0, 0, patch.image)
+        for i, v in enumerate(reversed(self._stackedIms)):
+            visible, layerOpacity, layerImageSource = v
+            if visible:
+                layerNr = len(self._stackedIms) - i - 1
+                patch = self._imagePatches[layerNr][patchNumber]
+                
+                if patch.imgVer != patch.dataVer:
+                    continue
+                
+                p.setOpacity(layerOpacity)
+                p.drawImage(0, 0, patch.image)
         p.end()
         compositePatch.imgVer = compositePatch.reqVer
         
@@ -189,7 +192,7 @@ class ImageSceneRenderThread(QThread):
                   % (layerNr, patchNr, volumeeditor.strQRect(rect))
             volumeeditor.printLock.release()
             
-        request = self._stackedIms[layerNr].request(rect)
+        request = self._stackedIms.getImageSource(layerNr).request(rect)
         self._runningRequests.addRequest((layerNr, patchNr), request)
         request.notify(self._onPatchFinished, request=request, patchNumber=patchNr, patchLayer=layerNr)
 
