@@ -4,6 +4,16 @@ from slicesources import SliceSource, SyncedSliceSources
 from imagesourcefactories import createImageSource
 
 class StackedImageSources( QObject ):
+    """
+    Manages an ordered stack of image sources.
+    
+    The StackedImageSources manages the 'add' and 'remove' operation to a stack
+    of objects derived from 'ImageSource'. The stacking order mirrors the
+    LayerStackModel, and each Layer object has a corresponding ImageSource
+    object that can be queried to produce images which adhere to the
+    specification as defined in the Layer object. 
+    """
+    
     isDirty      = pyqtSignal( QRect )
     stackChanged = pyqtSignal()
     aboutToResize = pyqtSignal(int)
@@ -18,15 +28,18 @@ class StackedImageSources( QObject ):
     def __len__( self ):
         return self._layerStackModel.rowCount()
 
-#    def __iter__( self ):
-#        for layer in reversed(self._layerStackModel):
-#            yield (layer.opacity, layer.visible, self._layerToIms[layer])
-
-    def __getitem__(self, i):
-        return self._layerStackModel[i]
+    def __iter__( self ):
+        for layerNr, layer in enumerate(self._layerStackModel):
+            if layer.visible:
+                yield (layerNr, layer.opacity, self._layerToIms[layer])
+                
+    def __reversed__(self):
+        for layerNr in range(len(self._layerStackModel)-1, -1, -1):
+            layer = self._layerStackModel[layerNr]
+            if layer.visible:
+                yield (layerNr, layer.opacity, self._layerToIms[layer])
 
     def register( self, layer, imageSource ):
-        #print "<StackedImageSources.register(self=%r, layer=%r, imageSource=%r)>" % (self, layer, imageSource)
         assert not layer in self._layerToIms, "layer %s already registered" % str(layer)
         self._layerToIms[layer] = imageSource
         imageSource.isDirty.connect(self.isDirty)
@@ -34,10 +47,8 @@ class StackedImageSources( QObject ):
         layer.opacityChanged.connect( self._curryRegistry[layer] )
         layer.visibleChanged.connect( self._onVisibleChanged )
         self.stackChanged.emit()
-        #print "</StackedImageSources.register(self=%r)>" % (self)
 
     def deregister( self, layer ):
-        #print "<StackedImageSources.deregister(self=%r, layer=%r)>" % (self, layer)
         assert layer in self._layerToIms, "layer %s is not registered; can't be deregistered" % str(layer)
         ims = self._layerToIms[layer]
         ims.isDirty.disconnect( self.isDirty)
@@ -46,7 +57,6 @@ class StackedImageSources( QObject ):
         del self._curryRegistry[layer]
         del self._layerToIms[layer]
         self.stackChanged.emit()
-        #print "</StackedImageSources.deregister(self=%r)>" % (self)
 
     def isRegistered( self, layer ):
         return layer in self._layerToIms
@@ -57,8 +67,6 @@ class StackedImageSources( QObject ):
 
     def _onVisibleChanged( self, visible ):
         self.isDirty.emit( QRect() )
-
-
 
 #*******************************************************************************
 # I m a g e P u m p                                                            *
@@ -124,18 +132,14 @@ class ImagePump( object ):
         return slicesrcs, ims
 
     def _addLayer( self, layer ):
-        #print "<ImagePump._addLayer(self=%r, layer=%r) >" % (self, layer)
         sliceSources, imageSource = self._createSources(layer)
         for ss in sliceSources:
             self._syncedSliceSources.add(ss)
         self._layerToSliceSrcs[layer] = sliceSources
         self._stackedImageSources.register(layer, imageSource)
-        #print "</ImagePump._addLayer>(self=%r)>" % self
 
     def _removeLayer( self, layer ):
-        #print "<ImagePump._removeLayer(self=%r, layer=%r) >" % (self, layer)
         self._stackedImageSources.deregister(layer)
         for ss in self._layerToSliceSrcs[layer]:
             self._syncedSliceSources.remove(ss)
         del self._layerToSliceSrcs[layer] 
-        #print "</ImagePump._removeLayer(self=%r)>" % self               

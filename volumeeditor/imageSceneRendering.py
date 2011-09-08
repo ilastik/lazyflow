@@ -144,11 +144,9 @@ class ImageSceneRenderThread(QThread):
         r = compositePatch.imageRectF
         p.fillRect(0, 0, round(r.width()), round(r.height()), Qt.white)
 
-        for layerNr in range(numLayers-1, -1, -1):
-            if not self._stackedIms[layerNr].visible:
-                continue
+        for layerNr, layerOpacity, layerImageSource in reversed(self._stackedIms):
             patch = self._imagePatches[layerNr][patchNumber]
-            p.setOpacity(self._stackedIms[layerNr].opacity)
+            p.setOpacity(layerOpacity)
             p.drawImage(0, 0, patch.image)
         p.end()
         compositePatch.imgVer = compositePatch.reqVer
@@ -175,18 +173,15 @@ class ImageSceneRenderThread(QThread):
 			
         rect = self._imagePatches[0][patchNr].imageRect
         
-        for layerNr in range(len(self._stackedIms)):
-            layer = self._stackedIms[layerNr]
-            imageSource = self._stackedIms._layerToIms[layer]
-            if layer.visible:
-                if volumeeditor.verboseRequests:
-                    volumeeditor.printLock.acquire()
-                    print "  ImageSceneRenderThread._takeJob: requesting rect=%s" % volumeeditor.strQRect(rect)
-                    volumeeditor.printLock.release()
-                    
-                request = imageSource.request(rect)
-                self._runningRequests.addRequest(patchNr, request)
-                request.notify(self._onPatchFinished, request=request, patchNumber=patchNr, patchLayer=layerNr)
+        for layerNr, layerOpacity, layerImageSource in self._stackedIms:
+            if volumeeditor.verboseRequests:
+                volumeeditor.printLock.acquire()
+                print "  ImageSceneRenderThread._takeJob: requesting rect=%s" % volumeeditor.strQRect(rect)
+                volumeeditor.printLock.release()
+                
+            request = layerImageSource.request(rect)
+            self._runningRequests.addRequest(patchNr, request)
+            request.notify(self._onPatchFinished, request=request, patchNumber=patchNr, patchLayer=layerNr)
 
     def _runImpl(self):
         self._dataPending.wait()
