@@ -354,7 +354,7 @@ class ImageScene2D(QGraphicsScene):
                     
                     rectangle = QRectF(p.patchRectF.center()-QPointF(w/4,h/4), QSizeF(w/2, h/2));
                     startAngle = 0 * 16
-                    spanAngle  = numDirtyLayers/float(self._numLayers)*360.0 * 16
+                    spanAngle  = int(numDirtyLayers/float(self._numLayers)*360.0) * 16
                     painter.drawPie(rectangle, startAngle, spanAngle);
                     
                     painter.setBrush(QBrush(dirtyColor, Qt.NoBrush))
