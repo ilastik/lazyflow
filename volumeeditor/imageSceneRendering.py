@@ -142,7 +142,7 @@ class ImageSceneRenderThread(QThread):
         numLayers = len(self._imagePatches) - 2
         compositePatch = self._imagePatches[numLayers][patchNumber]
     
-        ### render the composite patch ######             
+        ### render the composite patch ######
         compositePatch.lock()
         compositePatch.dirty = True
         p = QPainter(compositePatch.image)
@@ -151,6 +151,10 @@ class ImageSceneRenderThread(QThread):
 
         for layerNr, layerOpacity, layerImageSource in reversed(self._stackedIms):
             patch = self._imagePatches[layerNr][patchNumber]
+            
+            if patch.imgVer != patch.dataVer:
+                continue
+            
             p.setOpacity(layerOpacity)
             p.drawImage(0, 0, patch.image)
         p.end()
