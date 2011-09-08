@@ -109,7 +109,7 @@ class ImageScene2D(QGraphicsScene):
     """
     
     # base patch size: blockSize x blockSize
-    blockSize = 128
+    blockSize = 256
     #
     # overlap between patches 
     # positive number prevents rendering artifacts between patches for certain zoom levels
@@ -351,20 +351,14 @@ class ImageScene2D(QGraphicsScene):
                     
                     w,h = p.patchRectF.width(), p.patchRectF.height()
                     
-                    rectangle = QRectF(p.patchRectF.center()-QPointF(w/4,w/4), QSizeF(w/2, w/2));
+                    rectangle = QRectF(p.patchRectF.center()-QPointF(w/4,h/4), QSizeF(w/2, h/2));
                     startAngle = 0 * 16
                     spanAngle  = numDirtyLayers/float(self._numLayers)*360.0 * 16
                     painter.drawPie(rectangle, startAngle, spanAngle);
-                    print "pie", startAngle, spanAngle
                     
                     painter.setBrush(QBrush(dirtyColor, Qt.NoBrush))
                     adjRect = p.patchRectF.adjusted(5,5,-5,-5)
                     painter.drawRect(adjRect)
-                    
-#                    if numDirtyLayers < self._numLayers:
-#                        painter.setBrush(QBrush(doneColor, Qt.SolidPattern))
-#                        painter.setPen(doneColor)
-#                        painter.drawPie(rectangle, spanAngle, 360*16);
 
                 else:
                     painter.setBrush(QBrush(doneColor, Qt.NoBrush))

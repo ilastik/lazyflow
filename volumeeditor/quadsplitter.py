@@ -27,7 +27,7 @@
 #    authors and should not be interpreted as representing official policies, either expressed
 #    or implied, of their employers.
 
-from PyQt4.QtCore import Qt, pyqtSignal, QEvent
+from PyQt4.QtCore import Qt, pyqtSignal, QEvent, QTimer
 from PyQt4.QtGui import QSizePolicy, QWidget, QVBoxLayout, QSplitter
             
 class ImageView2DFloatingWindow(QWidget):
@@ -176,14 +176,33 @@ class QuadView(QWidget):
 
         self.splitHorizontal2.addWidget(self.dock2_ofSplitHorizontal2)  
         
-        #QTimer.singleShot(0, self.synchronizeSplitter)
+        #this is a hack: with 0 ms it does not work...
+        QTimer.singleShot(250, self._resizeEqual)
+    
+    def _resizeEqual(self):
+        w, h = self.size().width()-self.splitHorizontal1.handleWidth(), self.size().height()-self.splitVertical.handleWidth()
+        docks = [self.imageView2D_1, self.imageView2D_2, self.imageView2D_3, self.testView4]
         
+        w1  = [docks[i].minimumSize().width() for i in [0,2] ]
+        w2  = [docks[i].minimumSize().width() for i in [1,3] ]
+        wLeft  = max(w1)
+        wRight = max(w2)
+        if wLeft > wRight and wLeft > w/2:
+            wRight = w - wLeft
+        elif wRight >= wLeft and wRight > w/2:
+            wLeft = w - wRight
+        else:
+            wLeft = w/2
+            wRight = w/2
+        self.splitHorizontal1.setSizes([wLeft, wRight])
+        self.splitHorizontal2.setSizes([wLeft, wRight])
+        self.splitVertical.setSizes([h/2, h/2])
+            
     def eventFilter(self, obj, event):
         if(event.type()==QEvent.WindowActivate):
             self._synchronizeSplitter()
         return False
-            
-        
+                
     def _synchronizeSplitter(self):
         sizes1 = self.splitHorizontal1.sizes()
         sizes2 = self.splitHorizontal2.sizes()        
