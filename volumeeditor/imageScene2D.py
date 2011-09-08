@@ -108,7 +108,7 @@ class ImageScene2D(QGraphicsScene):
     """
     
     # base patch size: blockSize x blockSize
-    blockSize = 128
+    blockSize = 512
     #
     # overlap between patches 
     # positive number prevents rendering artifacts between patches for certain zoom levels
@@ -241,6 +241,11 @@ class ImageScene2D(QGraphicsScene):
     
     def _onLayerDirty(self, layerNr, rect):
         print "layer=%d reports dirty rect=%r" % (layerNr, rect)
+        
+        for p in self._imagePatches[layerNr]:
+            if not rect.isValid() or p.patchRect.intersects(rect):
+                p.dataVer += 1
+        
         self._invalidateRect(rect)
             
     def _invalidateRect(self, rect = QRect()):
@@ -259,7 +264,6 @@ class ImageScene2D(QGraphicsScene):
         for p in self.compositePatches():
             if not rect.isValid() or rect.intersects(p.patchRect):
                 #convention: if a rect is invalid, it is infinitely large
-                
                 p.dataVer += 1
                 self._schedulePatchRedraw(p.patchNr)
                 
@@ -289,18 +293,25 @@ class ImageScene2D(QGraphicsScene):
     
     def drawBackground(self, painter, rect):
         #Find all patches that intersect the given 'rect'.
-        for p in self.compositePatches():
-            p.lock()
-            if p.imgVer != p.dataVer and p.reqVer != p.dataVer and rect.intersects(p.patchRectF):
-                if volumeeditor.verboseRequests:
-                    volumeeditor.printLock.acquire()
-                    print Fore.RED + "ImageScene2D '%s' asks for patch %d = (x=%d, y=%d, w=%d, h=%d)" \
-                          % (self.objectName(), p.patchNr, p.patchRectF.x(), p.patchRectF.y(), \
-                             p.patchRectF.width(), p.patchRectF.height()) + Fore.RESET
-                    volumeeditor.printLock.release()
-                self._renderThread.requestPatch(p.patchNr)
-                p.reqVer = p.dataVer
-            p.unlock()
+        for patchNr in range(len(self._imagePatches[0])):
+            p = self._imagePatches[0][patchNr]            
+            if rect.intersects(p.patchRectF):
+                for layerNr in range(self._numLayers):
+                    p = self._imagePatches[layerNr][patchNr]
+                    p.lock()
+                    
+                    if p.imgVer != p.dataVer and p.reqVer != p.dataVer:
+                        #
+                        if volumeeditor.verboseRequests:
+                            volumeeditor.printLock.acquire()
+                            print Fore.RED + "ImageScene2D '%s' asks for layer=%d, patch %d = (x=%d, y=%d, w=%d, h=%d)" \
+                                  % (self.objectName(), layerNr, p.patchNr, p.patchRectF.x(), p.patchRectF.y(), \
+                                     p.patchRectF.width(), p.patchRectF.height()) + Fore.RESET
+                            volumeeditor.printLock.release()
+                        #
+                        self._renderThread.requestPatch(p.patchNr)
+                        p.reqVer = p.dataVer
+                    p.unlock()
         
         for p in self.compositePatches():
             

@@ -131,7 +131,10 @@ class ImageSceneRenderThread(QThread):
         thisPatch = self._imagePatches[patchLayer][patchNumber]
         
         ### one layer of this patch is done, just assign the newly arrived image
+        thisPatch.lock()
         thisPatch.image = image
+        thisPatch.imgVer = thisPatch.reqVer
+        thisPatch.unlock()
         ### ...done
         
         numLayers = len(self._imagePatches) - 2
