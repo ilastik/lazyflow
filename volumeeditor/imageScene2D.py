@@ -309,7 +309,7 @@ class ImageScene2D(QGraphicsScene):
                                      p.patchRectF.width(), p.patchRectF.height()) + Fore.RESET
                             volumeeditor.printLock.release()
                         #
-                        self._renderThread.requestPatch(p.patchNr)
+                        self._renderThread.requestPatch((layerNr, p.patchNr))
                         p.reqVer = p.dataVer
                     p.unlock()
         

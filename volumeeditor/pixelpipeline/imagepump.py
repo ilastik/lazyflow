@@ -33,6 +33,9 @@ class StackedImageSources( QObject ):
     def __len__( self ):
         return self._layerStackModel.rowCount()
 
+    def __getitem__(self, i):
+        return self._layerToIms[self._layerStackModel[i]]
+
     def __iter__( self ):
         for layerNr, layer in enumerate(self._layerStackModel):
             if layer.visible:

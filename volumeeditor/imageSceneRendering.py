@@ -17,6 +17,7 @@ class Requests(object):
         self._r = set()
 
     def addRequest(self, reqId, request):
+        assert isinstance(reqId, tuple)
         self._mutex.lock()
         
         if not reqId in self._id2r:
@@ -27,6 +28,7 @@ class Requests(object):
         self._mutex.unlock()
         
     def removeById(self, reqId):
+        assert isinstance(reqId, tuple)
         self._mutex.lock()
         if id in self._id2r:
             for req in self._id2r[reqId]:
@@ -84,11 +86,11 @@ class ImageSceneRenderThread(QThread):
         self._stackedIms = stackedImageSources
         self._runningRequests = Requests()
 
-    def requestPatch(self, patchNr):
-        self._runningRequests.removeById(patchNr)
+    def requestPatch(self, layerPatch):
+        self._runningRequests.removeById(layerPatch)
         
-        if patchNr not in self._queue:
-            self._queue.append(patchNr)
+        if layerPatch not in self._queue:
+            self._queue.append(layerPatch)
             self._dataPending.set()
 
     def stop(self):
@@ -168,23 +170,24 @@ class ImageSceneRenderThread(QThread):
     def _takeJob(self):
         #the queue might have been emptied via cancelAll()
         #fix this properly TODO
-        patchNr = None
+        layerPatch = None
         try:
-            patchNr = self._queue.pop()
+            layerPatch = self._queue.pop()
         except:
-	        return
-			
+            return
+        layerNr, patchNr = layerPatch
+        
         rect = self._imagePatches[0][patchNr].imageRect
         
-        for layerNr, layerOpacity, layerImageSource in self._stackedIms:
-            if volumeeditor.verboseRequests:
-                volumeeditor.printLock.acquire()
-                print "  ImageSceneRenderThread._takeJob: requesting rect=%s" % volumeeditor.strQRect(rect)
-                volumeeditor.printLock.release()
-                
-            request = layerImageSource.request(rect)
-            self._runningRequests.addRequest(patchNr, request)
-            request.notify(self._onPatchFinished, request=request, patchNumber=patchNr, patchLayer=layerNr)
+        if volumeeditor.verboseRequests:
+            volumeeditor.printLock.acquire()
+            print "  ImageSceneRenderThread._takeJob: requesting layer=%d, patch=%d {rect=%s}" \
+                  % (layerNr, patchNr, volumeeditor.strQRect(rect))
+            volumeeditor.printLock.release()
+            
+        request = self._stackedIms[layerNr].request(rect)
+        self._runningRequests.addRequest((layerNr, patchNr), request)
+        request.notify(self._onPatchFinished, request=request, patchNumber=patchNr, patchLayer=layerNr)
 
     def _runImpl(self):
         self._dataPending.wait()
