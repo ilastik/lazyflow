@@ -109,7 +109,7 @@ class ImageScene2D(QGraphicsScene):
     """
     
     # base patch size: blockSize x blockSize
-    blockSize = 128
+    blockSize = 256
     #
     # overlap between patches 
     # positive number prevents rendering artifacts between patches for certain zoom levels
