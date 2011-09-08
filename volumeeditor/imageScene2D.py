@@ -121,7 +121,7 @@ class ImageScene2D(QGraphicsScene):
     @stackedImageSources.setter
     def stackedImageSources(self, s):
         self._stackedImageSources = s
-        s.isDirty.connect(self._invalidateRect)
+        s.layerDirty.connect(self._onLayerDirty)
         self._initializePatches()
         s.stackChanged.connect(partial(self._invalidateRect, QRect()))
         s.aboutToResize.connect(self._onAboutToResize)
@@ -238,6 +238,10 @@ class ImageScene2D(QGraphicsScene):
         return self._imagePatches[self._numLayers]
     def brushingPatches(self):
         return self._imagePatches[self._numLayers+1]
+    
+    def _onLayerDirty(self, layerNr, rect):
+        print "layer=%d reports dirty rect=%r" % (layerNr, rect)
+        self._invalidateRect(rect)
             
     def _invalidateRect(self, rect = QRect()):
         if not rect.isValid():

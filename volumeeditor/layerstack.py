@@ -33,6 +33,11 @@ class LayerStackModel(QAbstractListModel):
     
     def __iter__(self):
         return self._layerStack.__iter__()
+    
+    def layerIndex(self, layer):
+        #note that the 'index' function already has a different implementation
+        #from Qt side
+        return self._layerStack.index(layer)
         
     def updateGUI(self):
         self.canMoveSelectedUp.emit(self.selectedRow()>0)

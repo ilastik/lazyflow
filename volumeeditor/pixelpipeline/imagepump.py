@@ -14,14 +14,19 @@ class StackedImageSources( QObject ):
     specification as defined in the Layer object. 
     """
     
-    isDirty      = pyqtSignal( QRect )
-    stackChanged = pyqtSignal()
+    layerDirty    = pyqtSignal(int, QRect)
+    stackChanged  = pyqtSignal()
     aboutToResize = pyqtSignal(int)
 
     def __init__( self, layerStackModel ):
         super(StackedImageSources, self).__init__()
         self._layerStackModel = layerStackModel
-        self._layerToIms = {}
+        
+        #each layer has a single image source, which has been set-up according
+        #to the layer's specification
+        self._layerToIms = {} #look up layer -> corresponding image source
+        self._imsToLayer = {} #look up image source -> corresponding layer
+        
         self._curryRegistry = {}
         layerStackModel.orderChanged.connect( self.stackChanged )
 
@@ -42,7 +47,8 @@ class StackedImageSources( QObject ):
     def register( self, layer, imageSource ):
         assert not layer in self._layerToIms, "layer %s already registered" % str(layer)
         self._layerToIms[layer] = imageSource
-        imageSource.isDirty.connect(self.isDirty)
+        self._imsToLayer[imageSource] = layer
+        imageSource.isDirty.connect( partial(self._onImageSourceDirty, imageSource) )
         self._curryRegistry[layer] = partial(self._onOpacityChanged, layer)
         layer.opacityChanged.connect( self._curryRegistry[layer] )
         layer.visibleChanged.connect( self._onVisibleChanged )
@@ -51,15 +57,19 @@ class StackedImageSources( QObject ):
     def deregister( self, layer ):
         assert layer in self._layerToIms, "layer %s is not registered; can't be deregistered" % str(layer)
         ims = self._layerToIms[layer]
-        ims.isDirty.disconnect( self.isDirty)
+        ims.isDirty.disconnect( self.isDirty )
         layer.opacityChanged.disconnect( self._curryRegistry[layer] )
         layer.visibleChanged.disconnect( self._onVisibleChanged )
         del self._curryRegistry[layer]
         del self._layerToIms[layer]
+        del self._imsToLayer[ims]
         self.stackChanged.emit()
 
     def isRegistered( self, layer ):
         return layer in self._layerToIms
+
+    def _onImageSourceDirty( self, imageSource, rect ):
+        self.layerDirty.emit(self._layerStackModel.layerIndex(self._imsToLayer[imageSource]), rect)
 
     def _onOpacityChanged( self, layer, opacity ):
         if layer.visible:
