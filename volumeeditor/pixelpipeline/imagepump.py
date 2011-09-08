@@ -27,7 +27,6 @@ class StackedImageSources( QObject ):
         self._layerToIms = {} #look up layer -> corresponding image source
         self._imsToLayer = {} #look up image source -> corresponding layer
         
-        self._curryRegistry = {}
         layerStackModel.orderChanged.connect( self.stackChanged )
 
     def __len__( self ):
@@ -50,10 +49,11 @@ class StackedImageSources( QObject ):
         assert not layer in self._layerToIms, "layer %s already registered" % str(layer)
         self._layerToIms[layer] = imageSource
         self._imsToLayer[imageSource] = layer
+        
         imageSource.isDirty.connect( partial(self._onImageSourceDirty, imageSource) )
-        self._curryRegistry[layer] = partial(self._onOpacityChanged, layer)
-        layer.opacityChanged.connect( self._curryRegistry[layer] )
-        layer.visibleChanged.connect( self._onVisibleChanged )
+        layer.opacityChanged.connect( partial(self._onOpacityChanged, layer) )
+        layer.visibleChanged.connect( partial(self._onVisibleChanged, layer) )
+
         self.stackChanged.emit()
 
     def deregister( self, layer ):
@@ -71,14 +71,18 @@ class StackedImageSources( QObject ):
         return layer in self._layerToIms
 
     def _onImageSourceDirty( self, imageSource, rect ):
-        self.layerDirty.emit(self._layerStackModel.layerIndex(self._imsToLayer[imageSource]), rect)
+        layer = self._imsToLayer[imageSource]
+        if layer.visible:
+            self.layerDirty.emit(self._layerStackModel.layerIndex(layer), rect)
 
     def _onOpacityChanged( self, layer, opacity ):
         if layer.visible:
-            self.isDirty.emit( QRect() )
+            self.layerDirty.emit(self._layerStackModel.layerIndex(layer), QRect())
 
-    def _onVisibleChanged( self, visible ):
-        self.isDirty.emit( QRect() )
+    def _onVisibleChanged( self, layer, visible ):
+        self.layerDirty.emit(self._layerStackModel.layerIndex(layer), QRect())
+
+
 
 #*******************************************************************************
 # I m a g e P u m p                                                            *
