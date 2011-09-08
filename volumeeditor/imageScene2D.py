@@ -31,8 +31,9 @@ import volumeeditor
 from volumeeditor.colorama import Fore, Back, Style
 
 from functools import partial
-from PyQt4.QtCore import QRect, QRectF, QMutex, QPointF, Qt
-from PyQt4.QtGui import QGraphicsScene, QImage, QTransform, QPen, QColor, QBrush
+from PyQt4.QtCore import QRect, QRectF, QMutex, QPointF, Qt, QSizeF
+from PyQt4.QtGui import QGraphicsScene, QImage, QTransform, QPen, QColor, QBrush, \
+                        QFont
 
 from patchAccessor import PatchAccessor
 from imageSceneRendering import ImageSceneRenderThread
@@ -108,7 +109,7 @@ class ImageScene2D(QGraphicsScene):
     """
     
     # base patch size: blockSize x blockSize
-    blockSize = 512
+    blockSize = 128
     #
     # overlap between patches 
     # positive number prevents rendering artifacts between patches for certain zoom levels
@@ -260,6 +261,12 @@ class ImageScene2D(QGraphicsScene):
                 p.image.fill(0)
                 p.imgVer = p.dataVer
                 p.unlock()
+            
+            for layerNr in range(self._numLayers):
+                for p in self._imagePatches[layerNr]:
+                    p.lock()
+                    p.dataVer += 1
+                    p.unlock() 
         
         for p in self.compositePatches():
             if not rect.isValid() or rect.intersects(p.patchRect):
@@ -323,13 +330,48 @@ class ImageScene2D(QGraphicsScene):
             p.unlock()
 
             if self._showDebugPatches:
-                if p.imgVer != p.dataVer:
-                    painter.setBrush(QBrush(QColor(255,0,0), Qt.DiagCrossPattern))
-                    painter.setPen(QColor(255,255,255))
+                painter.save()
+                painter.setOpacity(0.5)
+                
+                dirtyColor = QColor(255,0,0)
+                doneColor  = QColor(0,255,0)
+                
+                numDirtyLayers = 0
+                for layerNr in range(self._numLayers):
+                    _p = self._imagePatches[layerNr][p.patchNr]
+                    _p.lock()
+                    if _p.imgVer != _p.dataVer:
+                        numDirtyLayers += 1
+                    _p.unlock()
+                    
+                if numDirtyLayers > 0:
+                    
+                    painter.setBrush(QBrush(dirtyColor, Qt.SolidPattern))
+                    painter.setPen(dirtyColor)
+                    
+                    w,h = p.patchRectF.width(), p.patchRectF.height()
+                    
+                    rectangle = QRectF(p.patchRectF.center()-QPointF(w/4,w/4), QSizeF(w/2, w/2));
+                    startAngle = 0 * 16
+                    spanAngle  = numDirtyLayers/float(self._numLayers)*360.0 * 16
+                    painter.drawPie(rectangle, startAngle, spanAngle);
+                    print "pie", startAngle, spanAngle
+                    
+                    painter.setBrush(QBrush(dirtyColor, Qt.NoBrush))
+                    adjRect = p.patchRectF.adjusted(5,5,-5,-5)
+                    painter.drawRect(adjRect)
+                    
+#                    if numDirtyLayers < self._numLayers:
+#                        painter.setBrush(QBrush(doneColor, Qt.SolidPattern))
+#                        painter.setPen(doneColor)
+#                        painter.drawPie(rectangle, spanAngle, 360*16);
+
                 else:
-                    painter.setBrush(QBrush(QColor(0,255,0), Qt.NoBrush))
-                    painter.setPen(QColor(0,255,0))
-                adjRect = p.patchRectF.adjusted(5,5,-5,-5)
-                painter.drawRect(adjRect)
-                painter.drawText(p.patchRectF.topLeft()+QPointF(20,20), "%d" % p.patchNr)
+                    painter.setBrush(QBrush(doneColor, Qt.NoBrush))
+                    painter.setPen(doneColor)
+                    
+                    adjRect = p.patchRectF.adjusted(5,5,-5,-5)
+                    painter.drawRect(adjRect)
+                    
+                painter.restore()
                     
