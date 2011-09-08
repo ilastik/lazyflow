@@ -199,6 +199,8 @@ class ImageScene2D(QGraphicsScene):
     
         self.data2scene = QTransform(0,1,1,0,0,0) 
         self.scene2data = self.data2scene.transposed()
+        
+        self._slicingPositionSettled = True
     
         def cleanup():
             self._renderThread.stop()
@@ -241,8 +243,6 @@ class ImageScene2D(QGraphicsScene):
         return self._imagePatches[self._numLayers+1]
     
     def _onLayerDirty(self, layerNr, rect):
-        print "layer=%d reports dirty rect=%r" % (layerNr, rect)
-        
         for p in self._imagePatches[layerNr]:
             if not rect.isValid() or p.patchRect.intersects(rect):
                 p.dataVer += 1
@@ -298,6 +298,9 @@ class ImageScene2D(QGraphicsScene):
             painter.drawImage(p.imageRectF.topLeft(), p.image)
             p.unlock()
     
+    def indicateSlicingPositionSettled(self, settled):
+        self._slicingPositionSettled = settled
+    
     def drawBackground(self, painter, rect):
         #Find all patches that intersect the given 'rect'.
         for patchNr in range(len(self._imagePatches[0])):
@@ -321,7 +324,6 @@ class ImageScene2D(QGraphicsScene):
                     p.unlock()
         
         for p in self.compositePatches():
-            
             if not p.patchRectF.intersect(rect):
                 continue
             
@@ -329,7 +331,7 @@ class ImageScene2D(QGraphicsScene):
             painter.drawImage(p.imageRectF.topLeft(), p.image)
             p.unlock()
 
-            if self._showDebugPatches:
+            if self._slicingPositionSettled:
                 painter.save()
                 painter.setOpacity(0.5)
                 
@@ -345,7 +347,6 @@ class ImageScene2D(QGraphicsScene):
                     _p.unlock()
                     
                 if numDirtyLayers > 0:
-                    
                     painter.setBrush(QBrush(dirtyColor, Qt.SolidPattern))
                     painter.setPen(dirtyColor)
                     
@@ -359,11 +360,14 @@ class ImageScene2D(QGraphicsScene):
                     painter.setBrush(QBrush(dirtyColor, Qt.NoBrush))
                     adjRect = p.patchRectF.adjusted(5,5,-5,-5)
                     painter.drawRect(adjRect)
-
-                else:
-                    painter.setBrush(QBrush(doneColor, Qt.NoBrush))
-                    painter.setPen(doneColor)
-                    
+                
+                if self._showDebugPatches:
+                    if numDirtyLayers > 0:
+                        painter.setBrush(QBrush(dirtyColor, Qt.NoBrush))
+                        painter.setPen(dirtyColor) 
+                    else:
+                        painter.setBrush(QBrush(doneColor, Qt.NoBrush))
+                        painter.setPen(doneColor)
                     adjRect = p.patchRectF.adjusted(5,5,-5,-5)
                     painter.drawRect(adjRect)
                     

@@ -190,6 +190,7 @@ class VolumeEditor( QObject ):
         self.posModel.timeChanged.connect(self.navCtrl.changeTime)
         self.posModel.slicingPositionChanged.connect(self.navCtrl.moveSlicingPosition)
         self.posModel.cursorPositionChanged.connect(self.navCtrl.moveCrosshair)
+        self.posModel.slicingPositionSettled.connect(self.navCtrl.settleSlicingPosition)
 
     def setDrawingEnabled(self, enabled): 
         for i in range(3):

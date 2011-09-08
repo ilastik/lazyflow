@@ -244,6 +244,10 @@ class NavigationControler(QObject):
             for src in self._sliceSources[i]:
                 src.setThrough(2, newChannel)
     
+    def settleSlicingPosition(self, settled):
+        for v in self._views:
+            v.indicateSlicingPositionSettled(settled)
+    
     #private functions ########################################################
     
     def _updateCrossHairCursor(self):

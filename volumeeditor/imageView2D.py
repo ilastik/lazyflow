@@ -210,6 +210,10 @@ class ImageView2D(QGraphicsView):
         del self._drawTimer
         del self._ticker
 
+
+    def indicateSlicingPositionSettled(self, settled):
+        self.scene().indicateSlicingPositionSettled(settled)
+
     def viewportRect(self):
         """
         Return a QRectF giving the part of the scene currently displayed in this
