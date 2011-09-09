@@ -289,7 +289,7 @@ class ImageScene2D(QGraphicsScene):
         #
         #To compensate, adjust the rectangle slightly (less than one pixel,
         #so it should not matter) 
-        self.invalidate(p.patchRectF.adjusted(0.3,0.3,-0.3,-0.3), QGraphicsScene.BackgroundLayer)
+        self.invalidate(p.patchRectF.adjusted(0.6,0.6,-0.6,-0.6), QGraphicsScene.BackgroundLayer)
 
     def drawForeground(self, painter, rect):
         for p in self.brushingPatches():
