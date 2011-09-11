@@ -109,8 +109,8 @@ class GrayscaleImageRequest( object ):
     
     def cancel( self ):
         self.cancelLock()
-        #self._arrayreq.cancel()
-        self._arrayreq.adjustPriority(-50)        
+        self._arrayreq.cancel()
+        #self._arrayreq.adjustPriority(-50)        
         self._canceled = True
         self.cancelUnlock()
     
@@ -188,7 +188,7 @@ class AlphaModulatedImageRequest( object ):
     def cancel( self ):
         self.cancelLock()
         self._arrayreq.cancel()
-        self._arrayreq.adjustPriority(-50)   
+        #self._arrayreq.adjustPriority(-50)   
         self._canceled = True
         self.cancelUnlock()
     
@@ -260,7 +260,7 @@ class ColortableImageRequest( object ):
     def cancel( self ):
         self.cancelLock()
         self._arrayreq.cancel()
-        self._arrayreq.adjustPriority(-50)   
+        #self._arrayreq.adjustPriority(-50)   
         self._canceled = True
         self.cancelUnlock()
     
@@ -362,8 +362,8 @@ class RGBAImageRequest( object ):
     def cancel( self ):
         self.cancelLock()
         for r in self._requests:
-            #r.cancel()
-            r.adjustPriority(-50)   
+            r.cancel()
+            #r.adjustPriority(-50)   
         self._canceled = True
         self.cancelUnlock()
 
