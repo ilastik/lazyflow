@@ -1,6 +1,3 @@
-import numpy as np
-from PyQt4.QtCore import QRect
-
 '''Provide tools to work with collections of slice instances.
 
 A n-dimensional slicing is a sequence of n slice objects, for example:
@@ -13,6 +10,9 @@ Additionally, a 1-dimensional slicing may consist of a single slice instance
 not wrapped in a sequence.
 
 '''
+import numpy as np
+from PyQt4.QtCore import QRect
+
         
 #*******************************************************************************
 # S l                                                                          *
