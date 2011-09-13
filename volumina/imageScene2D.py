@@ -27,8 +27,8 @@
 #    authors and should not be interpreted as representing official policies, either expressed
 #    or implied, of their employers.
 
-import volumeeditor
-from volumeeditor.colorama import Fore, Back, Style
+import volumina
+from volumina.colorama import Fore, Back, Style
 
 from functools import partial
 from PyQt4.QtCore import QRect, QRectF, QMutex, QPointF, Qt, QSizeF
@@ -312,12 +312,12 @@ class ImageScene2D(QGraphicsScene):
                     
                     if p.imgVer != p.dataVer and p.reqVer != p.dataVer:
                         #
-                        if volumeeditor.verboseRequests:
-                            volumeeditor.printLock.acquire()
+                        if volumina.verboseRequests:
+                            volumina.printLock.acquire()
                             print Fore.RED + "ImageScene2D '%s' asks for layer=%d, patch %d = (x=%d, y=%d, w=%d, h=%d)" \
                                   % (self.objectName(), layerNr, p.patchNr, p.patchRectF.x(), p.patchRectF.y(), \
                                      p.patchRectF.width(), p.patchRectF.height()) + Fore.RESET
-                            volumeeditor.printLock.release()
+                            volumina.printLock.release()
                         #
                         self._renderThread.requestPatch((layerNr, p.patchNr))
                         p.reqVer = p.dataVer

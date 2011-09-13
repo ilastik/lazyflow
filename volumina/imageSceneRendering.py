@@ -1,7 +1,7 @@
 from PyQt4.QtCore import QThread, pyqtSignal, Qt, QMutex
 from PyQt4.QtGui import QPainter
 
-import volumeeditor
+import volumina
 
 import threading
 from collections import deque
@@ -186,11 +186,11 @@ class ImageSceneRenderThread(QThread):
         
         rect = self._imagePatches[0][patchNr].imageRect
         
-        if volumeeditor.verboseRequests:
-            volumeeditor.printLock.acquire()
+        if volumina.verboseRequests:
+            volumina.printLock.acquire()
             print "  ImageSceneRenderThread._takeJob: requesting layer=%d, patch=%d {rect=%s}" \
-                  % (layerNr, patchNr, volumeeditor.strQRect(rect))
-            volumeeditor.printLock.release()
+                  % (layerNr, patchNr, volumina.strQRect(rect))
+            volumina.printLock.release()
             
         request = self._stackedIms.getImageSource(layerNr).request(rect)
         self._runningRequests.addRequest((layerNr, patchNr), request)

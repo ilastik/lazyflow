@@ -1,6 +1,6 @@
 import copy
-from volumeeditor.pixelpipeline.multimethods import multimethod
-from volumeeditor.layer import GrayscaleLayer, RGBALayer, ColortableLayer, \
+from volumina.pixelpipeline.multimethods import multimethod
+from volumina.layer import GrayscaleLayer, RGBALayer, ColortableLayer, \
                                AlphaModulatedLayer
 from imagesources import GrayscaleImageSource, ColortableImageSource, \
                          RGBAImageSource, AlphaModulatedImageSource

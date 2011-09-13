@@ -1,11 +1,11 @@
-import volumeeditor
-from volumeeditor.colorama import Fore, Back, Style
+import volumina
+from volumina.colorama import Fore, Back, Style
 
 from PyQt4.QtCore import QObject, QRect, pyqtSignal, QMutex
 from PyQt4.QtGui import QImage
 from qimage2ndarray import gray2qimage, array2qimage, alpha_view, rgb_view
 from asyncabcs import SourceABC, RequestABC
-from volumeeditor.slicingtools import is_bounded, slicing2rect, rect2slicing, slicing2shape, is_pure_slicing
+from volumina.slicingtools import is_bounded, slicing2rect, rect2slicing, slicing2shape, is_pure_slicing
 import numpy as np
 
 #*******************************************************************************
@@ -61,12 +61,12 @@ class GrayscaleImageSource( ImageSource ):
         self._arraySource2D.isDirty.connect(self.setDirty)
 
     def request( self, qrect ):
-        if volumeeditor.verboseRequests:
-            volumeeditor.printLock.acquire()
+        if volumina.verboseRequests:
+            volumina.printLock.acquire()
             print Fore.RED + "  GrayscaleImageSource '%s' requests (x=%d, y=%d, w=%d, h=%d)" \
             % (self.objectName(), qrect.x(), qrect.y(), qrect.width(), qrect.height()) \
             + Fore.RESET
-            volumeeditor.printLock.release()
+            volumina.printLock.release()
             
         assert isinstance(qrect, QRect)
         s = rect2slicing(qrect)
@@ -136,12 +136,12 @@ class AlphaModulatedImageSource( ImageSource ):
         self._arraySource2D.isDirty.connect(self.setDirty)
 
     def request( self, qrect ):
-        if volumeeditor.verboseRequests:
-            volumeeditor.printLock.acquire()
+        if volumina.verboseRequests:
+            volumina.printLock.acquire()
             print Fore.RED + "  AlphaModulatedImageSource '%s' requests (x=%d, y=%d, w=%d, h=%d)" \
             % (self.objectName(), qrect.x(), qrect.y(), qrect.width(), qrect.height()) \
             + Fore.RESET
-            volumeeditor.printLock.release()
+            volumina.printLock.release()
             
         assert isinstance(qrect, QRect)
         s = rect2slicing(qrect)
@@ -214,12 +214,12 @@ class ColortableImageSource( ImageSource ):
         self._colorTable = colorTable
         
     def request( self, qrect ):
-        if volumeeditor.verboseRequests:
-            volumeeditor.printLock.acquire()
+        if volumina.verboseRequests:
+            volumina.printLock.acquire()
             print Fore.RED + "  ColortableImageSource '%s' requests (x=%d, y=%d, w=%d, h=%d)" \
             % (self.objectName(), qrect.x(), qrect.y(), qrect.width(), qrect.height()) \
             + Fore.RESET
-            volumeeditor.printLock.release()
+            volumina.printLock.release()
             
         assert isinstance(qrect, QRect)
         s = rect2slicing(qrect)
@@ -298,12 +298,12 @@ class RGBAImageSource( ImageSource ):
             arraySource.isDirty.connect(self.setDirty)
 
     def request( self, qrect ):
-        if volumeeditor.verboseRequests:
-            volumeeditor.printLock.acquire()
+        if volumina.verboseRequests:
+            volumina.printLock.acquire()
             print Fore.RED + "  RGBAImageSource '%s' requests (x=%d, y=%d, w=%d, h=%d)" \
             % (self.objectName(), qrect.x(), qrect.y(), qrect.width(), qrect.height()) \
              + Fore.RESET
-            volumeeditor.printLock.release()
+            volumina.printLock.release()
             
         assert isinstance(qrect, QRect)
         s = rect2slicing( qrect )

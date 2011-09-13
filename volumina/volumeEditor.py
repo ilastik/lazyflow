@@ -283,7 +283,7 @@ class VolumeEditor( QObject ):
         event.accept()
 
     def wheelEvent(self, event):
-        #Implementing the wheel event for the whole 'volumeeditor' widget
+        #Implementing the wheel event for the whole 'volumina' widget
         #enables zooming all three slice views at once using the
         #Ctrl+<mouse wheel> shortcut
         keys = QApplication.keyboardModifiers()

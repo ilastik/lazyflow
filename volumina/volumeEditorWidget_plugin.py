@@ -4,13 +4,13 @@ from PyQt4.QtGui import QPixmap, QIcon
 import numpy
 
 from lazyflow.graph import Graph
-from volumeeditor.volumeEditor import VolumeEditor
-from volumeeditor.volumeEditorWidget import VolumeEditorWidget
-from volumeeditor.pixelpipeline.datasources import LazyflowSource
-from volumeeditor.pixelpipeline._testing import OpDataProvider
-from volumeeditor._testing.from_lazyflow import OpDelay
-from volumeeditor.layerstack import LayerStackModel
-from volumeeditor.layer import GrayscaleLayer
+from volumina.volumeEditor import VolumeEditor
+from volumina.volumeEditorWidget import VolumeEditorWidget
+from volumina.pixelpipeline.datasources import LazyflowSource
+from volumina.pixelpipeline._testing import OpDataProvider
+from volumina._testing.from_lazyflow import OpDelay
+from volumina.layerstack import LayerStackModel
+from volumina.layer import GrayscaleLayer
 
 class PyVolumeEditorWidgetPlugin(QPyDesignerCustomWidgetPlugin):
 
@@ -70,4 +70,4 @@ class PyVolumeEditorWidgetPlugin(QPyDesignerCustomWidgetPlugin):
                )
     
     def includeFile(self):
-        return "volumeeditor.volumeEditorWidget"
+        return "volumina.volumeEditorWidget"

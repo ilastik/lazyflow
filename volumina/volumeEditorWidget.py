@@ -56,8 +56,8 @@ class VolumeEditorWidget(QWidget):
         if editor!=None:
             self.init(editor)
     
-    def init(self, volumeeditor):
-        self._ve = volumeeditor
+    def init(self, volumina):
+        self._ve = volumina
 
         self.layout = QHBoxLayout()
         self.layout.setContentsMargins(0, 0, 0, 0)
@@ -184,12 +184,12 @@ if __name__ == "__main__":
     
     from lazyflow.graph import Graph, Operator, InputSlot, OutputSlot
     from lazyflow import operators
-    from volumeeditor.pixelpipeline.datasources import LazyflowSource, ConstantSource
-    from volumeeditor.pixelpipeline._testing import OpDataProvider
-    from volumeeditor._testing.from_lazyflow import OpDataProvider5D, OpDelay
-    from volumeeditor.layer import GrayscaleLayer, RGBALayer, ColortableLayer
-    from volumeeditor.layerwidget.layerwidget import LayerWidget
-    from volumeeditor.layerstack import LayerStackModel
+    from volumina.pixelpipeline.datasources import LazyflowSource, ConstantSource
+    from volumina.pixelpipeline._testing import OpDataProvider
+    from volumina._testing.from_lazyflow import OpDataProvider5D, OpDelay
+    from volumina.layer import GrayscaleLayer, RGBALayer, ColortableLayer
+    from volumina.layerwidget.layerwidget import LayerWidget
+    from volumina.layerstack import LayerStackModel
     
     def img(N):
         def meshgrid2(*arrs):
@@ -493,7 +493,7 @@ if __name__ == "__main__":
     args = ['hugeslab', 'cuboid', '5d', 'comp', 'layers', 'manylayers', 't', 'label', '3dvol']
     
     if len(sys.argv) < 2 or not any(x in sys.argv for x in args) :
-        print "Usage: python volumeeditor.py <testmode> %r" % args 
+        print "Usage: python volumina.py <testmode> %r" % args 
         app.quit()
         sys.exit(0)
     if len(sys.argv) == 2 and "t" in sys.argv:

@@ -1,19 +1,19 @@
 from distutils.core import setup
 
-packages=['volumeeditor', 
-          'volumeeditor.pixelpipeline',
-          'volumeeditor.colorama',
-          'volumeeditor.layerwidget',
-          'volumeeditor.view3d',
-          'volumeeditor.resources',
-          'volumeeditor.resources.icons']
+packages=['volumina', 
+          'volumina.pixelpipeline',
+          'volumina.colorama',
+          'volumina.layerwidget',
+          'volumina.view3d',
+          'volumina.resources',
+          'volumina.resources.icons']
 
-package_data={'volumeeditor.resources.icons': ['*.png', 'LICENSES']}
+package_data={'volumina.resources.icons': ['*.png', 'LICENSES']}
 
-setup(name='volumeeditor',
+setup(name='volumina',
       version='0.6a',
       description='Volume Slicer and Editor',
-      url='https://github.com/Ilastik/volumeeditor',
+      url='https://github.com/Ilastik/volumina',
       packages=packages,
       package_data=package_data
      )

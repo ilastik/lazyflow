@@ -3,7 +3,7 @@ import unittest as ut
 from PyQt4.QtCore import QRect
 from PyQt4.QtGui import QImage
 
-from volumeeditor.pixelpipeline.imagesources import GrayscaleImageSource, RGBAImageSource
+from volumina.pixelpipeline.imagesources import GrayscaleImageSource, RGBAImageSource
 
 #*******************************************************************************
 # G r a y s c a l e I m a g e S o u r c e T e s t                              *
@@ -54,7 +54,7 @@ class RGBAImageSourceTest( ut.TestCase ):
         import numpy as np
         import os.path
         from datasources import ArraySource        
-        from volumeeditor import _testing
+        from volumina import _testing
         basedir = os.path.dirname(_testing.__file__)
         self.data = np.load(os.path.join(basedir, 'rgba129x104.npy'))
         self.red = ArraySource(self.data[:,:,0])

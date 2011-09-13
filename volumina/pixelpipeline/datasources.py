@@ -1,7 +1,7 @@
 from PyQt4.QtCore import QObject, pyqtSignal
 from asyncabcs import RequestABC, SourceABC
-import volumeeditor
-from volumeeditor.slicingtools import is_pure_slicing, slicing2shape, is_bounded, index2slice
+import volumina
+from volumina.slicingtools import is_pure_slicing, slicing2shape, is_bounded, index2slice
 import numpy as np
 
 #*******************************************************************************
@@ -105,10 +105,10 @@ class LazyflowSource( QObject ):
         self._outslot.registerDirtyCallback(self.setDirty)
 
     def request( self, slicing ):
-        if volumeeditor.verboseRequests:
-            volumeeditor.printLock.acquire()
-            print "  LazyflowSource '%s' requests %s" % (self.objectName(), volumeeditor.strSlicing(slicing))
-            volumeeditor.printLock.release()
+        if volumina.verboseRequests:
+            volumina.printLock.acquire()
+            print "  LazyflowSource '%s' requests %s" % (self.objectName(), volumina.strSlicing(slicing))
+            volumina.printLock.release()
         if not is_pure_slicing(slicing):
             raise Exception('LazyflowSource: slicing is not pure')
         reqobj = self._outslot[slicing].allocate(priority = self._priority)        
@@ -130,10 +130,10 @@ class LazyflowSinkSource( LazyflowSource ):
         self._outputSlot.registerDirtyCallback(self.setDirty)
 
     def request( self, slicing ):
-        if volumeeditor.verboseRequests:
-            volumeeditor.printLock.acquire()
-            print "  LazyflowSinkSource '%s' requests %s" % (self.objectName(), volumeeditor.strSlicing(slicing))
-            volumeeditor.printLock.release()
+        if volumina.verboseRequests:
+            volumina.printLock.acquire()
+            print "  LazyflowSinkSource '%s' requests %s" % (self.objectName(), volumina.strSlicing(slicing))
+            volumina.printLock.release()
         if not is_pure_slicing(slicing):
             raise Exception('LazyflowSinkSource: slicing is not pure')
         reqobj = self._outslot[slicing].allocate(priority = self._priority)        

@@ -5,12 +5,12 @@ from PyQt4.QtGui import QStyledItemDelegate, QWidget, QListView, QStyle, \
 from PyQt4.QtCore import pyqtSignal, Qt, QEvent, QRect, QSize, QTimer, \
                          QPoint 
                          
-from volumeeditor.layer import Layer
+from volumina.layer import Layer
 
 from os import path
-import volumeeditor.resources.icons
-from volumeeditor.layerstack import LayerStackModel
-_icondir = path.dirname(volumeeditor.resources.icons.__file__)
+import volumina.resources.icons
+from volumina.layerstack import LayerStackModel
+_icondir = path.dirname(volumina.resources.icons.__file__)
 
 #*******************************************************************************
 # L a y e r P a i n t e r                                                      *

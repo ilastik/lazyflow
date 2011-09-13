@@ -1,8 +1,8 @@
 from PyQt4.QtDesigner import QPyDesignerCustomWidgetPlugin
 from PyQt4.QtGui import QPixmap, QIcon, QColor
 
-from volumeeditor.layerwidget.layerwidget import LayerWidget
-from volumeeditor.layerstack import LayerStackModel, Layer
+from volumina.layerwidget.layerwidget import LayerWidget
+from volumina.layerstack import LayerStackModel, Layer
 
 class PyLayerWidgetPlugin(QPyDesignerCustomWidgetPlugin):
 
@@ -77,4 +77,4 @@ class PyLayerWidgetPlugin(QPyDesignerCustomWidgetPlugin):
                )
     
     def includeFile(self):
-        return "volumeeditor.layerwidget.layerwidget"
+        return "volumina.layerwidget.layerwidget"

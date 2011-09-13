@@ -2,7 +2,7 @@ from PyQt4.QtCore import QObject, pyqtSignal
 from asyncabcs import SourceABC, RequestABC
 import copy
 import numpy as np
-from volumeeditor.slicingtools import SliceProjection, is_pure_slicing, intersection, sl
+from volumina.slicingtools import SliceProjection, is_pure_slicing, intersection, sl
 
 projectionAlongTXC = SliceProjection( abscissa = 2, ordinate = 3, along = [0,1,4] )
 projectionAlongTYC = SliceProjection( abscissa = 1, ordinate = 3, along = [0,2,4] )
