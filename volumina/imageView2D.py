@@ -238,40 +238,7 @@ class ImageView2D(QGraphicsView):
         self._drawTimer.stop()
         self._isDrawing = False
         self.endDraw.emit(pos)
-
-    def wheelEvent(self, event):
-        keys = QApplication.keyboardModifiers()
-        k_alt = (keys == Qt.AltModifier)
-        k_ctrl = (keys == Qt.ControlModifier)
-
-        self.mousePos = self.mapScene2Data(self.mapToScene(event.pos()))
-
-        sceneMousePos = self.mapToScene(event.pos())
-        grviewCenter  = self.mapToScene(self.viewport().rect().center())
-
-        if event.delta() > 0:
-            if k_alt:
-                self.changeSlice(10)
-            elif k_ctrl:
-                scaleFactor = 1.1
-                self.doScale(scaleFactor)
-            else:
-                self.changeSlice(1)
-        else:
-            if k_alt:
-                self.changeSlice(-10)
-            elif k_ctrl:
-                scaleFactor = 0.9
-                self.doScale(scaleFactor)
-            else:
-                self.changeSlice(-1)
-        if k_ctrl:
-            mousePosAfterScale = self.mapToScene(event.pos())
-            offset = sceneMousePos - mousePosAfterScale
-            newGrviewCenter = grviewCenter + offset
-            self.centerOn(newGrviewCenter)
-            self.mouseMoveEvent(event)
-
+    
     def mousePressEvent(self, event):
         if event.button() == Qt.MidButton:
             self.setCursor(QCursor(Qt.SizeAllCursor))
