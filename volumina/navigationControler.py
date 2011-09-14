@@ -1,5 +1,5 @@
 from PyQt4.QtCore import QObject, QTimer, QEvent, Qt
-from PyQt4.QtGui  import QColor
+from PyQt4.QtGui  import QColor, QCursor
 
 import  copy
 from functools import partial
@@ -29,7 +29,7 @@ class NavigationInterpreter(QObject):
     is updated.
     """
     
-    def __init__(self, positionmodel, imagescenes):
+    def __init__(self, positionmodel, imageviews):
         """
         Constructs an interpreter which will update the
         PositionModel model.
@@ -40,42 +40,80 @@ class NavigationInterpreter(QObject):
         """
         QObject.__init__(self)
         self._model = positionmodel
-        self._imageScenes = imagescenes
+        self._imageViews = imageviews
 
     def eventFilter( self, watched, event ):
-        if event.type() == QEvent.Wheel:
-            k_alt = (event.modifiers() == Qt.AltModifier)
-            k_ctrl = (event.modifiers() == Qt.ControlModifier)
-
-            watched.mousePos = watched.mapScene2Data(watched.mapToScene(event.pos()))
-
-            sceneMousePos = watched.mapToScene(event.pos())
-            grviewCenter  = watched.mapToScene(watched.viewport().rect().center())
-
-            if event.delta() > 0:
-                if k_alt:
-                    watched.changeSlice(10)
-                elif k_ctrl:
-                    scaleFactor = 1.1
-                    watched.doScale(scaleFactor)
-                else:
-                    watched.changeSlice(1)
-            else:
-                if k_alt:
-                    watched.changeSlice(-10)
-                elif k_ctrl:
-                    scaleFactor = 0.9
-                    watched.doScale(scaleFactor)
-                else:
-                    watched.changeSlice(-1)
-            if k_ctrl:
-                mousePosAfterScale = watched.mapToScene(event.pos())
-                offset = sceneMousePos - mousePosAfterScale
-                newGrviewCenter = grviewCenter + offset
-                watched.centerOn(newGrviewCenter)
-                watched.mouseMoveEvent(event)
+        etype = event.type()
+        if etype == QEvent.Wheel:
+            self._onWheelEvent( watched, event )
             return True
-        return False
+        elif etype == QEvent.MouseButtonPress:
+            self._onMousePressEvent( watched, event )
+            return True
+        else:
+            return False
+
+    def _onWheelEvent( self, watched, event ):
+        k_alt = (event.modifiers() == Qt.AltModifier)
+        k_ctrl = (event.modifiers() == Qt.ControlModifier)
+
+        watched.mousePos = watched.mapScene2Data(watched.mapToScene(event.pos()))
+
+        sceneMousePos = watched.mapToScene(event.pos())
+        grviewCenter  = watched.mapToScene(watched.viewport().rect().center())
+
+        if event.delta() > 0:
+            if k_alt:
+                watched.changeSlice(10)
+            elif k_ctrl:
+                scaleFactor = 1.1
+                watched.doScale(scaleFactor)
+            else:
+                watched.changeSlice(1)
+        else:
+            if k_alt:
+                watched.changeSlice(-10)
+            elif k_ctrl:
+                scaleFactor = 0.9
+                watched.doScale(scaleFactor)
+            else:
+                watched.changeSlice(-1)
+        if k_ctrl:
+            mousePosAfterScale = watched.mapToScene(event.pos())
+            offset = sceneMousePos - mousePosAfterScale
+            newGrviewCenter = grviewCenter + offset
+            watched.centerOn(newGrviewCenter)
+            watched.mouseMoveEvent(event)
+
+    def _onMousePressEvent( self, watched, event ):
+        if event.button() == Qt.MidButton:
+            watched.setCursor(QCursor(Qt.SizeAllCursor))
+            watched._lastPanPoint = event.pos()
+            watched._crossHairCursor.setVisible(False)
+            watched._dragMode = True
+            if watched._ticker.isActive():
+                watched._deltaPan = QPointF(0, 0)
+
+        if event.buttons() == Qt.RightButton:
+            #make sure that we have the cursor at the correct position
+            #before we call the context menu
+            watched.mouseMoveEvent(event)
+            watched.customContextMenuRequested.emit(event.pos())
+            return
+
+        if not watched.drawingEnabled:
+            print "ImageView2D.mousePressEvent: drawing is not enabled"
+            return
+        
+        if event.buttons() == Qt.LeftButton:
+            #don't draw if flicker the view
+            if watched._ticker.isActive():
+                return
+            if QApplication.keyboardModifiers() == Qt.ShiftModifier:
+                watched.erasingToggled.emit(True)
+                watched._tempErase = True
+            watched.mousePos = watched.mapScene2Data(watched.mapToScene(event.pos()))
+            watched.beginDrawing(watched.mousePos)
 
 
     def changeSliceRelative(self, delta, axis):

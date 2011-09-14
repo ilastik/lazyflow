@@ -108,7 +108,7 @@ class VolumeEditor( QObject ):
         if useVTK:
             v3d = self.view3d
         self.navCtrl      = NavigationControler(self.imageViews, syncedSliceSources, self.posModel, view3d=v3d)
-        self.navInterpret = NavigationInterpreter(self.posModel, self.imageScenes)
+        self.navInterpret = NavigationInterpreter(self.posModel, self.imageViews)
 
         # eventswitch
         self.es = EventSwitch(self.imageViews)

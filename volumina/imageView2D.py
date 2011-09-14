@@ -239,36 +239,6 @@ class ImageView2D(QGraphicsView):
         self._isDrawing = False
         self.endDraw.emit(pos)
     
-    def mousePressEvent(self, event):
-        if event.button() == Qt.MidButton:
-            self.setCursor(QCursor(Qt.SizeAllCursor))
-            self._lastPanPoint = event.pos()
-            self._crossHairCursor.setVisible(False)
-            self._dragMode = True
-            if self._ticker.isActive():
-                self._deltaPan = QPointF(0, 0)
-
-        if event.buttons() == Qt.RightButton:
-            #make sure that we have the cursor at the correct position
-            #before we call the context menu
-            self.mouseMoveEvent(event)
-            self.customContextMenuRequested.emit(event.pos())
-            return
-
-        if not self.drawingEnabled:
-            print "ImageView2D.mousePressEvent: drawing is not enabled"
-            return
-        
-        if event.buttons() == Qt.LeftButton:
-            #don't draw if flicker the view
-            if self._ticker.isActive():
-                return
-            if QApplication.keyboardModifiers() == Qt.ShiftModifier:
-                self.erasingToggled.emit(True)
-                self._tempErase = True
-            self.mousePos = self.mapScene2Data(self.mapToScene(event.pos()))
-            self.beginDrawing(self.mousePos)
-            
     def mouseMoveEvent(self,event):
         if self._dragMode == True:
             #the mouse was moved because the user wants to change
