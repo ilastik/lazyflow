@@ -111,7 +111,8 @@ class VolumeEditor( QObject ):
         self.navInterpret = NavigationInterpreter(self.posModel, self.imageScenes)
 
         # eventswitch
-        self.es = EventSwitch(self.imageViews, self.navInterpret)
+        self.es = EventSwitch(self.imageViews)
+        self.es.interpreter = self.navInterpret
 
         # Add label widget to toolBoxLayout
         self.labelWidget = None
