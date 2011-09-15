@@ -1,5 +1,5 @@
 from PyQt4.QtCore import QObject, QTimer, QEvent, Qt
-from PyQt4.QtGui  import QColor, QCursor
+from PyQt4.QtGui  import QColor, QCursor, QGraphicsSceneEvent, QMouseEvent
 
 import  copy
 from functools import partial
@@ -44,76 +44,95 @@ class NavigationInterpreter(QObject):
 
     def eventFilter( self, watched, event ):
         etype = event.type()
+
         if etype == QEvent.Wheel:
             self._onWheelEvent( watched, event )
             return True
         elif etype == QEvent.MouseButtonPress:
             self._onMousePressEvent( watched, event )
             return True
+        elif etype == QEvent.MouseButtonRelease:
+            self._onMouseReleaseEvent( watched, event )
+            return True
         else:
             return False
 
-    def _onWheelEvent( self, watched, event ):
+    def _onWheelEvent( self, imageview, event ):
         k_alt = (event.modifiers() == Qt.AltModifier)
         k_ctrl = (event.modifiers() == Qt.ControlModifier)
 
-        watched.mousePos = watched.mapScene2Data(watched.mapToScene(event.pos()))
+        imageview.mousePos = imageview.mapScene2Data(imageview.mapToScene(event.pos()))
 
-        sceneMousePos = watched.mapToScene(event.pos())
-        grviewCenter  = watched.mapToScene(watched.viewport().rect().center())
+        sceneMousePos = imageview.mapToScene(event.pos())
+        grviewCenter  = imageview.mapToScene(imageview.viewport().rect().center())
 
         if event.delta() > 0:
             if k_alt:
-                watched.changeSlice(10)
+                imageview.changeSlice(10)
             elif k_ctrl:
                 scaleFactor = 1.1
-                watched.doScale(scaleFactor)
+                imageview.doScale(scaleFactor)
             else:
-                watched.changeSlice(1)
+                imageview.changeSlice(1)
         else:
             if k_alt:
-                watched.changeSlice(-10)
+                imageview.changeSlice(-10)
             elif k_ctrl:
                 scaleFactor = 0.9
-                watched.doScale(scaleFactor)
+                imageview.doScale(scaleFactor)
             else:
-                watched.changeSlice(-1)
+                imageview.changeSlice(-1)
         if k_ctrl:
-            mousePosAfterScale = watched.mapToScene(event.pos())
+            mousePosAfterScale = imageview.mapToScene(event.pos())
             offset = sceneMousePos - mousePosAfterScale
             newGrviewCenter = grviewCenter + offset
-            watched.centerOn(newGrviewCenter)
-            watched.mouseMoveEvent(event)
+            imageview.centerOn(newGrviewCenter)
+            imageview.mouseMoveEvent(event)
 
-    def _onMousePressEvent( self, watched, event ):
+    def _onMousePressEvent( self, imageview, event ):
         if event.button() == Qt.MidButton:
-            watched.setCursor(QCursor(Qt.SizeAllCursor))
-            watched._lastPanPoint = event.pos()
-            watched._crossHairCursor.setVisible(False)
-            watched._dragMode = True
-            if watched._ticker.isActive():
-                watched._deltaPan = QPointF(0, 0)
+            imageview.setCursor(QCursor(Qt.SizeAllCursor))
+            imageview._lastPanPoint = event.pos()
+            imageview._crossHairCursor.setVisible(False)
+            imageview._dragMode = True
+            if imageview._ticker.isActive():
+                imageview._deltaPan = QPointF(0, 0)
 
         if event.buttons() == Qt.RightButton:
             #make sure that we have the cursor at the correct position
             #before we call the context menu
-            watched.mouseMoveEvent(event)
-            watched.customContextMenuRequested.emit(event.pos())
+            imageview.mouseMoveEvent(event)
+            imageview.customContextMenuRequested.emit(event.pos())
             return
 
-        if not watched.drawingEnabled:
+        if not imageview.drawingEnabled:
             print "ImageView2D.mousePressEvent: drawing is not enabled"
             return
         
         if event.buttons() == Qt.LeftButton:
             #don't draw if flicker the view
-            if watched._ticker.isActive():
+            if imageview._ticker.isActive():
                 return
             if QApplication.keyboardModifiers() == Qt.ShiftModifier:
-                watched.erasingToggled.emit(True)
-                watched._tempErase = True
-            watched.mousePos = watched.mapScene2Data(watched.mapToScene(event.pos()))
-            watched.beginDrawing(watched.mousePos)
+                imageview.erasingToggled.emit(True)
+                imageview._tempErase = True
+            imageview.mousePos = imageview.mapScene2Data(imageview.mapToScene(event.pos()))
+            imageview.beginDrawing(imageview.mousePos)
+
+    def _onMouseReleaseEvent( self, imageview, event ):
+        imageview.mousePos = imageview.mapScene2Data(imageview.mapToScene(event.pos()))
+        
+        if event.button() == Qt.MidButton:
+            imageview.setCursor(QCursor())
+            releasePoint = event.pos()
+            imageview._lastPanPoint = releasePoint
+            imageview._dragMode = False
+            imageview._ticker.start(20)
+        if imageview._isDrawing:
+            imageview.endDrawing(imageview.mousePos)
+        if imageview._tempErase:
+            imageview.erasingToggled.emit(False)
+            imageview._tempErase = False
 
 
     def changeSliceRelative(self, delta, axis):

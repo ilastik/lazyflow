@@ -238,7 +238,7 @@ class ImageView2D(QGraphicsView):
         self._drawTimer.stop()
         self._isDrawing = False
         self.endDraw.emit(pos)
-    
+
     def mouseMoveEvent(self,event):
         if self._dragMode == True:
             #the mouse was moved because the user wants to change
@@ -283,20 +283,11 @@ class ImageView2D(QGraphicsView):
             
             self.drawing.emit(mousePos)
 
+    # We have to overload QGraphicsView's mouseRelease event handler with a nop to make the event switch work.
+    # Otherwise, mouseReleaseEvents are not catched by our eventFilter.
+    # There is no real reason for this behaviour: seems to be just a quirky qt implementation detail.
     def mouseReleaseEvent(self, event):
-        self.mousePos = self.mapScene2Data(self.mapToScene(event.pos()))
-        
-        if event.button() == Qt.MidButton:
-            self.setCursor(QCursor())
-            releasePoint = event.pos()
-            self._lastPanPoint = releasePoint
-            self._dragMode = False
-            self._ticker.start(20)
-        if self._isDrawing:
-            self.endDrawing(self.mousePos)
-        if self._tempErase:
-            self.erasingToggled.emit(False)
-            self._tempErase = False
+        event.ignore()
 
     def _panning(self):
         hBar = self.horizontalScrollBar()

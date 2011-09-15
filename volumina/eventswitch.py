@@ -11,6 +11,7 @@ class EventSwitch( QObject ):
             view.removeEventFilter( self._interpreter )
             if interpreter:
                 view.installEventFilter( interpreter )
+
         self._interpreter = interpreter
 
     def __init__( self, imageviews, interpreter=None):
