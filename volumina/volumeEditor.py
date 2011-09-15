@@ -224,19 +224,6 @@ class VolumeEditor( QObject ):
         self.labelWidget.itemSelectionChanged.connect(self.onLabelSelected)
         self._toolBoxLayout.insertWidget(0, self.labelWidget)
     
-    def setRgbMode(self, mode): 
-        """
-        change display mode of 3-channel images to either rgb, or 3-channels
-        mode can bei either  True or False
-        """
-        if self._shape[-1] == 3:
-            #FIXME
-            #self.image does not exist anymore,
-            #so this is not possible
-            #self.image.rgb = mode
-            self._channelSpin.setVisible(not mode)
-            self._channelSpinLabel.setVisible(not mode)
-
     def updateTimeSliceForSaving(self, time, num, axis):
         self._imageViews[axis].thread.freeQueue.clear()
         if self._imageViews[axis].hud.sliceSelector.value() != num:
