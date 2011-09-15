@@ -242,22 +242,6 @@ class VolumeEditor( QObject ):
     def closeEvent(self, event):
         event.accept()
 
-    def wheelEvent(self, event):
-        #Implementing the wheel event for the whole 'volumina' widget
-        #enables zooming all three slice views at once using the
-        #Ctrl+<mouse wheel> shortcut
-        keys = QApplication.keyboardModifiers()
-        k_ctrl = (keys == Qt.ControlModifier)
-        
-        if k_ctrl:        
-            if event.delta() > 0:
-                scaleFactor = VolumeEditor.zoomInFactor
-            else:
-                scaleFactor = VolumeEditor.zoomOutFactor
-            self._imageViews[0].doScale(scaleFactor)
-            self._imageViews[1].doScale(scaleFactor)
-            self._imageViews[2].doScale(scaleFactor)
-
     #===========================================================================
     # View & Tools Options
     #===========================================================================
