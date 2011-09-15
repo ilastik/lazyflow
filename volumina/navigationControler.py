@@ -1,5 +1,5 @@
-from PyQt4.QtCore import QObject, QTimer, QEvent, Qt
-from PyQt4.QtGui  import QColor, QCursor, QGraphicsSceneEvent, QMouseEvent
+from PyQt4.QtCore import QObject, QTimer, QEvent, Qt, QPointF
+from PyQt4.QtGui  import QColor, QCursor, QMouseEvent
 
 import  copy
 from functools import partial
@@ -44,8 +44,10 @@ class NavigationInterpreter(QObject):
 
     def eventFilter( self, watched, event ):
         etype = event.type()
-
-        if etype == QEvent.Wheel:
+        if etype == QEvent.MouseMove:
+            self._onMouseMoveEvent( watched, event )
+            return True
+        elif etype == QEvent.Wheel:
             self._onWheelEvent( watched, event )
             return True
         elif etype == QEvent.MouseButtonPress:
@@ -56,6 +58,49 @@ class NavigationInterpreter(QObject):
             return True
         else:
             return False
+
+    def _onMouseMoveEvent( self, imageview, event ):
+        if imageview._dragMode == True:
+            #the mouse was moved because the user wants to change
+            #the viewport
+            imageview._deltaPan = QPointF(event.pos() - imageview._lastPanPoint)
+            imageview._panning()
+            imageview._lastPanPoint = event.pos()
+            return
+        if imageview._ticker.isActive():
+            #the view is still scrolling
+            #do nothing until it comes to a complete stop
+            return
+        
+        imageview.mousePos = mousePos = imageview.mapScene2Data(imageview.mapToScene(event.pos()))
+        oldX, oldY = imageview.x, imageview.y
+        x = imageview.x = mousePos.x()
+        y = imageview.y = mousePos.y()
+        imageview.mouseMoved.emit(x,y)
+
+        if imageview._isDrawing:
+            ### FIXME
+            p = None
+            patchNr = -1
+            
+            for p in imageview.scene().brushingPatches(): 
+                if p.patchRectF.contains(imageview.mapToScene(event.pos())):
+                    break
+            p.lock()
+            painter = QPainter(p.image)
+            painter.setPen(imageview.scene()._brush)
+            
+            tL = p.imageRectF.topLeft()
+            o  = imageview.scene().data2scene.map(QPointF(oldX,oldY))
+            n  = imageview.scene().data2scene.map(QPointF(x,y))
+            
+            painter.drawLine(o-tL, n-tL)
+            painter.end()
+            p.dataVer += 1
+            p.unlock()
+            imageview.scene()._schedulePatchRedraw(patchNr)
+            ### end FIXME            
+            imageview.drawing.emit(mousePos)
 
     def _onWheelEvent( self, imageview, event ):
         k_alt = (event.modifiers() == Qt.AltModifier)
@@ -87,7 +132,7 @@ class NavigationInterpreter(QObject):
             offset = sceneMousePos - mousePosAfterScale
             newGrviewCenter = grviewCenter + offset
             imageview.centerOn(newGrviewCenter)
-            imageview.mouseMoveEvent(event)
+            self._onMouseMoveEvent( imageview, event)
 
     def _onMousePressEvent( self, imageview, event ):
         if event.button() == Qt.MidButton:
@@ -101,7 +146,7 @@ class NavigationInterpreter(QObject):
         if event.buttons() == Qt.RightButton:
             #make sure that we have the cursor at the correct position
             #before we call the context menu
-            imageview.mouseMoveEvent(event)
+            self._onMouseMoveEvent( imageview, event)
             imageview.customContextMenuRequested.emit(event.pos())
             return
 

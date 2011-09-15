@@ -239,53 +239,11 @@ class ImageView2D(QGraphicsView):
         self._isDrawing = False
         self.endDraw.emit(pos)
 
-    def mouseMoveEvent(self,event):
-        if self._dragMode == True:
-            #the mouse was moved because the user wants to change
-            #the viewport
-            self._deltaPan = QPointF(event.pos() - self._lastPanPoint)
-            self._panning()
-            self._lastPanPoint = event.pos()
-            return
-        if self._ticker.isActive():
-            #the view is still scrolling
-            #do nothing until it comes to a complete stop
-            return
-        
-        self.mousePos = mousePos = self.mapScene2Data(self.mapToScene(event.pos()))
-        oldX, oldY = self.x, self.y
-        x = self.x = mousePos.x()
-        y = self.y = mousePos.y()
-        self.mouseMoved.emit(x,y)
-
-        if self._isDrawing:
-            ### FIXME
-            p = None
-            patchNr = -1
-            
-            for p in self.scene().brushingPatches(): 
-                if p.patchRectF.contains(self.mapToScene(event.pos())):
-                    break
-            p.lock()
-            painter = QPainter(p.image)
-            painter.setPen(self.scene()._brush)
-            
-            tL = p.imageRectF.topLeft()
-            o  = self.scene().data2scene.map(QPointF(oldX,oldY))
-            n  = self.scene().data2scene.map(QPointF(x,y))
-            
-            painter.drawLine(o-tL, n-tL)
-            painter.end()
-            p.dataVer += 1
-            p.unlock()
-            self.scene()._schedulePatchRedraw(patchNr)
-            ### end FIXME
-            
-            self.drawing.emit(mousePos)
-
-    # We have to overload QGraphicsView's mouseRelease event handler with a nop to make the event switch work.
-    # Otherwise, mouseReleaseEvents are not catched by our eventFilter.
+    # We have to overload some QGraphicsView event handlers with a nop to make the event switch work.
+    # Otherwise, the events are not catched by our eventFilter.
     # There is no real reason for this behaviour: seems to be just a quirky qt implementation detail.
+    def mouseMoveEvent(self, event):
+        event.ignore()
     def mouseReleaseEvent(self, event):
         event.ignore()
 
