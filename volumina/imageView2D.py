@@ -44,9 +44,11 @@ class ImageView2D(QGraphicsView):
     #FIXME unused?
     @property
     def name(self):
+        assert(False) # added 2011/09/15 (triggered since then? If not, remove code.)
         return self._name
     @name.setter
     def name(self, n):
+        assert(False) # added 2011/09/15 (triggered since then? If not, remove code.)
         self._name = n
            
     @property
