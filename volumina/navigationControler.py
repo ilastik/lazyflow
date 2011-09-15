@@ -56,6 +56,9 @@ class NavigationInterpreter(QObject):
         elif etype == QEvent.MouseButtonRelease:
             self._onMouseReleaseEvent( watched, event )
             return True
+        elif etype == QEvent.MouseButtonDblClick:
+            self._onMouseDoubleClickEvent( watched, event )
+            return True
         else:
             return False
 
@@ -178,6 +181,10 @@ class NavigationInterpreter(QObject):
         if imageview._tempErase:
             imageview.erasingToggled.emit(False)
             imageview._tempErase = False
+
+    def _onMouseDoubleClickEvent( self, imageview, event ):
+        imageview.mousePos = imageview.mapScene2Data(imageview.mapToScene(event.pos()))
+        imageview.mouseDoubleClicked.emit(imageview.mousePos.x(), imageview.mousePos.y())
 
 
     def changeSliceRelative(self, delta, axis):

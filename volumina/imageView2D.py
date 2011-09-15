@@ -1,32 +1,3 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
-
-#    Copyright 2010, 2011 C Sommer, C Straehle, U Koethe, FA Hamprecht. All rights reserved.
-#    
-#    Redistribution and use in source and binary forms, with or without modification, are
-#    permitted provided that the following conditions are met:
-#    
-#       1. Redistributions of source code must retain the above copyright notice, this list of
-#          conditions and the following disclaimer.
-#    
-#       2. Redistributions in binary form must reproduce the above copyright notice, this list
-#          of conditions and the following disclaimer in the documentation and/or other materials
-#          provided with the distribution.
-#    
-#    THIS SOFTWARE IS PROVIDED BY THE ABOVE COPYRIGHT HOLDERS ``AS IS'' AND ANY EXPRESS OR IMPLIED
-#    WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND
-#    FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE ABOVE COPYRIGHT HOLDERS OR
-#    CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
-#    CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
-#    SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON
-#    ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
-#    NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
-#    ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-#    
-#    The views and conclusions contained in the software and documentation are those of the
-#    authors and should not be interpreted as representing official policies, either expressed
-#    or implied, of their employers.
-
 from PyQt4.QtCore import QPoint, QPointF, QTimer, pyqtSignal, Qt
 from PyQt4.QtGui import QCursor, QGraphicsView, QPainter, QVBoxLayout, QApplication
 
@@ -42,10 +13,7 @@ from sliceIntersectionMarker import SliceIntersectionMarker
 class ImageView2D(QGraphicsView):
     """
     Shows a ImageScene2D to the user and allows for interactive
-    scrolling, panning, zooming etc. It intercepts all meaningful
-    events on the widget for further interpretation (e.g. the view
-    does not know which slicing axis it represents in the 3D slice
-    viewer setting).
+    scrolling, panning, zooming etc.
     """
     
     #notifies about the relative change in the slicing position
@@ -246,6 +214,8 @@ class ImageView2D(QGraphicsView):
         event.ignore()
     def mouseReleaseEvent(self, event):
         event.ignore()
+    def mouseDoubleClickEvent( self, event):
+        event.ignore()
 
     def _panning(self):
         hBar = self.horizontalScrollBar()
@@ -302,10 +272,6 @@ class ImageView2D(QGraphicsView):
         else:
             self._deltaPan = self._deaccelerate(self._deltaPan)
             self._panning()
-
-    def mouseDoubleClickEvent(self, event):
-        self.mousePos = self.mapScene2Data(self.mapToScene(event.pos()))
-        self.mouseDoubleClicked.emit(self.mousePos.x(), self.mousePos.y())
 
     def changeSlice(self, delta):       
         if self._isDrawing:
