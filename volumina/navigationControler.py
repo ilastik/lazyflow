@@ -116,20 +116,32 @@ class NavigationInterpreter(QObject):
 
         if event.delta() > 0:
             if k_alt:
-                imageview.changeSlice(10)
+                if imageview._isDrawing:
+                    imageview.endDrawing(imageview.mousePos)
+                    imageview._isDrawing = True
+                self.changeSliceRelative(10, self._imageViews.index(imageview))
             elif k_ctrl:
                 scaleFactor = 1.1
                 imageview.doScale(scaleFactor)
             else:
-                imageview.changeSlice(1)
+                if imageview._isDrawing:
+                    imageview.endDrawing(imageview.mousePos)
+                    imageview._isDrawing = True
+                self.changeSliceRelative(1, self._imageViews.index(imageview))
         else:
             if k_alt:
-                imageview.changeSlice(-10)
+                if imageview._isDrawing:
+                    imageview.endDrawing(imageview.mousePos)
+                    imageview._isDrawing = True
+                self.changeSliceRelative(-10, self._imageViews.index(imageview))
             elif k_ctrl:
                 scaleFactor = 0.9
                 imageview.doScale(scaleFactor)
             else:
-                imageview.changeSlice(-1)
+                if imageview._isDrawing:
+                    imageview.endDrawing(imageview.mousePos)
+                    imageview._isDrawing = True
+                self.changeSliceRelative(-1, self._imageViews.index(imageview))
         if k_ctrl:
             mousePosAfterScale = imageview.mapToScene(event.pos())
             offset = sceneMousePos - mousePosAfterScale

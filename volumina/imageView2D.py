@@ -14,12 +14,8 @@ class ImageView2D(QGraphicsView):
     """
     Shows a ImageScene2D to the user and allows for interactive
     scrolling, panning, zooming etc.
+
     """
-    
-    #notifies about the relative change in the slicing position
-    #that is requested
-    changeSliceDelta   = pyqtSignal(int)
-    
     #all the following signals refer to data coordinates
     drawing            = pyqtSignal(QPointF)
     beginDraw          = pyqtSignal(QPointF, object)
@@ -273,16 +269,6 @@ class ImageView2D(QGraphicsView):
             self._deltaPan = self._deaccelerate(self._deltaPan)
             self._panning()
 
-    def changeSlice(self, delta):       
-        if self._isDrawing:
-            self.endDrawing(self.mousePos)
-            self._isDrawing = True
-            
-            #FIXME:
-            #self._drawManager.beginDrawing(self.mousePos, self.self.shape2D)
-        
-        self.changeSliceDelta.emit(delta)
-        
     def zoomOut(self):
         self.doScale(0.9)
 
