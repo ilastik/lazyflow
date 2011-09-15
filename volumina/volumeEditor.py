@@ -29,7 +29,6 @@ except:
 class VolumeEditor( QObject ):
     changedSlice      = pyqtSignal(int,int)
     onOverlaySelected = pyqtSignal(int)
-    newLabelsPending  = pyqtSignal()
     
     zoomInFactor  = 1.1
     zoomOutFactor = 0.9
@@ -49,8 +48,6 @@ class VolumeEditor( QObject ):
         #self.drawUpdateInterval = 300
 
         self.layerStack = layerStackModel
-
-        self._pendingLabels = []
 
         # three ortho image pumps
         alongTXC = SliceProjection( abscissa = 2, ordinate = 3, along = [0,1,4] )
@@ -113,9 +110,6 @@ class VolumeEditor( QObject ):
         # eventswitch
         self.es = EventSwitch(self.imageViews)
         self.es.interpreter = self.navInterpret
-
-        # Add label widget to toolBoxLayout
-        self.labelWidget = None
         
         # some auxiliary stuff
         self.focusAxis =  0 #the currently focused axis
@@ -174,18 +168,6 @@ class VolumeEditor( QObject ):
         print "Volumeeditor.onCustomContextMenuRequested"
         #self.customContextMenuRequested.emit(pos)
         
-    def onLabelSelected(self):
-        assert(False)
-        item = self.labelWidget.currentItem()
-        if item is not None:
-            for imageScene in self._imageViews:
-                imageScene.drawingEnabled = True
-                imageScene.crossHairCursor.setColor(item.color)
-        else:
-            for imageScene in self._imageViews:
-                imageScene.drawingEnabled = False
-                imageScene.crossHairCursor.setColor(QColor("black"))
-
     def focusNextPrevChild(self, forward = True):
         """this method is overwritten from QWidget
            so that the user can cycle through the three slice views
@@ -212,19 +194,6 @@ class VolumeEditor( QObject ):
         self._imageViews = []
         QApplication.processEvents()
         print "finished saving thread"
-
-    def setLabelWidget(self,  widget):
-        """
-        Public interface function for setting the labelWidget toolBox
-        """
-        assert(False)
-        if self.labelWidget is not None:
-            self._toolBoxLayout.removeWidget(self.labelWidget)
-            self.labelWidget.close()
-            del self.labelWidget
-        self.labelWidget = widget
-        self.labelWidget.itemSelectionChanged.connect(self.onLabelSelected)
-        self._toolBoxLayout.insertWidget(0, self.labelWidget)
     
     def updateTimeSliceForSaving(self, time, num, axis):
         self._imageViews[axis].thread.freeQueue.clear()
@@ -251,11 +220,6 @@ class VolumeEditor( QObject ):
     def previousChannel(self):
         self.posModel.channel = self.posModel.channel-1
           
-    def nextLabel(self):
-        self.labelWidget.nextLabel()
-        
-    def prevLabel(self):
-        self.labelWidget.nextLabel()
         
     def historyUndo(self):
         self._history.undo()
@@ -265,13 +229,3 @@ class VolumeEditor( QObject ):
 
     def getVisibleState(self):
         return self._viewManager.getVisibleState()
-
-    def pushLabelsToLabelWidget(self):
-        #FIXME
-        newLabels = self.getPendingLabels()
-        self.labelWidget.labelMgr.newLabels(newLabels)
-        
-    def getPendingLabels(self):
-        temp = self._pendingLabels
-        self._pendingLabels = []
-        return temp
