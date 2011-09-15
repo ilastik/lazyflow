@@ -29,8 +29,6 @@ class ImageView2D(QGraphicsView):
     
     #notifies that the mouse has moved to 2D data coordinate x,y
     mouseMoved         = pyqtSignal(int, int)
-    #notifies that the user has double clicked on the 2D data coordinate x,y    
-    mouseDoubleClicked = pyqtSignal(int, int)
     
     drawUpdateInterval = 300 #ms
     
@@ -207,6 +205,7 @@ class ImageView2D(QGraphicsView):
         self._isDrawing = False
         self.endDraw.emit(pos)
 
+
     # We have to overload some QGraphicsView event handlers with a nop to make the event switch work.
     # Otherwise, the events are not catched by our eventFilter.
     # There is no real reason for this behaviour: seems to be just a quirky qt implementation detail.
@@ -216,6 +215,7 @@ class ImageView2D(QGraphicsView):
         event.ignore()
     def mouseDoubleClickEvent( self, event):
         event.ignore()
+
 
     def _panning(self):
         hBar = self.horizontalScrollBar()

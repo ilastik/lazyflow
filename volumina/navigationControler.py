@@ -8,9 +8,9 @@ from imageView2D import ImageView2D
 from imageScene2D import ImageScene2D
 
 def posView2D(pos3d, axis):
-    pos2d = copy.deepcopy(pos3d)
     """convert from a 3D position to a 2D position on the slicing plane
        perpendicular to axis"""
+    pos2d = copy.deepcopy(pos3d)
     del pos2d[axis]
     return pos2d
 
@@ -183,8 +183,9 @@ class NavigationInterpreter(QObject):
             imageview._tempErase = False
 
     def _onMouseDoubleClickEvent( self, imageview, event ):
-        imageview.mousePos = imageview.mapScene2Data(imageview.mapToScene(event.pos()))
-        imageview.mouseDoubleClicked.emit(imageview.mousePos.x(), imageview.mousePos.y())
+        dataMousePos = imageview.mapScene2Data(imageview.mapToScene(event.pos()))
+        imageview.mousePos = dataMousePos # FIXME: remove, when guaranteed, that no longer needed inside imageview
+        self.positionSlice(dataMousePos.x(), dataMousePos.y(), self._imageViews.index(imageview))
 
 
     def changeSliceRelative(self, delta, axis):
