@@ -362,7 +362,6 @@ if __name__ == "__main__":
                 tint[:] = 255
                 tintsrc = ArraySource(tint)
 
-                #new shit
                 opLabels = operators.OpSparseLabelArray(g)                                
                 opLabels.inputs["shape"].setValue(raw.shape[:-1] + (1,))
                 opLabels.inputs["eraser"].setValue(100)                
