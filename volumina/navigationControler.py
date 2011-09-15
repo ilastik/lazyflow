@@ -79,7 +79,7 @@ class NavigationInterpreter(QObject):
         oldX, oldY = imageview.x, imageview.y
         x = imageview.x = mousePos.x()
         y = imageview.y = mousePos.y()
-        imageview.mouseMoved.emit(x,y)
+        self.positionCursor( x, y, self._imageViews.index(imageview))
 
         if imageview._isDrawing:
             ### FIXME

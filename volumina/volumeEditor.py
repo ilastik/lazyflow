@@ -158,7 +158,6 @@ class VolumeEditor( QObject ):
         for i, v in enumerate(self.imageViews):
             #connect interpreter
             v.sliceShape = self.posModel.sliceShape(axis=i)
-            v.mouseMoved.connect(partial(self.navInterpret.positionCursor, axis=i))
             
         #connect controler
         self.posModel.channelChanged.connect(self.navCtrl.changeChannel)

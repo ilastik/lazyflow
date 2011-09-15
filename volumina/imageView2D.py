@@ -23,9 +23,6 @@ class ImageView2D(QGraphicsView):
     
     erasingToggled     = pyqtSignal(bool)            
     
-    #notifies that the mouse has moved to 2D data coordinate x,y
-    mouseMoved         = pyqtSignal(int, int)
-    
     drawUpdateInterval = 300 #ms
     
     @property
