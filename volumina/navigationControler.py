@@ -1,5 +1,5 @@
 from PyQt4.QtCore import QObject, QTimer, QEvent, Qt, QPointF
-from PyQt4.QtGui  import QColor, QCursor, QMouseEvent
+from PyQt4.QtGui  import QColor, QCursor, QMouseEvent, QApplication, QPainter
 
 import  copy
 from functools import partial

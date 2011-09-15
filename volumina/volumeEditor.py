@@ -175,6 +175,7 @@ class VolumeEditor( QObject ):
         #self.customContextMenuRequested.emit(pos)
         
     def onLabelSelected(self):
+        assert(False)
         item = self.labelWidget.currentItem()
         if item is not None:
             for imageScene in self._imageViews:
@@ -216,6 +217,7 @@ class VolumeEditor( QObject ):
         """
         Public interface function for setting the labelWidget toolBox
         """
+        assert(False)
         if self.labelWidget is not None:
             self._toolBoxLayout.removeWidget(self.labelWidget)
             self.labelWidget.close()
