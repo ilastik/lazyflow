@@ -16,15 +16,6 @@ class ImageView2D(QGraphicsView):
     scrolling, panning, zooming etc.
 
     """
-    #all the following signals refer to data coordinates
-    drawing            = pyqtSignal(QPointF)
-    beginDraw          = pyqtSignal(QPointF, object)
-    endDraw            = pyqtSignal(QPointF)
-    
-    erasingToggled     = pyqtSignal(bool)            
-    
-    drawUpdateInterval = 300 #ms
-    
     @property
     def sliceShape(self):
         """
@@ -149,8 +140,6 @@ class ImageView2D(QGraphicsView):
         self._hiddenCursor = QCursor(Qt.BlankCursor)
         # For screen recording BlankCursor doesn't work
         #self.hiddenCursor = QCursor(Qt.ArrowCursor)
-
-        self._tempErase = False
         
     def _cleanUp(self):        
         self._ticker.stop()

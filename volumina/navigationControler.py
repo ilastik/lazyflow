@@ -1,4 +1,4 @@
-from PyQt4.QtCore import QObject, QTimer, QEvent, Qt, QPointF
+from PyQt4.QtCore import QObject, QTimer, QEvent, Qt, QPointF, pyqtSignal
 from PyQt4.QtGui  import QColor, QCursor, QMouseEvent, QApplication, QPainter
 
 import  copy
@@ -27,7 +27,14 @@ class NavigationInterpreter(QObject):
     
     After interpreting the user's events on these widgets, the position model
     is updated.
+
     """
+    #all the following signals refer to data coordinates
+    drawing            = pyqtSignal(QPointF)
+    beginDraw          = pyqtSignal(QPointF, object)
+    endDraw            = pyqtSignal(QPointF)
+    
+    erasingToggled     = pyqtSignal(bool)            
     
     def __init__(self, positionmodel, imageviews):
         """
@@ -41,6 +48,7 @@ class NavigationInterpreter(QObject):
         QObject.__init__(self)
         self.drawingEnabled = False
         self._isDrawing = False
+        self._tempErase = False
         self._model = positionmodel
         self._imageViews = imageviews
 
@@ -105,7 +113,7 @@ class NavigationInterpreter(QObject):
             p.unlock()
             imageview.scene()._schedulePatchRedraw(patchNr)
             ### end FIXME            
-            imageview.drawing.emit(mousePos)
+            self.drawing.emit(mousePos)
 
     def _onWheelEvent( self, imageview, event ):
         k_alt = (event.modifiers() == Qt.AltModifier)
@@ -175,8 +183,8 @@ class NavigationInterpreter(QObject):
             if imageview._ticker.isActive():
                 return
             if QApplication.keyboardModifiers() == Qt.ShiftModifier:
-                imageview.erasingToggled.emit(True)
-                imageview._tempErase = True
+                self.erasingToggled.emit(True)
+                self._tempErase = True
             imageview.mousePos = imageview.mapScene2Data(imageview.mapToScene(event.pos()))
             self.beginDrawing(imageview, imageview.mousePos)
 
@@ -191,9 +199,9 @@ class NavigationInterpreter(QObject):
             imageview._ticker.start(20)
         if self._isDrawing:
             self.endDrawing(imageview, imageview.mousePos)
-        if imageview._tempErase:
-            imageview.erasingToggled.emit(False)
-            imageview._tempErase = False
+        if self._tempErase:
+            self.erasingToggled.emit(False)
+            self._tempErase = False
 
     def _onMouseDoubleClickEvent( self, imageview, event ):
         dataMousePos = imageview.mapScene2Data(imageview.mapToScene(event.pos()))
@@ -295,11 +303,11 @@ class NavigationInterpreter(QObject):
     def beginDrawing(self, imageview, pos):
         imageview.mousePos = pos
         self._isDrawing  = True
-        imageview.beginDraw.emit(pos, imageview.sliceShape)
+        self.beginDraw.emit(pos, imageview.sliceShape)
 
     def endDrawing(self, imageview, pos): 
         self._isDrawing = False
-        imageview.endDraw.emit(pos)
+        self.endDraw.emit(pos)
 
     
 #*******************************************************************************

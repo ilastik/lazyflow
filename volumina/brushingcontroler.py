@@ -55,13 +55,11 @@ class BrushingControler(QObject):
 #*******************************************************************************
 
 class BrushingInterpreter(QObject):
-    def __init__(self, brushingModel, imageViews):
+    def __init__(self, brushingModel, navigationInterpreter):
         QObject.__init__(self, parent=None)
-        self._imageViews = imageViews
         self._brushingModel = brushingModel
-        for i in range(3):
-            self._imageViews[i].beginDraw.connect(self._brushingModel.beginDrawing)
-            self._imageViews[i].endDraw.connect(self._brushingModel.endDrawing)
-            self._imageViews[i].drawing.connect(self._brushingModel.moveTo)
-            self._imageViews[i].erasingToggled.connect(self._brushingModel.toggleErase)
-    
+        self._navigationInterpreter = navigationInterpreter
+        self._navigationInterpreter.beginDraw.connect(self._brushingModel.beginDrawing)
+        self._navigationInterpreter.endDraw.connect(self._brushingModel.endDrawing)
+        self._navigationInterpreter.drawing.connect(self._brushingModel.moveTo)
+        self._navigationInterpreter.erasingToggled.connect(self._brushingModel.toggleErase)
