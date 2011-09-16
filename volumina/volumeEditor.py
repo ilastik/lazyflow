@@ -1,8 +1,7 @@
+import copy
+
 from PyQt4.QtCore import Qt, pyqtSignal, QObject
 from PyQt4.QtGui import QApplication, QWidget, QBrush, QPen, QColor, QTransform
-
-import copy
-from functools import partial
 
 from eventswitch import EventSwitch
 from imageScene2D import ImageScene2D
@@ -84,10 +83,6 @@ class VolumeEditor( QObject ):
         else:
             self.view3d = QWidget()
 
-        for i in xrange(3):
-            self.imageViews[i].customContextMenuRequested.connect(self.onCustomContextMenuRequested)
-
-
         # navigation control
         self.posModel     = PositionModel(self._shape)
         v3d = None
@@ -150,10 +145,6 @@ class VolumeEditor( QObject ):
     def setDrawingEnabled(self, enabled): 
         for i in range(3):
             self.imageViews[i].drawingEnabled = enabled
-
-    def onCustomContextMenuRequested(self, pos):
-        print "Volumeeditor.onCustomContextMenuRequested"
-        #self.customContextMenuRequested.emit(pos)
         
     def cleanUp(self):
         QApplication.processEvents()
@@ -168,18 +159,10 @@ class VolumeEditor( QObject ):
     def closeEvent(self, event):
         event.accept()
 
-    #===========================================================================
-    # View & Tools Options
-    #===========================================================================
     def nextChannel(self):
+        assert(False)
         self.posModel.channel = self.posModel.channel+1
 
     def previousChannel(self):
+        assert(False)
         self.posModel.channel = self.posModel.channel-1
-          
-        
-    def historyUndo(self):
-        self._history.undo()
-
-    def historyRedo(self):
-        self._history.redo()
