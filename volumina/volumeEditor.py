@@ -117,8 +117,7 @@ class VolumeEditor( QObject ):
             s._invalidateRect()
 
     def setDrawingEnabled(self, enabled): 
-        for i in range(3):
-            self.imageViews[i].drawingEnabled = enabled
+        self.navInterpret.drawingEnabled = enabled
         
     def cleanUp(self):
         QApplication.processEvents()

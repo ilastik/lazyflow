@@ -67,14 +67,6 @@ class ImageView2D(QGraphicsView):
         self.layout().setContentsMargins(0,0,0,0)
         self.layout().addLayout(self._hud)
         self.layout().addStretch()
-
-
-    @property
-    def drawingEnabled(self):
-        return self._drawingEnabled
-    @drawingEnabled.setter
-    def drawingEnabled(self, enable):
-        self._drawingEnabled = enable 
     
     def __init__(self, imagescene2d):
         """
@@ -94,7 +86,6 @@ class ImageView2D(QGraphicsView):
         self._slices = None #number of slices that are stacked
         self._name   = ''
         self._hud    = None
-        self._drawingEnabled = False
         
         self._crossHairCursor         = None
         self._sliceIntersectionMarker = None
@@ -189,18 +180,7 @@ class ImageView2D(QGraphicsView):
         print "ImageView2D.notifyDrawing"
         #FIXME: resurrect
         self.drawing.emit(self.mousePos)
-    
-    def beginDrawing(self, pos):
-        self.mousePos = pos
-        self._isDrawing  = True
-        self.beginDraw.emit(pos, self.sliceShape)
         
-    def endDrawing(self, pos): 
-        self._drawTimer.stop()
-        self._isDrawing = False
-        self.endDraw.emit(pos)
-
-
     # We have to overload some QGraphicsView event handlers with a nop to make the event switch work.
     # Otherwise, the events are not catched by our eventFilter.
     # There is no real reason for this behaviour: seems to be just a quirky qt implementation detail.
@@ -322,7 +302,6 @@ if __name__ == '__main__':
             self.cross = cross(self.lena.shape, 30)
 
             self.imageView2D = ImageView2D()
-            self.imageView2D.drawingEnabled = True
             self.imageView2D.name = 'ImageView2D:'
             self.imageView2D.shape = self.lena.shape
             self.imageView2D.slices = 1

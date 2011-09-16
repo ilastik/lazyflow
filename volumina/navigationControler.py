@@ -39,6 +39,8 @@ class NavigationInterpreter(QObject):
         himself.
         """
         QObject.__init__(self)
+        self.drawingEnabled = False
+
         self._model = positionmodel
         self._imageViews = imageviews
 
@@ -165,8 +167,7 @@ class NavigationInterpreter(QObject):
             imageview.customContextMenuRequested.emit(event.pos())
             return
 
-        if not imageview.drawingEnabled:
-            print "ImageView2D.mousePressEvent: drawing is not enabled"
+        if not self.drawingEnabled:
             return
         
         if event.buttons() == Qt.LeftButton:
@@ -177,7 +178,7 @@ class NavigationInterpreter(QObject):
                 imageview.erasingToggled.emit(True)
                 imageview._tempErase = True
             imageview.mousePos = imageview.mapScene2Data(imageview.mapToScene(event.pos()))
-            imageview.beginDrawing(imageview.mousePos)
+            self.beginDrawing(imageview, imageview.mousePos)
 
     def _onMouseReleaseEvent( self, imageview, event ):
         imageview.mousePos = imageview.mapScene2Data(imageview.mapToScene(event.pos()))
@@ -189,7 +190,7 @@ class NavigationInterpreter(QObject):
             imageview._dragMode = False
             imageview._ticker.start(20)
         if imageview._isDrawing:
-            imageview.endDrawing(imageview.mousePos)
+            self.endDrawing(imageview, imageview.mousePos)
         if imageview._tempErase:
             imageview.erasingToggled.emit(False)
             imageview._tempErase = False
@@ -290,6 +291,17 @@ class NavigationInterpreter(QObject):
             if pos[i] < 0 or pos[i] >= self._model.shape[i]:
                 return False
         return True
+
+    def beginDrawing(self, imageview, pos):
+        imageview.mousePos = pos
+        imageview._isDrawing  = True
+        imageview.beginDraw.emit(pos, self.sliceShape)
+
+    def endDrawing(self, imageview, pos): 
+        imageview._drawTimer.stop()
+        imageview._isDrawing = False
+        imageview.endDraw.emit(pos)
+
     
 #*******************************************************************************
 # N a v i g a t i o n C o n t r o l e r                                        *
