@@ -99,7 +99,7 @@ class NavigationInterpreter(QObject):
             p.unlock()
             imageview.scene()._schedulePatchRedraw(patchNr)
             ### end FIXME            
-            self._navCtrl.drawing.emit(mousePos)
+            self._navCtrl._brushingModel.moveTo(mousePos)
 
     def onWheelEvent( self, imageview, event ):
         k_alt = (event.modifiers() == Qt.AltModifier)
@@ -169,7 +169,7 @@ class NavigationInterpreter(QObject):
             if imageview.ticker.isActive():
                 return
             if QApplication.keyboardModifiers() == Qt.ShiftModifier:
-                self._navCtrl.erasingToggled.emit(True)
+                self._navCtrl._brushingModel.setErasing()
                 self._navCtrl._tempErase = True
             imageview.mousePos = imageview.mapScene2Data(imageview.mapToScene(event.pos()))
             self._navCtrl.beginDrawing(imageview, imageview.mousePos)
@@ -186,7 +186,7 @@ class NavigationInterpreter(QObject):
         if self._navCtrl._isDrawing:
             self._navCtrl.endDrawing(imageview, imageview.mousePos)
         if self._navCtrl._tempErase:
-            self._navCtrl.erasingToggled.emit(False)
+            self._navCtrl._brushingModel.disableErasing()
             self._navCtrl._tempErase = False
 
     def onMouseDoubleClickEvent( self, imageview, event ):
@@ -236,7 +236,7 @@ class NavigationControler(QObject):
         for v in self._views:
             v._sliceIntersectionMarker.setVisibility(show)
         
-    def __init__(self, imageView2Ds, sliceSources, positionModel, time = 0, channel = 0, view3d=None):
+    def __init__(self, imageView2Ds, sliceSources, positionModel, brushingModel, time = 0, channel = 0, view3d=None):
         QObject.__init__(self)
         assert len(imageView2Ds) == 3
 
@@ -251,6 +251,7 @@ class NavigationControler(QObject):
         self.drawingEnabled = False
         self._isDrawing = False
         self._tempErase = False
+        self._brushingModel = brushingModel
 
         self.axisColors = [QColor(255,0,0,255), QColor(0,255,0,255), QColor(0,0,255,255)]
     
@@ -369,11 +370,11 @@ class NavigationControler(QObject):
     def beginDrawing(self, imageview, pos):
         imageview.mousePos = pos
         self._isDrawing  = True
-        self.beginDraw.emit(pos, imageview.sliceShape)
+        self._brushingModel.beginDrawing(pos, imageview.sliceShape)
 
     def endDrawing(self, imageview, pos): 
         self._isDrawing = False
-        self.endDraw.emit(pos)
+        self._brushingModel.endDrawing(pos)
     
     #private functions ########################################################
     

@@ -26,11 +26,6 @@ class BrushingInterpreter(QObject):
         QObject.__init__(self, parent=None)
         self._brushingModel = brushingModel
         self._navCtrl = navigationControler
-        self._navCtrl.beginDraw.connect(self._brushingModel.beginDrawing)
-        self._navCtrl.endDraw.connect(self._brushingModel.endDrawing)
-        self._navCtrl.drawing.connect(self._brushingModel.moveTo)
-        self._navCtrl.erasingToggled.connect(self._brushingModel.toggleErase)
-
         
 #*******************************************************************************
 # B r u s h i n g C o n t r o l e r                                            *

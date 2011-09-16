@@ -52,7 +52,9 @@ class VolumeEditor( QObject ):
         self.imageScenes = [ImageScene2D(), ImageScene2D(), ImageScene2D()]
         self.imageViews = [ImageView2D(self.imageScenes[i]) for i in [0,1,2]]
         self.imagepumps = self._initImagePumps()
+
         self.posModel = PositionModel(self._shape)
+        self.brushingModel = BrushingModel()
 
         self.view3d = self._initView3d() if useVTK else QWidget()
 
@@ -70,11 +72,10 @@ class VolumeEditor( QObject ):
         # navigation control
         v3d = self.view3d if useVTK else None
         syncedSliceSources = [self.imagepumps[i].syncedSliceSources for i in [0,1,2]]
-        self.navCtrl      = NavigationControler(self.imageViews, syncedSliceSources, self.posModel, view3d=v3d)
+        self.navCtrl      = NavigationControler(self.imageViews, syncedSliceSources, self.posModel, self.brushingModel, view3d=v3d)
         self.navInterpret = NavigationInterpreter(self.navCtrl)
 
         # brushing control
-        self.brushingModel = BrushingModel()
         #self.crosshairControler = CrosshairControler() 
         self.brushingInterpreter = BrushingInterpreter(self.brushingModel, self.navCtrl)
         self.brushingControler = BrushingControler(self.brushingModel, self.posModel, labelsink)        
