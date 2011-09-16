@@ -40,7 +40,7 @@ class NavigationInterpreter(QObject):
         """
         QObject.__init__(self)
         self.drawingEnabled = False
-
+        self._isDrawing = False
         self._model = positionmodel
         self._imageViews = imageviews
 
@@ -83,7 +83,7 @@ class NavigationInterpreter(QObject):
         y = imageview.y = mousePos.y()
         self.positionCursor( x, y, self._imageViews.index(imageview))
 
-        if imageview._isDrawing:
+        if self._isDrawing:
             ### FIXME
             p = None
             patchNr = -1
@@ -118,31 +118,31 @@ class NavigationInterpreter(QObject):
 
         if event.delta() > 0:
             if k_alt:
-                if imageview._isDrawing:
-                    imageview.endDrawing(imageview.mousePos)
+                if self._isDrawing:
+                    self.endDrawing(imageview, imageview.mousePos)
                     imageview._isDrawing = True
                 self.changeSliceRelative(10, self._imageViews.index(imageview))
             elif k_ctrl:
                 scaleFactor = 1.1
                 imageview.doScale(scaleFactor)
             else:
-                if imageview._isDrawing:
-                    imageview.endDrawing(imageview.mousePos)
-                    imageview._isDrawing = True
+                if self._isDrawing:
+                    self.endDrawing(imageview, imageview.mousePos)
+                    self._isDrawing = True
                 self.changeSliceRelative(1, self._imageViews.index(imageview))
         else:
             if k_alt:
-                if imageview._isDrawing:
-                    imageview.endDrawing(imageview.mousePos)
-                    imageview._isDrawing = True
+                if self._isDrawing:
+                    self.endDrawing(imageview, imageview.mousePos)
+                    self._isDrawing = True
                 self.changeSliceRelative(-10, self._imageViews.index(imageview))
             elif k_ctrl:
                 scaleFactor = 0.9
                 imageview.doScale(scaleFactor)
             else:
-                if imageview._isDrawing:
-                    imageview.endDrawing(imageview.mousePos)
-                    imageview._isDrawing = True
+                if self._isDrawing:
+                    self.endDrawing(imageview, imageview.mousePos)
+                    self._isDrawing = True
                 self.changeSliceRelative(-1, self._imageViews.index(imageview))
         if k_ctrl:
             mousePosAfterScale = imageview.mapToScene(event.pos())
@@ -189,7 +189,7 @@ class NavigationInterpreter(QObject):
             imageview._lastPanPoint = releasePoint
             imageview._dragMode = False
             imageview._ticker.start(20)
-        if imageview._isDrawing:
+        if self._isDrawing:
             self.endDrawing(imageview, imageview.mousePos)
         if imageview._tempErase:
             imageview.erasingToggled.emit(False)
@@ -294,12 +294,11 @@ class NavigationInterpreter(QObject):
 
     def beginDrawing(self, imageview, pos):
         imageview.mousePos = pos
-        imageview._isDrawing  = True
-        imageview.beginDraw.emit(pos, self.sliceShape)
+        self._isDrawing  = True
+        imageview.beginDraw.emit(pos, imageview.sliceShape)
 
     def endDrawing(self, imageview, pos): 
-        imageview._drawTimer.stop()
-        imageview._isDrawing = False
+        self._isDrawing = False
         imageview.endDraw.emit(pos)
 
     

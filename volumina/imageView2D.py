@@ -126,7 +126,6 @@ class ImageView2D(QGraphicsView):
         #       within the image scene renderer
         self.tempImageItems = []
         
-        self._isDrawing = False
         self._zoomFactor = 1.0
         
         #for panning
@@ -145,9 +144,6 @@ class ImageView2D(QGraphicsView):
 
         self._ticker = QTimer(self)
         self._ticker.timeout.connect(self._tickerEvent)
-        #label updates while drawing, needed for interactive segmentation
-        self._drawTimer = QTimer(self)
-        self._drawTimer.timeout.connect(self.notifyDrawing)
         
         # invisible cursor to enable custom cursor
         self._hiddenCursor = QCursor(Qt.BlankCursor)
@@ -158,8 +154,6 @@ class ImageView2D(QGraphicsView):
         
     def _cleanUp(self):        
         self._ticker.stop()
-        self._drawTimer.stop()
-        del self._drawTimer
         del self._ticker
 
 
@@ -176,11 +170,6 @@ class ImageView2D(QGraphicsView):
     def mapScene2Data(self, pos):
         return self.scene().scene2data.map(pos)
    
-    def notifyDrawing(self):
-        print "ImageView2D.notifyDrawing"
-        #FIXME: resurrect
-        self.drawing.emit(self.mousePos)
-        
     # We have to overload some QGraphicsView event handlers with a nop to make the event switch work.
     # Otherwise, the events are not catched by our eventFilter.
     # There is no real reason for this behaviour: seems to be just a quirky qt implementation detail.
