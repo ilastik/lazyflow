@@ -77,7 +77,7 @@ class VolumeEditor( QObject ):
 
         # brushing control
         #self.crosshairControler = CrosshairControler() 
-        self.brushingInterpreter = BrushingInterpreter(self.brushingModel, self.navCtrl)
+        self.brushingInterpreter = BrushingInterpreter(self.navInterpret, self.navCtrl)
         self.brushingControler = BrushingControler(self.brushingModel, self.posModel, labelsink)        
         def onBrushSize(s):
             b = QPen(QBrush(self.brushingModel.drawColor), s)
