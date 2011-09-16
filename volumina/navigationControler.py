@@ -36,9 +36,6 @@ class NavigationInterpreter(QObject):
         himself.
         """
         QObject.__init__(self)
-        self.drawingEnabled = False
-        self._isDrawing = False
-        self._tempErase = False
         self._navCtrl = navigationcontroler
 
     def eventFilter( self, watched, event ):
@@ -80,7 +77,7 @@ class NavigationInterpreter(QObject):
         y = imageview.y = mousePos.y()
         self._navCtrl.positionCursor( x, y, self._navCtrl._views.index(imageview))
 
-        if self._isDrawing:
+        if self._navCtrl._isDrawing:
             ### FIXME
             p = None
             patchNr = -1
@@ -115,31 +112,31 @@ class NavigationInterpreter(QObject):
 
         if event.delta() > 0:
             if k_alt:
-                if self._isDrawing:
-                    self.endDrawing(imageview, imageview.mousePos)
+                if self._navCtrl._isDrawing:
+                    self._navCtrl.endDrawing(imageview, imageview.mousePos)
                     imageview._isDrawing = True
                 self._navCtrl.changeSliceRelative(10, self._navCtrl._views.index(imageview))
             elif k_ctrl:
                 scaleFactor = 1.1
                 imageview.doScale(scaleFactor)
             else:
-                if self._isDrawing:
-                    self.endDrawing(imageview, imageview.mousePos)
-                    self._isDrawing = True
+                if self._navCtrl._isDrawing:
+                    self._navCtrl.endDrawing(imageview, imageview.mousePos)
+                    self._navCtrl._isDrawing = True
                 self._navCtrl.changeSliceRelative(1, self._navCtrl._views.index(imageview))
         else:
             if k_alt:
-                if self._isDrawing:
-                    self.endDrawing(imageview, imageview.mousePos)
-                    self._isDrawing = True
+                if self._navCtrl._isDrawing:
+                    self._navCtrl.endDrawing(imageview, imageview.mousePos)
+                    self._navCtrl._isDrawing = True
                 self._navCtrl.changeSliceRelative(-10, self._navCtrl._views.index(imageview))
             elif k_ctrl:
                 scaleFactor = 0.9
                 imageview.doScale(scaleFactor)
             else:
-                if self._isDrawing:
-                    self.endDrawing(imageview, imageview.mousePos)
-                    self._isDrawing = True
+                if self._navCtrl._isDrawing:
+                    self._navCtrl.endDrawing(imageview, imageview.mousePos)
+                    self._navCtrl._isDrawing = True
                 self._navCtrl.changeSliceRelative(-1, self._navCtrl._views.index(imageview))
         if k_ctrl:
             mousePosAfterScale = imageview.mapToScene(event.pos())
@@ -164,7 +161,7 @@ class NavigationInterpreter(QObject):
             imageview.customContextMenuRequested.emit(event.pos())
             return
 
-        if not self.drawingEnabled:
+        if not self._navCtrl.drawingEnabled:
             return
         
         if event.buttons() == Qt.LeftButton:
@@ -173,9 +170,9 @@ class NavigationInterpreter(QObject):
                 return
             if QApplication.keyboardModifiers() == Qt.ShiftModifier:
                 self._navCtrl.erasingToggled.emit(True)
-                self._tempErase = True
+                self._navCtrl._tempErase = True
             imageview.mousePos = imageview.mapScene2Data(imageview.mapToScene(event.pos()))
-            self.beginDrawing(imageview, imageview.mousePos)
+            self._navCtrl.beginDrawing(imageview, imageview.mousePos)
 
     def _onMouseReleaseEvent( self, imageview, event ):
         imageview.mousePos = imageview.mapScene2Data(imageview.mapToScene(event.pos()))
@@ -186,26 +183,16 @@ class NavigationInterpreter(QObject):
             imageview._lastPanPoint = releasePoint
             imageview._dragMode = False
             imageview.ticker.start(20)
-        if self._isDrawing:
-            self.endDrawing(imageview, imageview.mousePos)
-        if self._tempErase:
+        if self._navCtrl._isDrawing:
+            self._navCtrl.endDrawing(imageview, imageview.mousePos)
+        if self._navCtrl._tempErase:
             self._navCtrl.erasingToggled.emit(False)
-            self._tempErase = False
+            self._navCtrl._tempErase = False
 
     def _onMouseDoubleClickEvent( self, imageview, event ):
         dataMousePos = imageview.mapScene2Data(imageview.mapToScene(event.pos()))
         imageview.mousePos = dataMousePos # FIXME: remove, when guaranteed, that no longer needed inside imageview
         self._navCtrl.positionSlice(dataMousePos.x(), dataMousePos.y(), self._navCtrl._views.index(imageview))
-            
-    def beginDrawing(self, imageview, pos):
-        imageview.mousePos = pos
-        self._isDrawing  = True
-        self._navCtrl.beginDraw.emit(pos, imageview.sliceShape)
-
-    def endDrawing(self, imageview, pos): 
-        self._isDrawing = False
-        self._navCtrl.endDraw.emit(pos)
-
     
 #*******************************************************************************
 # N a v i g a t i o n C o n t r o l e r                                        *
@@ -261,8 +248,9 @@ class NavigationControler(QObject):
         self._endStackIndex   = 1
         self._view3d = view3d
 
-        #FIXME
-        #self._views[0].swapAxes()
+        self.drawingEnabled = False
+        self._isDrawing = False
+        self._tempErase = False
 
         self.axisColors = [QColor(255,0,0,255), QColor(0,255,0,255), QColor(0,0,255,255)]
     
@@ -376,6 +364,16 @@ class NavigationControler(QObject):
             return
 
         self._model.cursorPos = newPos
+
+            
+    def beginDrawing(self, imageview, pos):
+        imageview.mousePos = pos
+        self._isDrawing  = True
+        self.beginDraw.emit(pos, imageview.sliceShape)
+
+    def endDrawing(self, imageview, pos): 
+        self._isDrawing = False
+        self.endDraw.emit(pos)
     
     #private functions ########################################################
     
