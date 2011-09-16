@@ -16,6 +16,21 @@ class CrosshairControler(QObject):
     
     def _setBrushColor(self):
         pass
+
+#*******************************************************************************
+# B r u s h i n g I n t e r p r e t e r                                        *
+#*******************************************************************************
+
+class BrushingInterpreter(QObject):
+    def __init__(self, brushingModel, navigationInterpreter):
+        QObject.__init__(self, parent=None)
+        self._brushingModel = brushingModel
+        self._navigationInterpreter = navigationInterpreter
+        self._navigationInterpreter.beginDraw.connect(self._brushingModel.beginDrawing)
+        self._navigationInterpreter.endDraw.connect(self._brushingModel.endDrawing)
+        self._navigationInterpreter.drawing.connect(self._brushingModel.moveTo)
+        self._navigationInterpreter.erasingToggled.connect(self._brushingModel.toggleErase)
+
         
 #*******************************************************************************
 # B r u s h i n g C o n t r o l e r                                            *
@@ -49,17 +64,3 @@ class BrushingControler(QObject):
         #newlabels = numpy.zeros
         
         self._dataSink.put(slicing, labels.reshape(tuple(newshape)))
-        
-#*******************************************************************************
-# B r u s h i n g I n t e r p r e t e r                                        *
-#*******************************************************************************
-
-class BrushingInterpreter(QObject):
-    def __init__(self, brushingModel, navigationInterpreter):
-        QObject.__init__(self, parent=None)
-        self._brushingModel = brushingModel
-        self._navigationInterpreter = navigationInterpreter
-        self._navigationInterpreter.beginDraw.connect(self._brushingModel.beginDrawing)
-        self._navigationInterpreter.endDraw.connect(self._brushingModel.endDrawing)
-        self._navigationInterpreter.drawing.connect(self._brushingModel.moveTo)
-        self._navigationInterpreter.erasingToggled.connect(self._brushingModel.toggleErase)

@@ -36,7 +36,7 @@ class NavigationInterpreter(QObject):
     
     erasingToggled     = pyqtSignal(bool)            
     
-    def __init__(self, positionmodel, imageviews):
+    def __init__(self, positionmodel, imageviews, navigationcontroler):
         """
         Constructs an interpreter which will update the
         PositionModel model.
@@ -51,6 +51,7 @@ class NavigationInterpreter(QObject):
         self._tempErase = False
         self._model = positionmodel
         self._imageViews = imageviews
+        self._navCtrl = navigationcontroler
 
     def eventFilter( self, watched, event ):
         etype = event.type()
@@ -89,7 +90,7 @@ class NavigationInterpreter(QObject):
         oldX, oldY = imageview.x, imageview.y
         x = imageview.x = mousePos.x()
         y = imageview.y = mousePos.y()
-        self.positionCursor( x, y, self._imageViews.index(imageview))
+        self._navCtrl.positionCursor( x, y, self._imageViews.index(imageview))
 
         if self._isDrawing:
             ### FIXME
@@ -129,7 +130,7 @@ class NavigationInterpreter(QObject):
                 if self._isDrawing:
                     self.endDrawing(imageview, imageview.mousePos)
                     imageview._isDrawing = True
-                self.changeSliceRelative(10, self._imageViews.index(imageview))
+                self._navCtrl.changeSliceRelative(10, self._imageViews.index(imageview))
             elif k_ctrl:
                 scaleFactor = 1.1
                 imageview.doScale(scaleFactor)
@@ -137,13 +138,13 @@ class NavigationInterpreter(QObject):
                 if self._isDrawing:
                     self.endDrawing(imageview, imageview.mousePos)
                     self._isDrawing = True
-                self.changeSliceRelative(1, self._imageViews.index(imageview))
+                self._navCtrl.changeSliceRelative(1, self._imageViews.index(imageview))
         else:
             if k_alt:
                 if self._isDrawing:
                     self.endDrawing(imageview, imageview.mousePos)
                     self._isDrawing = True
-                self.changeSliceRelative(-10, self._imageViews.index(imageview))
+                self._navCtrl.changeSliceRelative(-10, self._imageViews.index(imageview))
             elif k_ctrl:
                 scaleFactor = 0.9
                 imageview.doScale(scaleFactor)
@@ -151,7 +152,7 @@ class NavigationInterpreter(QObject):
                 if self._isDrawing:
                     self.endDrawing(imageview, imageview.mousePos)
                     self._isDrawing = True
-                self.changeSliceRelative(-1, self._imageViews.index(imageview))
+                self._navCtrl.changeSliceRelative(-1, self._imageViews.index(imageview))
         if k_ctrl:
             mousePosAfterScale = imageview.mapToScene(event.pos())
             offset = sceneMousePos - mousePosAfterScale
@@ -206,100 +207,8 @@ class NavigationInterpreter(QObject):
     def _onMouseDoubleClickEvent( self, imageview, event ):
         dataMousePos = imageview.mapScene2Data(imageview.mapToScene(event.pos()))
         imageview.mousePos = dataMousePos # FIXME: remove, when guaranteed, that no longer needed inside imageview
-        self.positionSlice(dataMousePos.x(), dataMousePos.y(), self._imageViews.index(imageview))
-
-
-    def changeSliceRelative(self, delta, axis):
-        """
-        Change slice along a certain axis relative to current slice.
-
-        delta -- add delta to current slice position [positive or negative int]
-        axis  -- along which axis [0,1,2]
-        """
-        
-        if delta == 0:
-            return
-        newSlice = self._model.slicingPos[axis] + delta
-        if newSlice < 0 or newSlice >= self._model.volumeExtent(axis):
-            return
-        newPos = copy.copy(self._model.slicingPos)
-        newPos[axis] = newSlice
-        
-        cursorPos = copy.copy(self._model.cursorPos)
-        cursorPos[axis] = newSlice
-        self._model.cursorPos  = cursorPos  
-
-        self._model.slicingPos = newPos
-
-    def changeSliceAbsolute(self, value, axis):
-        """
-        Change slice along a certain axis.
-
-        value -- slice number
-        axis  -- along which axis [0,1,2]
-        """
-        
-        if value < 0 or value > self._model.volumeExtent(axis):
-            return
-        newPos = copy.copy(self._model.slicingPos)
-        newPos[axis] = value
-        if not self._positionValid(newPos):
-            return
-        
-        cursorPos = copy.copy(self._model.cursorPos)
-        cursorPos[axis] = value
-        self._model.cursorPos  = cursorPos  
-        
-        self._model.slicingPos = newPos
-        
-    def sliceIntersectionIndicatorToggle(self, show):
-        """
-        Toggle the display of the slice intersection indicator lines
-        to on/off according to `show`.
-        """
-        self.indicateSliceIntersection = show
-    
-    def positionCursor(self, x, y, axis):
-        """
-        Change position of the crosshair cursor.
-
-        x,y  -- cursor position on a certain image scene
-        axis -- perpendicular axis [0,1,2]
-        """
-        
-        #we get the 2D coordinates x,y from the view that
-        #shows the projection perpendicular to axis
-        #set this view as active
-        self._model.activeView = axis
-        
-        newPos = [x,y]
-        newPos.insert(axis, self._model.slicingPos[axis])
-
-        if newPos == self._model.cursorPos:
-            return
-        if not self._positionValid(newPos):
-            return
-
-        self._model.cursorPos = newPos
-        
-    def positionSlice(self, x, y, axis):
-        newPos = copy.copy(self._model.slicingPos)
-        i,j = posView2D([0,1,2], axis)
-        newPos[i] = x
-        newPos[j] = y
-        if newPos == self._model.slicingPos:
-            return
-        if not self._positionValid(newPos):
-            return
-        
-        self._model.slicingPos = newPos
-        
-    def _positionValid(self, pos):
-        for i in range(3):
-            if pos[i] < 0 or pos[i] >= self._model.shape[i]:
-                return False
-        return True
-
+        self._navCtrl.positionSlice(dataMousePos.x(), dataMousePos.y(), self._imageViews.index(imageview))
+            
     def beginDrawing(self, imageview, pos):
         imageview.mousePos = pos
         self._isDrawing  = True
@@ -369,6 +278,18 @@ class NavigationControler(QObject):
     
     def moveCrosshair(self, newPos, oldPos):
         self._updateCrossHairCursor()
+
+    def positionSlice(self, x, y, axis):
+        newPos = copy.copy(self._model.slicingPos)
+        i,j = posView2D([0,1,2], axis)
+        newPos[i] = x
+        newPos[j] = y
+        if newPos == self._model.slicingPos:
+            return
+        if not self._positionValid(newPos):
+            return
+        
+        self._model.slicingPos = newPos
     
     def moveSlicingPosition(self, newPos, oldPos):
         for i in range(3):
@@ -395,10 +316,76 @@ class NavigationControler(QObject):
         for i in range(3):
             for src in self._sliceSources[i]:
                 src.setThrough(2, newChannel)
+
+    def changeSliceRelative(self, delta, axis):
+        """
+        Change slice along a certain axis relative to current slice.
+
+        delta -- add delta to current slice position [positive or negative int]
+        axis  -- along which axis [0,1,2]
+        """
+        
+        if delta == 0:
+            return
+        newSlice = self._model.slicingPos[axis] + delta
+        if newSlice < 0 or newSlice >= self._model.volumeExtent(axis):
+            return
+        newPos = copy.copy(self._model.slicingPos)
+        newPos[axis] = newSlice
+        
+        cursorPos = copy.copy(self._model.cursorPos)
+        cursorPos[axis] = newSlice
+        self._model.cursorPos  = cursorPos  
+
+        self._model.slicingPos = newPos
+
+    def changeSliceAbsolute(self, value, axis):
+        """
+        Change slice along a certain axis.
+
+        value -- slice number
+        axis  -- along which axis [0,1,2]
+        """
+        
+        if value < 0 or value > self._model.volumeExtent(axis):
+            return
+        newPos = copy.copy(self._model.slicingPos)
+        newPos[axis] = value
+        if not self._positionValid(newPos):
+            return
+        
+        cursorPos = copy.copy(self._model.cursorPos)
+        cursorPos[axis] = value
+        self._model.cursorPos  = cursorPos  
+        
+        self._model.slicingPos = newPos
     
     def settleSlicingPosition(self, settled):
         for v in self._views:
             v.indicateSlicingPositionSettled(settled)
+
+    def positionCursor(self, x, y, axis):
+        """
+        Change position of the crosshair cursor.
+
+        x,y  -- cursor position on a certain image scene
+        axis -- perpendicular axis [0,1,2]
+        """
+        
+        #we get the 2D coordinates x,y from the view that
+        #shows the projection perpendicular to axis
+        #set this view as active
+        self._model.activeView = axis
+        
+        newPos = [x,y]
+        newPos.insert(axis, self._model.slicingPos[axis])
+
+        if newPos == self._model.cursorPos:
+            return
+        if not self._positionValid(newPos):
+            return
+
+        self._model.cursorPos = newPos
     
     #private functions ########################################################
     
@@ -422,3 +409,9 @@ class NavigationControler(QObject):
         #re-configure the slice source
         for src in self._sliceSources[axis]:
             src.setThrough(1, num)
+
+    def _positionValid(self, pos):
+        for i in range(3):
+            if pos[i] < 0 or pos[i] >= self._model.shape[i]:
+                return False
+        return True

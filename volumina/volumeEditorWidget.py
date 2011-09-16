@@ -71,7 +71,7 @@ class VolumeEditorWidget(QWidget):
             v.hud = imageView2DHud()
             #connect interpreter
             v.hud.createImageView2DHud(axisLabels[i], self._ve.posModel.volumeExtent(i), axisColors[i], QColor("white"))
-            v.hud.sliceSelector.valueChanged.connect(partial(self._ve.navInterpret.changeSliceAbsolute, axis=i))
+            v.hud.sliceSelector.valueChanged.connect(partial(self._ve.navCtrl.changeSliceAbsolute, axis=i))
 
         self.quadview = QuadView(self, self._ve.imageViews[2], self._ve.imageViews[0], self._ve.imageViews[1], self._ve.view3d)
         self.quadViewStatusBar = QuadStatusBar()
