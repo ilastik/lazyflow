@@ -26,81 +26,58 @@ except:
 #*******************************************************************************
 
 class VolumeEditor( QObject ):
-    zoomInFactor  = 1.1
-    zoomOutFactor = 0.9
+    @property
+    def showDebugPatches(self):
+        return self._showDebugPatches
+    @showDebugPatches.setter
+    def showDebugPatches(self, show):
+        for s in self.imageScenes:
+            s.showDebugPatches = show
+        self._showDebugPatches = show
 
     def __init__( self, shape, layerStackModel, labelsink=None):
         super(VolumeEditor, self).__init__()
         assert(len(shape) == 5)
-        self._shape = shape
-        
+
+        ##
+        ## properties
+        ##
+        self._shape = shape        
         self._showDebugPatches = False
+
+        ##
+        ## base components
+        ##
         self.layerStack = layerStackModel
+        self.imageScenes = [ImageScene2D(), ImageScene2D(), ImageScene2D()]
+        self.imageViews = [ImageView2D(self.imageScenes[i]) for i in [0,1,2]]
+        self.imagepumps = self._initImagePumps()
+        self.posModel = PositionModel(self._shape)
 
-        # three ortho image pumps
-        alongTXC = SliceProjection( abscissa = 2, ordinate = 3, along = [0,1,4] )
-        alongTYC = SliceProjection( abscissa = 1, ordinate = 3, along = [0,2,4] )
-        alongTZC = SliceProjection( abscissa = 1, ordinate = 2, along = [0,3,4] )
+        self.view3d = self._initView3d() if useVTK else QWidget()
 
-        imagepumps = []
-        imagepumps.append(ImagePump( layerStackModel, alongTXC ))
-        imagepumps.append(ImagePump( layerStackModel, alongTYC ))
-        imagepumps.append(ImagePump( layerStackModel, alongTZC ))
-
-        # synced slicesource collections
-        syncedSliceSources = []
-        for i in xrange(3):
-            syncedSliceSources.append(imagepumps[i].syncedSliceSources)
-
-        # three ortho image scenes
-        self.imageScenes = []
-        self.imageScenes.append(ImageScene2D())
-        self.imageScenes.append(ImageScene2D())
-        self.imageScenes.append(ImageScene2D())
         names = ['x', 'y', 'z']
-        for scene, name, pump in zip(self.imageScenes, names, imagepumps):
+        for scene, name, pump in zip(self.imageScenes, names, self.imagepumps):
             scene.setObjectName(name)
             scene.stackedImageSources = pump.stackedImageSources
 
-        # three ortho image views
-        self.imageViews = []
-        self.imageViews.append(ImageView2D(self.imageScenes[0]))
-        self.imageViews.append(ImageView2D(self.imageScenes[1]))
-        self.imageViews.append(ImageView2D(self.imageScenes[2]))
-        
-        self.imageViews[0].setTransform(QTransform(1,0,0,0,1,0,0,0,1))
-        self.imageViews[1].setTransform(QTransform(0,1,1,0,0,0))
-        self.imageViews[2].setTransform(QTransform(0,1,1,0,0,0))
-
-        if useVTK:
-            self.view3d = OverviewScene(shape=self._shape[1:4])
-            def onSliceDragged(num, pos):
-                newPos = copy.deepcopy(self.posModel.slicingPos)
-                newPos[pos] = num
-                self.posModel.slicingPos = newPos
-                
-            self.view3d.changedSlice.connect(onSliceDragged)
-        else:
-            self.view3d = QWidget()
+        ##
+        ## interaction
+        ##
+        # event switch
+        self.eventSwitch = EventSwitch(self.imageViews)
 
         # navigation control
-        self.posModel     = PositionModel(self._shape)
-        v3d = None
-        if useVTK:
-            v3d = self.view3d
+        v3d = self.view3d if useVTK else None
+        syncedSliceSources = [self.imagepumps[i].syncedSliceSources for i in [0,1,2]]
         self.navCtrl      = NavigationControler(self.imageViews, syncedSliceSources, self.posModel, view3d=v3d)
         self.navInterpret = NavigationInterpreter(self.posModel, self.imageViews)
 
-        # eventswitch
-        self.es = EventSwitch(self.imageViews)
-        self.es.interpreter = self.navInterpret
-        
         # brushing control
         self.brushingModel = BrushingModel()
         #self.crosshairControler = CrosshairControler() 
         self.brushingInterpreter = BrushingInterpreter(self.brushingModel, self.imageViews)
-        self.brushingControler = BrushingControler(self.brushingModel, self.posModel, labelsink)
-        
+        self.brushingControler = BrushingControler(self.brushingModel, self.posModel, labelsink)        
         def onBrushSize(s):
             b = QPen(QBrush(self.brushingModel.drawColor), s)
             #b = QPen(QBrush(QColor(0,255,0)), 15) #for testing
@@ -111,36 +88,33 @@ class VolumeEditor( QObject ):
             #b = QPen(QBrush(QColor(0,255,0)), 15) #for testing
             for s in self.imageScenes:
                 s.setBrush(b)
-        
         self.brushingModel.brushSizeChanged.connect(onBrushSize)
         self.brushingModel.brushColorChanged.connect(onBrushColor)
-        
-        self._initConnects()
 
-    @property
-    def showDebugPatches(self):
-        return self._showDebugPatches
-    @showDebugPatches.setter
-    def showDebugPatches(self, show):
-        for s in self.imageScenes:
-            s.showDebugPatches = show
-        self._showDebugPatches = show
+        # initial interaction mode
+        self.eventSwitch.interpreter = self.navInterpret
 
-    def scheduleSlicesRedraw(self):
-        for s in self.imageScenes:
-            s._invalidateRect()
-
-    def _initConnects(self):
+        ##
+        ## connect
+        ##
         for i, v in enumerate(self.imageViews):
-            #connect interpreter
             v.sliceShape = self.posModel.sliceShape(axis=i)
-            
-        #connect controler
         self.posModel.channelChanged.connect(self.navCtrl.changeChannel)
         self.posModel.timeChanged.connect(self.navCtrl.changeTime)
         self.posModel.slicingPositionChanged.connect(self.navCtrl.moveSlicingPosition)
         self.posModel.cursorPositionChanged.connect(self.navCtrl.moveCrosshair)
         self.posModel.slicingPositionSettled.connect(self.navCtrl.settleSlicingPosition)
+        
+        ##
+        ## Other
+        ##
+        self.imageViews[0].setTransform(QTransform(1,0,0,0,1,0,0,0,1))
+        self.imageViews[1].setTransform(QTransform(0,1,1,0,0,0))
+        self.imageViews[2].setTransform(QTransform(0,1,1,0,0,0))
+
+    def scheduleSlicesRedraw(self):
+        for s in self.imageScenes:
+            s._invalidateRect()
 
     def setDrawingEnabled(self, enabled): 
         for i in range(3):
@@ -166,3 +140,27 @@ class VolumeEditor( QObject ):
     def previousChannel(self):
         assert(False)
         self.posModel.channel = self.posModel.channel-1
+
+    ##
+    ## private
+    ##
+    def _initImagePumps( self ):
+        alongTXC = SliceProjection( abscissa = 2, ordinate = 3, along = [0,1,4] )
+        alongTYC = SliceProjection( abscissa = 1, ordinate = 3, along = [0,2,4] )
+        alongTZC = SliceProjection( abscissa = 1, ordinate = 2, along = [0,3,4] )
+
+        imagepumps = []
+        imagepumps.append(ImagePump( self.layerStack, alongTXC ))
+        imagepumps.append(ImagePump( self.layerStack, alongTYC ))
+        imagepumps.append(ImagePump( self.layerStack, alongTZC ))
+        return imagepumps
+
+    def _initView3d( self ):
+        view3d = OverviewScene(shape=self._shape[1:4])
+        def onSliceDragged(num, pos):
+            newPos = copy.deepcopy(self.posModel.slicingPos)
+            newPos[pos] = num
+            self.posModel.slicingPos = newPos
+        view3d.changedSlice.connect(onSliceDragged)
+        return view3d
+
