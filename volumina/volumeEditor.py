@@ -71,12 +71,12 @@ class VolumeEditor( QObject ):
         v3d = self.view3d if useVTK else None
         syncedSliceSources = [self.imagepumps[i].syncedSliceSources for i in [0,1,2]]
         self.navCtrl      = NavigationControler(self.imageViews, syncedSliceSources, self.posModel, view3d=v3d)
-        self.navInterpret = NavigationInterpreter(self.posModel, self.imageViews, self.navCtrl)
+        self.navInterpret = NavigationInterpreter(self.navCtrl)
 
         # brushing control
         self.brushingModel = BrushingModel()
         #self.crosshairControler = CrosshairControler() 
-        self.brushingInterpreter = BrushingInterpreter(self.brushingModel, self.navInterpret)
+        self.brushingInterpreter = BrushingInterpreter(self.brushingModel, self.navCtrl)
         self.brushingControler = BrushingControler(self.brushingModel, self.posModel, labelsink)        
         def onBrushSize(s):
             b = QPen(QBrush(self.brushingModel.drawColor), s)

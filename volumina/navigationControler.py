@@ -24,19 +24,9 @@ class NavigationInterpreter(QObject):
     slice views and interprets them as actions upon a N-D volume
     (whereas the individual ImageView2D/ImageScene2D know nothing about the
     data they display).
-    
-    After interpreting the user's events on these widgets, the position model
-    is updated.
 
     """
-    #all the following signals refer to data coordinates
-    drawing            = pyqtSignal(QPointF)
-    beginDraw          = pyqtSignal(QPointF, object)
-    endDraw            = pyqtSignal(QPointF)
-    
-    erasingToggled     = pyqtSignal(bool)            
-    
-    def __init__(self, positionmodel, imageviews, navigationcontroler):
+    def __init__(self, navigationcontroler):
         """
         Constructs an interpreter which will update the
         PositionModel model.
@@ -49,8 +39,6 @@ class NavigationInterpreter(QObject):
         self.drawingEnabled = False
         self._isDrawing = False
         self._tempErase = False
-        self._model = positionmodel
-        self._imageViews = imageviews
         self._navCtrl = navigationcontroler
 
     def eventFilter( self, watched, event ):
@@ -90,7 +78,7 @@ class NavigationInterpreter(QObject):
         oldX, oldY = imageview.x, imageview.y
         x = imageview.x = mousePos.x()
         y = imageview.y = mousePos.y()
-        self._navCtrl.positionCursor( x, y, self._imageViews.index(imageview))
+        self._navCtrl.positionCursor( x, y, self._navCtrl._views.index(imageview))
 
         if self._isDrawing:
             ### FIXME
@@ -114,7 +102,7 @@ class NavigationInterpreter(QObject):
             p.unlock()
             imageview.scene()._schedulePatchRedraw(patchNr)
             ### end FIXME            
-            self.drawing.emit(mousePos)
+            self._navCtrl.drawing.emit(mousePos)
 
     def _onWheelEvent( self, imageview, event ):
         k_alt = (event.modifiers() == Qt.AltModifier)
@@ -130,7 +118,7 @@ class NavigationInterpreter(QObject):
                 if self._isDrawing:
                     self.endDrawing(imageview, imageview.mousePos)
                     imageview._isDrawing = True
-                self._navCtrl.changeSliceRelative(10, self._imageViews.index(imageview))
+                self._navCtrl.changeSliceRelative(10, self._navCtrl._views.index(imageview))
             elif k_ctrl:
                 scaleFactor = 1.1
                 imageview.doScale(scaleFactor)
@@ -138,13 +126,13 @@ class NavigationInterpreter(QObject):
                 if self._isDrawing:
                     self.endDrawing(imageview, imageview.mousePos)
                     self._isDrawing = True
-                self._navCtrl.changeSliceRelative(1, self._imageViews.index(imageview))
+                self._navCtrl.changeSliceRelative(1, self._navCtrl._views.index(imageview))
         else:
             if k_alt:
                 if self._isDrawing:
                     self.endDrawing(imageview, imageview.mousePos)
                     self._isDrawing = True
-                self._navCtrl.changeSliceRelative(-10, self._imageViews.index(imageview))
+                self._navCtrl.changeSliceRelative(-10, self._navCtrl._views.index(imageview))
             elif k_ctrl:
                 scaleFactor = 0.9
                 imageview.doScale(scaleFactor)
@@ -152,7 +140,7 @@ class NavigationInterpreter(QObject):
                 if self._isDrawing:
                     self.endDrawing(imageview, imageview.mousePos)
                     self._isDrawing = True
-                self._navCtrl.changeSliceRelative(-1, self._imageViews.index(imageview))
+                self._navCtrl.changeSliceRelative(-1, self._navCtrl._views.index(imageview))
         if k_ctrl:
             mousePosAfterScale = imageview.mapToScene(event.pos())
             offset = sceneMousePos - mousePosAfterScale
@@ -184,7 +172,7 @@ class NavigationInterpreter(QObject):
             if imageview.ticker.isActive():
                 return
             if QApplication.keyboardModifiers() == Qt.ShiftModifier:
-                self.erasingToggled.emit(True)
+                self._navCtrl.erasingToggled.emit(True)
                 self._tempErase = True
             imageview.mousePos = imageview.mapScene2Data(imageview.mapToScene(event.pos()))
             self.beginDrawing(imageview, imageview.mousePos)
@@ -201,22 +189,22 @@ class NavigationInterpreter(QObject):
         if self._isDrawing:
             self.endDrawing(imageview, imageview.mousePos)
         if self._tempErase:
-            self.erasingToggled.emit(False)
+            self._navCtrl.erasingToggled.emit(False)
             self._tempErase = False
 
     def _onMouseDoubleClickEvent( self, imageview, event ):
         dataMousePos = imageview.mapScene2Data(imageview.mapToScene(event.pos()))
         imageview.mousePos = dataMousePos # FIXME: remove, when guaranteed, that no longer needed inside imageview
-        self._navCtrl.positionSlice(dataMousePos.x(), dataMousePos.y(), self._imageViews.index(imageview))
+        self._navCtrl.positionSlice(dataMousePos.x(), dataMousePos.y(), self._navCtrl._views.index(imageview))
             
     def beginDrawing(self, imageview, pos):
         imageview.mousePos = pos
         self._isDrawing  = True
-        self.beginDraw.emit(pos, imageview.sliceShape)
+        self._navCtrl.beginDraw.emit(pos, imageview.sliceShape)
 
     def endDrawing(self, imageview, pos): 
         self._isDrawing = False
-        self.endDraw.emit(pos)
+        self._navCtrl.endDraw.emit(pos)
 
     
 #*******************************************************************************
@@ -232,10 +220,12 @@ class NavigationControler(QObject):
     views (representing the spatial X, Y and Z slicings)
     accordingly.
     """
+    # all the following signals refer to data coordinates
+    drawing            = pyqtSignal(QPointF)
+    beginDraw          = pyqtSignal(QPointF, object)
+    endDraw            = pyqtSignal(QPointF)
     
-    ##
-    ## properties
-    ##e
+    erasingToggled     = pyqtSignal(bool)            
     
     @property
     def axisColors( self ):

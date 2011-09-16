@@ -22,14 +22,14 @@ class CrosshairControler(QObject):
 #*******************************************************************************
 
 class BrushingInterpreter(QObject):
-    def __init__(self, brushingModel, navigationInterpreter):
+    def __init__(self, brushingModel, navigationControler):
         QObject.__init__(self, parent=None)
         self._brushingModel = brushingModel
-        self._navigationInterpreter = navigationInterpreter
-        self._navigationInterpreter.beginDraw.connect(self._brushingModel.beginDrawing)
-        self._navigationInterpreter.endDraw.connect(self._brushingModel.endDrawing)
-        self._navigationInterpreter.drawing.connect(self._brushingModel.moveTo)
-        self._navigationInterpreter.erasingToggled.connect(self._brushingModel.toggleErase)
+        self._navCtrl = navigationControler
+        self._navCtrl.beginDraw.connect(self._brushingModel.beginDrawing)
+        self._navCtrl.endDraw.connect(self._brushingModel.endDrawing)
+        self._navCtrl.drawing.connect(self._brushingModel.moveTo)
+        self._navCtrl.erasingToggled.connect(self._brushingModel.toggleErase)
 
         
 #*******************************************************************************
