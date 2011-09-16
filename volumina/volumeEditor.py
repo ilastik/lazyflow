@@ -195,19 +195,6 @@ class VolumeEditor( QObject ):
         QApplication.processEvents()
         print "finished saving thread"
     
-    def updateTimeSliceForSaving(self, time, num, axis):
-        self._imageViews[axis].thread.freeQueue.clear()
-        if self._imageViews[axis].hud.sliceSelector.value() != num:
-            #this will emit the signal and change the slice
-            self._imageViews[axis].hud.sliceSelector.setValue(num)
-        elif self._viewManager.time!=time:
-            #if only the time is changed, we don't want to update all 3 slices
-            self._viewManager.time = time
-            self.changeSlice(num, axis)
-        else:
-            #no need to update, just save the current image
-            self._imageViews[axis].thread.freeQueue.set()
-            
     def closeEvent(self, event):
         event.accept()
 
@@ -226,6 +213,3 @@ class VolumeEditor( QObject ):
 
     def historyRedo(self):
         self._history.redo()
-
-    def getVisibleState(self):
-        return self._viewManager.getVisibleState()
