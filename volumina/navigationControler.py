@@ -80,7 +80,7 @@ class NavigationInterpreter(QObject):
             imageview._panning()
             imageview._lastPanPoint = event.pos()
             return
-        if imageview._ticker.isActive():
+        if imageview.ticker.isActive():
             #the view is still scrolling
             #do nothing until it comes to a complete stop
             return
@@ -165,7 +165,7 @@ class NavigationInterpreter(QObject):
             imageview._lastPanPoint = event.pos()
             imageview._crossHairCursor.setVisible(False)
             imageview._dragMode = True
-            if imageview._ticker.isActive():
+            if imageview.ticker.isActive():
                 imageview._deltaPan = QPointF(0, 0)
 
         if event.buttons() == Qt.RightButton:
@@ -180,7 +180,7 @@ class NavigationInterpreter(QObject):
         
         if event.buttons() == Qt.LeftButton:
             #don't draw if flicker the view
-            if imageview._ticker.isActive():
+            if imageview.ticker.isActive():
                 return
             if QApplication.keyboardModifiers() == Qt.ShiftModifier:
                 self.erasingToggled.emit(True)
@@ -196,7 +196,7 @@ class NavigationInterpreter(QObject):
             releasePoint = event.pos()
             imageview._lastPanPoint = releasePoint
             imageview._dragMode = False
-            imageview._ticker.start(20)
+            imageview.ticker.start(20)
         if self._isDrawing:
             self.endDrawing(imageview, imageview.mousePos)
         if self._tempErase:

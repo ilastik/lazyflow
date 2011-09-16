@@ -31,16 +31,6 @@ class ImageView2D(QGraphicsView):
         self.scene().sceneShape             = sceneShape
         self._crossHairCursor.shape         = sceneShape
         self._sliceIntersectionMarker.shape = sceneShape
-    
-    #FIXME unused?
-    @property
-    def name(self):
-        assert(False) # added 2011/09/15 (triggered since then? If not, remove code.)
-        return self._name
-    @name.setter
-    def name(self, n):
-        assert(False) # added 2011/09/15 (triggered since then? If not, remove code.)
-        self._name = n
            
     @property
     def hud(self):
@@ -75,18 +65,17 @@ class ImageView2D(QGraphicsView):
         #these attributes are exposed as public properties above
         self._sliceShape  = None #2D shape of this view's shown image
         self._slices = None #number of slices that are stacked
-        self._name   = ''
         self._hud    = None
         
         self._crossHairCursor         = None
         self._sliceIntersectionMarker = None
+
+        self.ticker = QTimer(self)
+        self.ticker.timeout.connect(self._tickerEvent)
         
         #
         # Setup the Viewport for fast painting
         #
-        
-        #Unfortunately, setting these flags has no effect when
-        #Cache background is turned on.
         #With these flags turned on we could handle the drawing of the
         #white background ourselves thus removing the flicker
         #when scrolling fast through the slices
@@ -133,9 +122,6 @@ class ImageView2D(QGraphicsView):
 
         self.setMouseTracking(True)
 
-        self._ticker = QTimer(self)
-        self._ticker.timeout.connect(self._tickerEvent)
-        
         # invisible cursor to enable custom cursor
         self._hiddenCursor = QCursor(Qt.BlankCursor)
         # For screen recording BlankCursor doesn't work
@@ -144,7 +130,6 @@ class ImageView2D(QGraphicsView):
     def _cleanUp(self):        
         self._ticker.stop()
         del self._ticker
-
 
     def indicateSlicingPositionSettled(self, settled):
         self.scene().indicateSlicingPositionSettled(settled)
@@ -220,8 +205,6 @@ class ImageView2D(QGraphicsView):
     def _tickerEvent(self):
         if self._deltaPan.x() == 0.0 and self._deltaPan.y() == 0.0 or self._dragMode == True:
             self._ticker.stop()
-
-
         else:
             self._deltaPan = self._deaccelerate(self._deltaPan)
             self._panning()
