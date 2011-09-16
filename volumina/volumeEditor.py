@@ -27,9 +27,6 @@ except:
 #*******************************************************************************
 
 class VolumeEditor( QObject ):
-    changedSlice      = pyqtSignal(int,int)
-    onOverlaySelected = pyqtSignal(int)
-    
     zoomInFactor  = 1.1
     zoomOutFactor = 0.9
 
