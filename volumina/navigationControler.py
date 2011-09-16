@@ -41,24 +41,24 @@ class NavigationInterpreter(QObject):
     def eventFilter( self, watched, event ):
         etype = event.type()
         if etype == QEvent.MouseMove:
-            self._onMouseMoveEvent( watched, event )
+            self.onMouseMoveEvent( watched, event )
             return True
         elif etype == QEvent.Wheel:
-            self._onWheelEvent( watched, event )
+            self.onWheelEvent( watched, event )
             return True
         elif etype == QEvent.MouseButtonPress:
-            self._onMousePressEvent( watched, event )
+            self.onMousePressEvent( watched, event )
             return True
         elif etype == QEvent.MouseButtonRelease:
-            self._onMouseReleaseEvent( watched, event )
+            self.onMouseReleaseEvent( watched, event )
             return True
         elif etype == QEvent.MouseButtonDblClick:
-            self._onMouseDoubleClickEvent( watched, event )
+            self.onMouseDoubleClickEvent( watched, event )
             return True
         else:
             return False
 
-    def _onMouseMoveEvent( self, imageview, event ):
+    def onMouseMoveEvent( self, imageview, event ):
         if imageview._dragMode == True:
             #the mouse was moved because the user wants to change
             #the viewport
@@ -101,7 +101,7 @@ class NavigationInterpreter(QObject):
             ### end FIXME            
             self._navCtrl.drawing.emit(mousePos)
 
-    def _onWheelEvent( self, imageview, event ):
+    def onWheelEvent( self, imageview, event ):
         k_alt = (event.modifiers() == Qt.AltModifier)
         k_ctrl = (event.modifiers() == Qt.ControlModifier)
 
@@ -143,9 +143,9 @@ class NavigationInterpreter(QObject):
             offset = sceneMousePos - mousePosAfterScale
             newGrviewCenter = grviewCenter + offset
             imageview.centerOn(newGrviewCenter)
-            self._onMouseMoveEvent( imageview, event)
+            self.onMouseMoveEvent( imageview, event)
 
-    def _onMousePressEvent( self, imageview, event ):
+    def onMousePressEvent( self, imageview, event ):
         if event.button() == Qt.MidButton:
             imageview.setCursor(QCursor(Qt.SizeAllCursor))
             imageview._lastPanPoint = event.pos()
@@ -157,7 +157,7 @@ class NavigationInterpreter(QObject):
         if event.buttons() == Qt.RightButton:
             #make sure that we have the cursor at the correct position
             #before we call the context menu
-            self._onMouseMoveEvent( imageview, event)
+            self.onMouseMoveEvent( imageview, event)
             imageview.customContextMenuRequested.emit(event.pos())
             return
 
@@ -174,7 +174,7 @@ class NavigationInterpreter(QObject):
             imageview.mousePos = imageview.mapScene2Data(imageview.mapToScene(event.pos()))
             self._navCtrl.beginDrawing(imageview, imageview.mousePos)
 
-    def _onMouseReleaseEvent( self, imageview, event ):
+    def onMouseReleaseEvent( self, imageview, event ):
         imageview.mousePos = imageview.mapScene2Data(imageview.mapToScene(event.pos()))
         
         if event.button() == Qt.MidButton:
@@ -189,7 +189,7 @@ class NavigationInterpreter(QObject):
             self._navCtrl.erasingToggled.emit(False)
             self._navCtrl._tempErase = False
 
-    def _onMouseDoubleClickEvent( self, imageview, event ):
+    def onMouseDoubleClickEvent( self, imageview, event ):
         dataMousePos = imageview.mapScene2Data(imageview.mapToScene(event.pos()))
         imageview.mousePos = dataMousePos # FIXME: remove, when guaranteed, that no longer needed inside imageview
         self._navCtrl.positionSlice(dataMousePos.x(), dataMousePos.y(), self._navCtrl._views.index(imageview))
