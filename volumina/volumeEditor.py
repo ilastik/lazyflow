@@ -36,14 +36,6 @@ class VolumeEditor( QObject ):
         self._shape = shape
         
         self._showDebugPatches = False
-
-        #this setting controls the rescaling of the displayed _data to the full 0-255 range
-        self.normalizeData = False
-
-        #this settings controls the timer interval during interactive mode
-        #set to 0 to wait for complete brushstrokes !
-        #self.drawUpdateInterval = 300
-
         self.layerStack = layerStackModel
 
         # three ortho image pumps
@@ -108,9 +100,7 @@ class VolumeEditor( QObject ):
         self.es = EventSwitch(self.imageViews)
         self.es.interpreter = self.navInterpret
         
-        # some auxiliary stuff
-        self.focusAxis =  0 #the currently focused axis
-        
+        # brushing control
         self.brushingModel = BrushingModel()
         #self.crosshairControler = CrosshairControler() 
         self.brushingInterpreter = BrushingInterpreter(self.brushingModel, self.imageViews)
@@ -165,23 +155,6 @@ class VolumeEditor( QObject ):
         print "Volumeeditor.onCustomContextMenuRequested"
         #self.customContextMenuRequested.emit(pos)
         
-    def focusNextPrevChild(self, forward = True):
-        """this method is overwritten from QWidget
-           so that the user can cycle through the three slice views
-           using TAB (without giving focus to other widgets in-between)"""
-        if forward:
-            self.focusAxis += 1
-            if self.focusAxis > 2:
-                self.focusAxis = 0
-        else:
-            self.focusAxis -= 1
-            if self.focusAxis < 0:
-                self.focusAxis = 2
-                
-        if len(self._imageViews) > 2:
-            self._imageViews[self.focusAxis].setFocus()
-        return True
-    
     def cleanUp(self):
         QApplication.processEvents()
         print "VolumeEditor: cleaning up "
