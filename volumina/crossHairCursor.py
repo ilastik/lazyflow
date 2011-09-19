@@ -45,13 +45,13 @@ class CrossHairCursor(QGraphicsItem) :
     modeXYPosition = 2
     
     def boundingRect(self):
-        return QRectF(0,0, self.width, self.height)
+        return QRectF(0,0, self._width, self._height)
     
     def __init__(self, scene=None):
         QGraphicsItem.__init__(self, scene=scene)
         
-        self.width = 0
-        self.height = 0
+        self._width = 0
+        self._height = 0
         
         self.penDotted = QPen(Qt.red, 2, Qt.DotLine, Qt.RoundCap, Qt.RoundJoin)
         self.penDotted.setCosmetic(True)
@@ -65,13 +65,15 @@ class CrossHairCursor(QGraphicsItem) :
         
         self.mode = self.modeXYPosition
     
+    #be careful: QGraphicsItem has a shape() method, which
+    #we cannot override, therefore we choose this name
     @property
-    def shape(self):
-        return (self.width, self.height)
-    @shape.setter
-    def shape(self, shape2D):
-        self.width  = shape2D[0]
-        self.height = shape2D[1]
+    def sceneShape(self):
+        return (self._width, self._height)
+    @sceneShape.setter
+    def sceneShape(self, shape2D):
+        self._width  = shape2D[0]
+        self._height = shape2D[1]
     
     def setColor(self, color):
         self.penDotted = QPen(color, 2, Qt.DotLine, Qt.RoundCap, Qt.RoundJoin)
@@ -104,7 +106,7 @@ class CrossHairCursor(QGraphicsItem) :
         painter.setPen(self.penDotted)
         
         if self.mode == self.modeXPosition:
-            painter.drawLine(QPointF(self.x +0.5, 0), QPointF(self.x +0.5, self.height))
+            painter.drawLine(QPointF(self.x +0.5, 0), QPointF(self.x +0.5, self._height))
         elif self.mode == self.modeYPosition:
             painter.drawLine(QPointF(0, self.y), QPointF(self.width, self.y))
         else:

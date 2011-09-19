@@ -129,8 +129,8 @@ class ImageSceneRenderThread(QThread):
         if request.canceled():
             return
         #no one will cancel this request before we release the lock...
-        
-        thisPatch = self._imagePatches[patchLayer][patchNumber]
+       
+        thisPatch = self._imageLayers[patchLayer][patchNumber]
         
         ### one layer of this patch is done, just assign the newly arrived image
         thisPatch.lock()
@@ -139,21 +139,19 @@ class ImageSceneRenderThread(QThread):
         thisPatch.unlock()
         ### ...done
         
-        numLayers = len(self._imagePatches) - 2
-        compositePatch = self._imagePatches[numLayers][patchNumber]
-    
         ### render the composite patch ######
+        compositePatch = self._compositeLayer[patchNumber]
         compositePatch.lock()
         compositePatch.dirty = True
         p = QPainter(compositePatch.image)
-        r = compositePatch.imageRectF
+        r = image.size() 
         p.fillRect(0, 0, round(r.width()), round(r.height()), Qt.white)
 
         for i, v in enumerate(reversed(self._stackedIms)):
             visible, layerOpacity, layerImageSource = v
             if visible:
                 layerNr = len(self._stackedIms) - i - 1
-                patch = self._imagePatches[layerNr][patchNumber]
+                patch = self._imageLayers[layerNr][patchNumber]
                 
                 if patch.imgVer != patch.dataVer:
                     continue
@@ -184,7 +182,7 @@ class ImageSceneRenderThread(QThread):
             return
         layerNr, patchNr = layerPatch
         
-        rect = self._imagePatches[0][patchNr].imageRect
+        rect = self._tiling._imageRect[patchNr]
         
         if volumina.verboseRequests:
             volumina.printLock.acquire()

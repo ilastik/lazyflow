@@ -40,13 +40,15 @@ class SliceIntersectionMarker(QGraphicsItem) :
     """
     
     def boundingRect(self):
-        return QRectF(0,0, self.width, self.height)
+        # w, h = self._width, self._height
+        w,h = 1000, 1000
+        return QRectF() #return QRectF(0,0, w, h)
     
     def __init__(self):
         QGraphicsItem.__init__(self)
         
-        self.width = 0
-        self.height = 0
+        self._width = 0
+        self._height = 0
               
         self.penX = QPen(Qt.red, 2)
         self.penX.setCosmetic(True)
@@ -59,13 +61,15 @@ class SliceIntersectionMarker(QGraphicsItem) :
         
         self.isVisible = False
 
+    #be careful: QGraphicsItem has a shape() method, which
+    #we cannot override, therefore we choose this name
     @property
-    def shape(self):
-        return (self.width, self.height)
-    @shape.setter
-    def shape(self, shape2D):
-        self.width = shape2D[0]
-        self.height = shape2D[1]
+    def sceneShape(self):
+        return (self._width, self._height)
+    @sceneShape.setter
+    def sceneShape(self, shape2D):
+        self._width = shape2D[0]
+        self._height = shape2D[1]
 
     def setPosition(self, x, y):
         self.x = x
@@ -95,7 +99,7 @@ class SliceIntersectionMarker(QGraphicsItem) :
     def paint(self, painter, option, widget=None):
         if self.isVisible:
             painter.setPen(self.penY)
-            painter.drawLine(QPointF(0.0,self.y), QPointF(self.width, self.y))
+            painter.drawLine(QPointF(0.0,self.y), QPointF(self._width, self.y))
             
             painter.setPen(self.penX)
-            painter.drawLine(QPointF(self.x, 0), QPointF(self.x, self.height))
+            painter.drawLine(QPointF(self.x, 0), QPointF(self.x, self._height))

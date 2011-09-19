@@ -28,9 +28,9 @@ class ImageView2D(QGraphicsView):
     def sliceShape(self, s):
         self._sliceShape = s
         sceneShape = (s[1], s[0])
-        self.scene().sceneShape             = sceneShape
-        self._crossHairCursor.shape         = sceneShape
-        self._sliceIntersectionMarker.shape = sceneShape
+        self.scene().sceneShape                  = sceneShape
+        self._crossHairCursor.sceneShape         = sceneShape
+        self._sliceIntersectionMarker.sceneShape = sceneShape
            
     @property
     def hud(self):
