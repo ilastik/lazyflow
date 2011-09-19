@@ -104,15 +104,8 @@ class VolumeEditor( QObject ):
     def scheduleSlicesRedraw(self):
         for s in self.imageScenes:
             s._invalidateRect()
-
-    def setDrawingEnabled(self, enabled):
-        if enabled:
-            self.eventSwitch.interpreter = self.brushingInterpreter
-        else:
-            self.eventSwitch.interpreter = self.navInterpret
         
     def setInteractionMode( self, name):
-        assert(False)
         modes = {'navigation': self.navInterpret, 'brushing': self.brushingInterpreter}
         self.eventSwitch.interpreter = modes[name]
 
