@@ -1,5 +1,5 @@
 from PyQt4.QtCore import QObject, QTimer, QEvent, Qt, QPointF, pyqtSignal
-from PyQt4.QtGui  import QColor, QCursor, QMouseEvent, QApplication, QPainter
+from PyQt4.QtGui  import QColor, QCursor, QMouseEvent, QApplication, QPainter, QPen
 
 import  copy
 from functools import partial
@@ -87,7 +87,7 @@ class NavigationInterpreter(QObject):
                     break
             p.lock()
             painter = QPainter(p.image)
-            painter.setPen(imageview.scene()._brush)
+            painter.setPen(QPen(self._navCtrl._brushingModel.drawColor, self._navCtrl._brushingModel.brushSize))
             
             tL = p.imageRectF.topLeft()
             o  = imageview.scene().data2scene.map(QPointF(oldX,oldY))
