@@ -61,8 +61,6 @@ class BrushingModel(QObject):
         self.drawColor = self.defaultColor
         self.drawnNumber = self.defaultDrawnNumber
 
-        self.penVis  = QPen(self.drawColor, self.brushSize, Qt.SolidLine, Qt.RoundCap, Qt.RoundJoin)
-        self.penDraw = QPen(QColor(255,255,255), self.brushSize, Qt.SolidLine, Qt.RoundCap, Qt.RoundJoin)
         self.pos = None
         self.erasing = False
         
@@ -93,8 +91,6 @@ class BrushingModel(QObject):
 
     def setBrushSize(self, size):
         self.brushSize = size
-        self.penVis.setWidth(size)
-        self.penDraw.setWidth(size)
         self.brushSizeChanged.emit(self.brushSize)
     
     def setDrawnNumber(self, num):
@@ -117,17 +113,12 @@ class BrushingModel(QObject):
         
     def setBrushColor(self, color):
         self.drawColor = color
-        self.penVis.setColor(color)
         self.brushColorChanged.emit(self.drawColor)
     
     def beginDrawing(self, pos, sliceRect):
         self.sliceRect = sliceRect
         self.scene.clear()
         self.bb = QRect()
-        if self.erasing:
-            self.penVis.setColor(self.erasingColor)
-        else:
-            self.penVis.setColor(self.drawColor)
         self.pos = QPointF(pos.x()+0.0001, pos.y()+0.0001)
         line = self.moveTo(pos)
         return line
@@ -160,9 +151,9 @@ class BrushingModel(QObject):
         
         #print "BrushingModel.moveTo(pos=%r)" % (pos) 
         line = QGraphicsLineItem(oldX, oldY, x, y)
-        line.setPen(self.penDraw)
+        line.setPen(QPen(self.drawColor, self.brushSize))
         self.scene.addItem(line)
-        
+
         #update bounding Box 
         if not self.bb.isValid():
             self.bb = QRect(QPoint(x,y), QSize(1,1))
