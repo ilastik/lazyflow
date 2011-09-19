@@ -81,7 +81,7 @@ class VolumeEditor( QObject ):
         self.brushingControler = BrushingControler(self.brushingModel, self.posModel, labelsink)        
 
         # initial interaction mode
-        self.eventSwitch.interpreter = self.brushingInterpreter
+        self.eventSwitch.interpreter = self.navInterpret
 
         ##
         ## connect
@@ -105,8 +105,13 @@ class VolumeEditor( QObject ):
         for s in self.imageScenes:
             s._invalidateRect()
 
-    def setDrawingEnabled(self, enabled): 
-        self.navCtrl.drawingEnabled = enabled
+    def setDrawingEnabled(self, enabled):
+        if enabled:
+            self.navCtrl.drawingEnabled = True
+            self.eventSwitch.interpreter = self.brushingInterpreter
+        else:
+            self.navCtrl.drawingEnabled = False
+            self.eventSwitch.interpreter = self.navInterpret
         
     def cleanUp(self):
         QApplication.processEvents()

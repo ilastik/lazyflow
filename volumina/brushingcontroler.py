@@ -50,7 +50,6 @@ class BrushingInterpreter( QObject ):
 
 
     def onMouseMoveEvent( self, imageview, event ):
-        #self._navIntr.onMouseMoveEvent(imageview, event)
         if imageview._dragMode == True:
             #the mouse was moved because the user wants to change
             #the viewport
@@ -70,27 +69,11 @@ class BrushingInterpreter( QObject ):
         self._navCtrl.positionCursor( x, y, self._navCtrl._views.index(imageview))
 
         if self._navCtrl._isDrawing:
-            ### FIXME
-            p = None
-            patchNr = -1
-            
-            for p in imageview.scene().brushingPatches(): 
-                if p.patchRectF.contains(imageview.mapToScene(event.pos())):
-                    break
-            p.lock()
-            painter = QPainter(p.image)
-            painter.setPen(QPen(self._navCtrl._brushingModel.drawColor, self._navCtrl._brushingModel.brushSize))
-            
-            tL = p.imageRectF.topLeft()
-            o  = imageview.scene().data2scene.map(QPointF(oldX,oldY))
-            n  = imageview.scene().data2scene.map(QPointF(x,y))
-            
-            painter.drawLine(o-tL, n-tL)
-            painter.end()
-            p.dataVer += 1
-            p.unlock()
-            imageview.scene()._schedulePatchRedraw(patchNr)
-            ### end FIXME            
+            o   = imageview.scene().data2scene.map(QPointF(oldX,oldY))
+            n   = imageview.scene().data2scene.map(QPointF(x,y))
+            pen = QPen(self._navCtrl._brushingModel.drawColor, self._navCtrl._brushingModel.brushSize)
+            imageview.scene().drawLine(o, n, pen)
+
             self._navCtrl._brushingModel.moveTo(mousePos)
 
     def onWheelEvent( self, imageview, event ):
