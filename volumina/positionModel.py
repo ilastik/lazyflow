@@ -65,6 +65,13 @@ class PositionModel(QObject):
         self._time       = 0
         self._channel    = 0
         self._shape5D    = shape5D
+        
+        """
+        Index of the currently active view in [0,1,2].
+        A view is active when the mouse cursor hovered over it last.
+        """
+        self.activeView = 0
+
         #call property setters to trigger updates etc. 
         self.cursorPos   = self._cursorPos
         self.slicingPos  = self._slicingPos
@@ -96,19 +103,6 @@ class PositionModel(QObject):
         """
         return self._shape5D[axis+1]
     
-    @property
-    def activeView(self):
-        """
-        Currently active view.
-        A view is active when the mouse cursor hovered over it last.
-        
-        Returns the index of the active view in [0,1,2].
-        """
-        return self._activeView
-    @activeView.setter
-    def activeView(self, view):
-        self._activeView = view
-        
     @property
     def shape( self ):
         """
