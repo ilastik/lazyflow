@@ -81,11 +81,13 @@ class BrushingModel(QObject):
 
     def setErasing(self):
         self.erasing = True
+        self.setBrushColor(self.erasingColor)
         self.brushColorChanged.emit(self.erasingColor)
         self.setDrawnNumber(self.erasingNumber)
     
     def disableErasing(self):
         self.erasing = False
+        self.setBrushColor(self.drawColor)
         self.brushColorChanged.emit(self.drawColor)
         self.setDrawnNumber(self.drawnNumber)
 
