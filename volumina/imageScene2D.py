@@ -183,9 +183,6 @@ class ImageScene2D(QGraphicsScene):
         
         self._initializePatches()
 
-    def setBrush(self, b):
-        self._brush = b
-
     def __init__( self ):
         QGraphicsScene.__init__(self)
         self._updatableTiles = []

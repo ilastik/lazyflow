@@ -79,18 +79,6 @@ class VolumeEditor( QObject ):
         #self.crosshairControler = CrosshairControler() 
         #self.brushingInterpreter = BrushingInterpreter(self.navInterpret, self.navCtrl)
         self.brushingControler = BrushingControler(self.brushingModel, self.posModel, labelsink)        
-        def onBrushSize(s):
-            b = QPen(QBrush(self.brushingModel.drawColor), s)
-            #b = QPen(QBrush(QColor(0,255,0)), 15) #for testing
-            for s in self.imageScenes:
-                s.setBrush(b)
-        def onBrushColor(c):
-            b = QPen(QBrush(c), self.brushingModel.brushSize)
-            #b = QPen(QBrush(QColor(0,255,0)), 15) #for testing
-            for s in self.imageScenes:
-                s.setBrush(b)
-        self.brushingModel.brushSizeChanged.connect(onBrushSize)
-        self.brushingModel.brushColorChanged.connect(onBrushColor)
 
         # initial interaction mode
         self.eventSwitch.interpreter = self.navInterpret
