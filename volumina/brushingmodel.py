@@ -153,7 +153,7 @@ class BrushingModel(QObject):
         
         #print "BrushingModel.moveTo(pos=%r)" % (pos) 
         line = QGraphicsLineItem(oldX, oldY, x, y)
-        line.setPen(QPen(self.drawColor, self.brushSize))
+        line.setPen(QPen(Qt.white, self.brushSize))
         self.scene.addItem(line)
 
         #update bounding Box 
