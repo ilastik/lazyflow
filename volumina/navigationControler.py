@@ -6,6 +6,7 @@ from functools import partial
 
 from imageView2D import ImageView2D
 from imageScene2D import ImageScene2D
+from eventswitch import InterpreterABC
 
 def posView2D(pos3d, axis):
     """convert from a 3D position to a 2D position on the slicing plane
@@ -37,6 +38,12 @@ class NavigationInterpreter(QObject):
         """
         QObject.__init__(self)
         self._navCtrl = navigationcontroler
+
+    def start( self ):
+        pass
+
+    def finalize( self ):
+        pass
 
     def eventFilter( self, watched, event ):
         etype = event.type()
@@ -139,7 +146,8 @@ class NavigationInterpreter(QObject):
         dataMousePos = imageview.mapScene2Data(imageview.mapToScene(event.pos()))
         imageview.mousePos = dataMousePos # FIXME: remove, when guaranteed, that no longer needed inside imageview
         self._navCtrl.positionSlice(dataMousePos.x(), dataMousePos.y(), self._navCtrl._views.index(imageview))
-    
+assert issubclass(NavigationInterpreter, InterpreterABC)    
+
 #*******************************************************************************
 # N a v i g a t i o n C o n t r o l e r                                        *
 #*******************************************************************************

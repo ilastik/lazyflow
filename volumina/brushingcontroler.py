@@ -1,6 +1,8 @@
 from PyQt4.QtCore import QObject, QEvent, QPointF, Qt
 from PyQt4.QtGui import QPainter, QPen, QApplication
 
+from eventswitch import InterpreterABC
+
 #*******************************************************************************
 # C r o s s h a i r C o n t r o l e r                                          *
 #*******************************************************************************
@@ -27,6 +29,12 @@ class BrushingInterpreter( QObject ):
         QObject.__init__( self )
         self._navCtrl = navigationControler
         self._navIntr = navigationInterpreter 
+
+    def start( self ):
+        pass
+
+    def finalize( self ):
+        pass
 
     def eventFilter( self, watched, event ):
         etype = event.type()
@@ -168,6 +176,7 @@ class BrushingInterpreter( QObject ):
         dataMousePos = imageview.mapScene2Data(imageview.mapToScene(event.pos()))
         imageview.mousePos = dataMousePos # FIXME: remove, when guaranteed, that no longer needed inside imageview
         self._navCtrl.positionSlice(dataMousePos.x(), dataMousePos.y(), self._navCtrl._views.index(imageview))
+assert issubclass(BrushingInterpreter, InterpreterABC)
         
 #*******************************************************************************
 # B r u s h i n g C o n t r o l e r                                            *
