@@ -36,10 +36,12 @@ class EventSwitch( QObject ):
 
     @interpreter.setter
     def interpreter( self, interpreter ):
+        assert(isinstance(interpreter, InterpreterABC))
         # finalize old interpreter before deinstalling to
         # avoid inconsistencies when eventloop and eventswitch
         # are running in different threads
-        self._interpreter.finalize()
+        if self._interpreter:
+            self._interpreter.finalize()
 
         # deinstall old and install new interpreter
         for view in self._imageViews:

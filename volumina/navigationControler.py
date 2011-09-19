@@ -40,7 +40,7 @@ class NavigationInterpreter(QObject):
         self._navCtrl = navigationcontroler
 
     def start( self ):
-        pass
+        self._navCtrl.drawingEnabled = False
 
     def finalize( self ):
         pass

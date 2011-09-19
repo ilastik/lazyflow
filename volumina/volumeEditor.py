@@ -107,12 +107,15 @@ class VolumeEditor( QObject ):
 
     def setDrawingEnabled(self, enabled):
         if enabled:
-            self.navCtrl.drawingEnabled = True
             self.eventSwitch.interpreter = self.brushingInterpreter
         else:
-            self.navCtrl.drawingEnabled = False
             self.eventSwitch.interpreter = self.navInterpret
         
+    def setInteractionMode( self, name):
+        assert(False)
+        modes = {'navigation': self.navInterpret, 'brushing': self.brushingInterpreter}
+        self.eventSwitch.interpreter = modes[name]
+
     def cleanUp(self):
         QApplication.processEvents()
         print "VolumeEditor: cleaning up "

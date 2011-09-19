@@ -31,10 +31,13 @@ class BrushingInterpreter( QObject ):
         self._navIntr = navigationInterpreter 
 
     def start( self ):
-        pass
+        self._navCtrl.drawingEnabled = True
 
     def finalize( self ):
-        pass
+        if self._navCtrl._isDrawing:
+            for imageview in self._navCtrl._views:
+                self._navCtrl.endDrawing(imageview, imageview.mousePos)
+        self._navCtrl.drawingEnabled = False
 
     def eventFilter( self, watched, event ):
         etype = event.type()
