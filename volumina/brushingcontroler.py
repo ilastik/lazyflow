@@ -1,4 +1,5 @@
-from PyQt4.QtCore import QObject
+from PyQt4.QtCore import QObject, QEvent, QPointF, Qt
+from PyQt4.QtGui import QPainter, QPen, QApplication
 
 #*******************************************************************************
 # C r o s s h a i r C o n t r o l e r                                          *
@@ -23,7 +24,7 @@ class CrosshairControler(QObject):
 
 class BrushingInterpreter( QObject ):
     def __init__( self, navigationInterpreter, navigationControler ):
-        super(BrushingInterpreter, self).__init__( self )
+        QObject.__init__( self )
         self._navCtrl = navigationControler
         self._navIntr = navigationInterpreter 
 
@@ -49,29 +50,48 @@ class BrushingInterpreter( QObject ):
 
 
     def onMouseMoveEvent( self, imageview, event ):
-        self._navIntr.onMouseMoveEvent(imageview, event)
-        ### FIXME
-        p = None
-        patchNr = -1
+        #self._navIntr.onMouseMoveEvent(imageview, event)
+        if imageview._dragMode == True:
+            #the mouse was moved because the user wants to change
+            #the viewport
+            imageview._deltaPan = QPointF(event.pos() - imageview._lastPanPoint)
+            imageview._panning()
+            imageview._lastPanPoint = event.pos()
+            return
+        if imageview.ticker.isActive():
+            #the view is still scrolling
+            #do nothing until it comes to a complete stop
+            return
+        
+        imageview.mousePos = mousePos = imageview.mapScene2Data(imageview.mapToScene(event.pos()))
+        oldX, oldY = imageview.x, imageview.y
+        x = imageview.x = mousePos.x()
+        y = imageview.y = mousePos.y()
+        self._navCtrl.positionCursor( x, y, self._navCtrl._views.index(imageview))
 
-        for p in imageview.scene().brushingPatches(): 
-            if p.patchRectF.contains(imageview.mapToScene(event.pos())):
-                break
-        p.lock()
-        painter = QPainter(p.image)
-        painter.setPen(imageview.scene()._brush)
-
-        tL = p.imageRectF.topLeft()
-        o  = imageview.scene().data2scene.map(QPointF(oldX,oldY))
-        n  = imageview.scene().data2scene.map(QPointF(x,y))
-
-        painter.drawLine(o-tL, n-tL)
-        painter.end()
-        p.dataVer += 1
-        p.unlock()
-        imageview.scene()._schedulePatchRedraw(patchNr)
-        ### end FIXME            
-        self._navCtrl._brushingModel.moveTo(mousePos)
+        if self._navCtrl._isDrawing:
+            ### FIXME
+            p = None
+            patchNr = -1
+            
+            for p in imageview.scene().brushingPatches(): 
+                if p.patchRectF.contains(imageview.mapToScene(event.pos())):
+                    break
+            p.lock()
+            painter = QPainter(p.image)
+            painter.setPen(QPen(self._navCtrl._brushingModel.drawColor, self._navCtrl._brushingModel.brushSize))
+            
+            tL = p.imageRectF.topLeft()
+            o  = imageview.scene().data2scene.map(QPointF(oldX,oldY))
+            n  = imageview.scene().data2scene.map(QPointF(x,y))
+            
+            painter.drawLine(o-tL, n-tL)
+            painter.end()
+            p.dataVer += 1
+            p.unlock()
+            imageview.scene()._schedulePatchRedraw(patchNr)
+            ### end FIXME            
+            self._navCtrl._brushingModel.moveTo(mousePos)
 
     def onWheelEvent( self, imageview, event ):
         k_alt = (event.modifiers() == Qt.AltModifier)
