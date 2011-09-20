@@ -204,9 +204,9 @@ class NavigationControler(QObject):
     @axisColors.setter
     def axisColors( self, colors ):
         self._axisColors = colors
-        self._views[0]._sliceIntersectionMarker.setColor(self.axisColors[1], self.axisColors[2])
-        self._views[1]._sliceIntersectionMarker.setColor(self.axisColors[0], self.axisColors[2])
-        self._views[2]._sliceIntersectionMarker.setColor(self.axisColors[0], self.axisColors[1])
+        self._views[0]._sliceIntersectionMarker.setColor(self.axisColors[2], self.axisColors[1])
+        self._views[1]._sliceIntersectionMarker.setColor(self.axisColors[2], self.axisColors[0])
+        self._views[2]._sliceIntersectionMarker.setColor(self.axisColors[1], self.axisColors[0])
         for axis, v in enumerate(self._views):
             #FIXME: Bad dependency here on hud to be available!
             if v.hud: v.hud.bgColor = self.axisColors[axis]
