@@ -6,6 +6,7 @@ from functools import partial
 
 from imageView2D import ImageView2D
 from imageScene2D import ImageScene2D
+from eventswitch import InterpreterABC
 
 def posView2D(pos3d, axis):
     """convert from a 3D position to a 2D position on the slicing plane
@@ -37,6 +38,12 @@ class NavigationInterpreter(QObject):
         """
         QObject.__init__(self)
         self._navCtrl = navigationcontroler
+
+    def start( self ):
+        self._navCtrl.drawingEnabled = False
+
+    def finalize( self ):
+        pass
 
     def eventFilter( self, watched, event ):
         etype = event.type()
@@ -77,14 +84,6 @@ class NavigationInterpreter(QObject):
         y = imageview.y = mousePos.y()
         self._navCtrl.positionCursor( x, y, self._navCtrl._views.index(imageview))
 
-        if self._navCtrl._isDrawing:
-            o   = imageview.scene().data2scene.map(QPointF(oldX,oldY))
-            n   = imageview.scene().data2scene.map(QPointF(x,y))
-            pen = QPen(self._navCtrl._brushingModel.drawColor, self._navCtrl._brushingModel.brushSize)
-            imageview.scene().drawLine(o, n, pen)
-
-            self._navCtrl._brushingModel.moveTo(mousePos)
-
     def onWheelEvent( self, imageview, event ):
         k_alt = (event.modifiers() == Qt.AltModifier)
         k_ctrl = (event.modifiers() == Qt.ControlModifier)
@@ -96,31 +95,19 @@ class NavigationInterpreter(QObject):
 
         if event.delta() > 0:
             if k_alt:
-                if self._navCtrl._isDrawing:
-                    self._navCtrl.endDrawing(imageview, imageview.mousePos)
-                    imageview._isDrawing = True
                 self._navCtrl.changeSliceRelative(10, self._navCtrl._views.index(imageview))
             elif k_ctrl:
                 scaleFactor = 1.1
                 imageview.doScale(scaleFactor)
             else:
-                if self._navCtrl._isDrawing:
-                    self._navCtrl.endDrawing(imageview, imageview.mousePos)
-                    self._navCtrl._isDrawing = True
                 self._navCtrl.changeSliceRelative(1, self._navCtrl._views.index(imageview))
         else:
             if k_alt:
-                if self._navCtrl._isDrawing:
-                    self._navCtrl.endDrawing(imageview, imageview.mousePos)
-                    self._navCtrl._isDrawing = True
                 self._navCtrl.changeSliceRelative(-10, self._navCtrl._views.index(imageview))
             elif k_ctrl:
                 scaleFactor = 0.9
                 imageview.doScale(scaleFactor)
             else:
-                if self._navCtrl._isDrawing:
-                    self._navCtrl.endDrawing(imageview, imageview.mousePos)
-                    self._navCtrl._isDrawing = True
                 self._navCtrl.changeSliceRelative(-1, self._navCtrl._views.index(imageview))
         if k_ctrl:
             mousePosAfterScale = imageview.mapToScene(event.pos())
@@ -145,19 +132,6 @@ class NavigationInterpreter(QObject):
             imageview.customContextMenuRequested.emit(event.pos())
             return
 
-        if not self._navCtrl.drawingEnabled:
-            return
-        
-        if event.buttons() == Qt.LeftButton:
-            #don't draw if flicker the view
-            if imageview.ticker.isActive():
-                return
-            if QApplication.keyboardModifiers() == Qt.ShiftModifier:
-                self._navCtrl._brushingModel.setErasing()
-                self._navCtrl._tempErase = True
-            imageview.mousePos = imageview.mapScene2Data(imageview.mapToScene(event.pos()))
-            self._navCtrl.beginDrawing(imageview, imageview.mousePos)
-
     def onMouseReleaseEvent( self, imageview, event ):
         imageview.mousePos = imageview.mapScene2Data(imageview.mapToScene(event.pos()))
         
@@ -167,17 +141,13 @@ class NavigationInterpreter(QObject):
             imageview._lastPanPoint = releasePoint
             imageview._dragMode = False
             imageview.ticker.start(20)
-        if self._navCtrl._isDrawing:
-            self._navCtrl.endDrawing(imageview, imageview.mousePos)
-        if self._navCtrl._tempErase:
-            self._navCtrl._brushingModel.disableErasing()
-            self._navCtrl._tempErase = False
 
     def onMouseDoubleClickEvent( self, imageview, event ):
         dataMousePos = imageview.mapScene2Data(imageview.mapToScene(event.pos()))
         imageview.mousePos = dataMousePos # FIXME: remove, when guaranteed, that no longer needed inside imageview
         self._navCtrl.positionSlice(dataMousePos.x(), dataMousePos.y(), self._navCtrl._views.index(imageview))
-    
+assert issubclass(NavigationInterpreter, InterpreterABC)    
+
 #*******************************************************************************
 # N a v i g a t i o n C o n t r o l e r                                        *
 #*******************************************************************************
