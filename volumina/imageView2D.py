@@ -153,7 +153,8 @@ class ImageView2D(QGraphicsView):
         event.ignore()
     def mouseDoubleClickEvent( self, event):
         event.ignore()
-
+    def wheelEvent(self, event):
+        event.ignore()
 
     def _panning(self):
         hBar = self.horizontalScrollBar()
