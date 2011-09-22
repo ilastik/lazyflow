@@ -176,9 +176,7 @@ class BrushingInterpreter( QObject ):
             self._navCtrl._tempErase = False
 
     def onMouseDoubleClickEvent( self, imageview, event ):
-        dataMousePos = imageview.mapScene2Data(imageview.mapToScene(event.pos()))
-        imageview.mousePos = dataMousePos # FIXME: remove, when guaranteed, that no longer needed inside imageview
-        self._navCtrl.positionSlice(dataMousePos.x(), dataMousePos.y(), self._navCtrl._views.index(imageview))
+        self._navIntr.onMouseDoubleClickEvent( imageview, event )
 assert issubclass(BrushingInterpreter, InterpreterABC)
         
 #*******************************************************************************
