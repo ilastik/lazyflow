@@ -70,8 +70,8 @@ class ImageView2D(QGraphicsView):
         self._crossHairCursor         = None
         self._sliceIntersectionMarker = None
 
-        self.ticker = QTimer(self)
-        self.ticker.timeout.connect(self._tickerEvent)
+        self._ticker = QTimer(self)
+        self._ticker.timeout.connect(self._tickerEvent)
         
         #
         # Setup the Viewport for fast painting
@@ -216,6 +216,9 @@ class ImageView2D(QGraphicsView):
     def zoomIn(self):
         self.doScale(1.1)
         
+    def centerImage(self):
+        self.centerOn(self.sceneRect().width()/2 + self.sceneRect().x(), self.sceneRect().height()/2 + self.sceneRect().y()) 
+     
     def changeViewPort(self,qRectf):
         self.fitInView(qRectf,mode = Qt.KeepAspectRatio)
 

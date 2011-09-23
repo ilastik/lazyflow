@@ -73,7 +73,7 @@ class NavigationInterpreter(QObject):
             imageview._panning()
             imageview._lastPanPoint = event.pos()
             return
-        if imageview.ticker.isActive():
+        if imageview._ticker.isActive():
             #the view is still scrolling
             #do nothing until it comes to a complete stop
             return
@@ -122,7 +122,7 @@ class NavigationInterpreter(QObject):
             imageview._lastPanPoint = event.pos()
             imageview._crossHairCursor.setVisible(False)
             imageview._dragMode = True
-            if imageview.ticker.isActive():
+            if imageview._ticker.isActive():
                 imageview._deltaPan = QPointF(0, 0)
 
         if event.buttons() == Qt.RightButton:
@@ -140,7 +140,7 @@ class NavigationInterpreter(QObject):
             releasePoint = event.pos()
             imageview._lastPanPoint = releasePoint
             imageview._dragMode = False
-            imageview.ticker.start(20)
+            imageview._ticker.start(20)
 
     def onMouseDoubleClickEvent( self, imageview, event ):
         dataMousePos = imageview.mapScene2Data(imageview.mapToScene(event.pos()))
