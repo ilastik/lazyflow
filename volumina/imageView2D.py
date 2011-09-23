@@ -11,6 +11,7 @@ from sliceIntersectionMarker import SliceIntersectionMarker
 #*******************************************************************************
 
 class ImageView2D(QGraphicsView):
+    focusChanged = pyqtSignal()
     """
     Shows a ImageScene2D to the user and allows for interactive
     scrolling, panning, zooming etc.
@@ -46,7 +47,7 @@ class ImageView2D(QGraphicsView):
         self._hud = hud
         self.setLayout(QVBoxLayout())
         self.layout().setContentsMargins(0,0,0,0)
-        self.layout().addLayout(self._hud)
+        self.layout().addWidget(self._hud)
         self.layout().addStretch()
     
     def __init__(self, imagescene2d):
@@ -70,8 +71,8 @@ class ImageView2D(QGraphicsView):
         self._crossHairCursor         = None
         self._sliceIntersectionMarker = None
 
-        self.ticker = QTimer(self)
-        self.ticker.timeout.connect(self._tickerEvent)
+        self._ticker = QTimer(self)
+        self._ticker.timeout.connect(self._tickerEvent)
         
         #
         # Setup the Viewport for fast painting
@@ -216,6 +217,25 @@ class ImageView2D(QGraphicsView):
     def zoomIn(self):
         self.doScale(1.1)
         
+    def fitImage(self):
+        self.fitInView(self.sceneRect(), Qt.KeepAspectRatio)
+        
+    def centerImage(self):
+        self.centerOn(self.sceneRect().width()/2 + self.sceneRect().x(), self.sceneRect().height()/2 + self.sceneRect().y()) 
+        
+    def toggleHud(self):
+        if self._hud.isVisible():
+            self._hud.setVisible(False)
+        else:
+            self._hud.setVisible(True)
+            
+    def hideHud(self, hide):
+        self._hud.setVisible(hide)
+    
+    def focusInEvent(self, event):
+        self.focusChanged.emit()
+                    
+     
     def changeViewPort(self,qRectf):
         self.fitInView(qRectf,mode = Qt.KeepAspectRatio)
 
