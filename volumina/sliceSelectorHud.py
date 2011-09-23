@@ -31,7 +31,7 @@ from PyQt4.QtCore import pyqtSignal, Qt, QPointF, QSize
 
 from PyQt4.QtGui import QLabel, QPen, QPainter, QPixmap, QColor, QHBoxLayout, QVBoxLayout, \
                         QFont, QPainterPath, QBrush, QPolygonF, QSpinBox, QAbstractSpinBox, \
-                        QCheckBox
+                        QCheckBox, QWidget
 import sys, random
 import numpy, qimage2ndarray
 
@@ -119,7 +119,7 @@ class LabelButtons(QLabel):
         self.setPixmap(pixmap)
         
     def setSpinBoxUpIcon(self):
-        self.setToolTip("Up")
+        self.setToolTip("+ 1")
         pixmap = QPixmap(250, 250)
         pixmap.fill(self.backgroundColor)
         painter = QPainter()
@@ -139,7 +139,7 @@ class LabelButtons(QLabel):
         self.setPixmap(pixmap)
         
     def setSpinBoxDownIcon(self):
-        self.setToolTip("Down")
+        self.setToolTip("- 1")
         pixmap = QPixmap(250, 250)
         pixmap.fill(self.backgroundColor)
         painter = QPainter()
@@ -212,20 +212,23 @@ class SpinBoxImageView(QHBoxLayout):
         self.spinBox.setValue(self.spinBox.value() - 1)
         
             
-class imageView2DHud(QHBoxLayout):
+class imageView2DHud(QWidget):
 #    valueChanged = pyqtSignal(int)
     dockButtonClicked = pyqtSignal()
     maximizeButtonClicked = pyqtSignal()
     def __init__(self, parent=None ):
-        QHBoxLayout.__init__(self, parent)
-        self.setContentsMargins(0,4,0,0)
-        self.setSpacing(0)
+        QWidget.__init__(self, parent)
+        
+        self.layout = QHBoxLayout()
+        self.setLayout(self.layout)
+        self.layout.setContentsMargins(0,4,0,0)
+        self.layout.setSpacing(0)
         
     def createImageView2DHud(self, axis, value, backgroundColor, foregroundColor):
         width = 20
         height = 20 
         
-        self.addSpacing(4)
+        self.layout.addSpacing(4)
         self.axisLabel = QLabel()
         self.axisLabel.setAttribute(Qt.WA_TransparentForMouseEvents, True)
         pixmap = QPixmap(250, 250)
@@ -244,25 +247,27 @@ class imageView2DHud(QHBoxLayout):
         painter.end()
         pixmap = pixmap.scaled(QSize(width,height),Qt.KeepAspectRatio, Qt.SmoothTransformation)
         self.axisLabel.setPixmap(pixmap)  
-        self.addWidget(self.axisLabel)
+        self.layout.addWidget(self.axisLabel)
+        
+        self.layout.addSpacing(1)
         
         self.sliceSelector = SpinBoxImageView(backgroundColor, foregroundColor, value, height, 12)
-        self.addLayout(self.sliceSelector)
+        self.layout.addLayout(self.sliceSelector)
       
-        self.addStretch()
+        self.layout.addStretch()
         
         self.dockButton = LabelButtons(backgroundColor, foregroundColor, width, height)
         self.dockButton.clicked.connect(self.on_dockButton)
         self.dockButton.setUndockIcon()
-        self.addWidget(self.dockButton)
+        self.layout.addWidget(self.dockButton)
         
-        self.addSpacing(4)
+        self.layout.addSpacing(4)
         
         self.maxButton = LabelButtons(backgroundColor, foregroundColor, width, height)
         self.maxButton.clicked.connect(self.on_maxButton)
         self.maxButton.setMaximizeIcon()
-        self.addWidget(self.maxButton)
-        self.addSpacing(4)
+        self.layout.addWidget(self.maxButton)
+        self.layout.addSpacing(4)
     
 #    def spinBoxChanged(self, value):
 #        self.valueChanged.emit(value)
