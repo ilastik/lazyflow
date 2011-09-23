@@ -26,6 +26,7 @@ except:
 #*******************************************************************************
 
 class VolumeEditor( QObject ):
+    newImageView2DFocus = pyqtSignal()
     @property
     def showDebugPatches(self):
         return self._showDebugPatches
@@ -34,6 +35,11 @@ class VolumeEditor( QObject ):
         for s in self.imageScenes:
             s.showDebugPatches = show
         self._showDebugPatches = show
+        
+    def lastImageViewFocus(self, axis):
+        self._lastImageViewFocus = axis
+        self.newImageView2DFocus.emit()
+        
 
     def __init__( self, shape, layerStackModel, labelsink=None):
         super(VolumeEditor, self).__init__()
@@ -51,6 +57,10 @@ class VolumeEditor( QObject ):
         self.layerStack = layerStackModel
         self.imageScenes = [ImageScene2D(), ImageScene2D(), ImageScene2D()]
         self.imageViews = [ImageView2D(self.imageScenes[i]) for i in [0,1,2]]
+        self.imageViews[0].focusChanged.connect(lambda arg=0 : self.lastImageViewFocus(arg))
+        self.imageViews[1].focusChanged.connect(lambda arg=1 : self.lastImageViewFocus(arg))
+        self.imageViews[2].focusChanged.connect(lambda arg=2 : self.lastImageViewFocus(arg)) 
+        
         self.imagepumps = self._initImagePumps()
 
         self.posModel = PositionModel(self._shape)
