@@ -31,7 +31,7 @@ from PyQt4.QtCore import pyqtSignal, Qt, QPointF, QSize
 
 from PyQt4.QtGui import QLabel, QPen, QPainter, QPixmap, QColor, QHBoxLayout, QVBoxLayout, \
                         QFont, QPainterPath, QBrush, QPolygonF, QSpinBox, QAbstractSpinBox, \
-                        QCheckBox, QWidget
+                        QCheckBox, QWidget, QPalette
 import sys, random
 import numpy, qimage2ndarray
 
@@ -52,13 +52,15 @@ class LabelButtons(QLabel):
         self.pixmapWidth = width
         self.pixmapHeight = height
         
-    def setUndockIcon(self):
+    def setUndockIcon(self, opacity=0.6):
+        self.buttonStyle = "undock"
         self.setToolTip("Undock")
         pixmap = QPixmap(250, 250)
         pixmap.fill(self.backgroundColor)
         painter = QPainter()
         painter.begin(pixmap)
         painter.setRenderHint(QPainter.Antialiasing)
+        painter.setOpacity(opacity)
         pen = QPen(self.foregroundColor)
         pen.setWidth(30)
         painter.setPen(pen)
@@ -69,13 +71,15 @@ class LabelButtons(QLabel):
         pixmap = pixmap.scaled(QSize(self.pixmapWidth, self.pixmapHeight),Qt.KeepAspectRatio, Qt.SmoothTransformation)
         self.setPixmap(pixmap)
         
-    def setDockIcon(self):
+    def setDockIcon(self, opacity=0.6):
+        self.buttonStyle = "dock"
         self.setToolTip("Dock")
         pixmap = QPixmap(250, 250)
         pixmap.fill(self.backgroundColor)
         painter = QPainter()
         painter.begin(pixmap)
         painter.setRenderHint(QPainter.Antialiasing)
+        painter.setOpacity(opacity)
         pen = QPen(self.foregroundColor)
         pen.setWidth(30)
         painter.setPen(pen)
@@ -86,13 +90,15 @@ class LabelButtons(QLabel):
         pixmap = pixmap.scaled(QSize(self.pixmapWidth, self.pixmapHeight),Qt.KeepAspectRatio, Qt.SmoothTransformation)
         self.setPixmap(pixmap)
         
-    def setMaximizeIcon(self):
+    def setMaximizeIcon(self, opacity=0.6):
+        self.buttonStyle = "max"
         self.setToolTip("Maximize")
         pixmap = QPixmap(250, 250)
         pixmap.fill(self.backgroundColor)
         painter = QPainter()
         painter.begin(pixmap)
         painter.setRenderHint(QPainter.Antialiasing)
+        painter.setOpacity(opacity)
         pen = QPen(self.foregroundColor)
         pen.setWidth(30)
         painter.setPen(pen)
@@ -101,13 +107,15 @@ class LabelButtons(QLabel):
         pixmap = pixmap.scaled(QSize(self.pixmapWidth, self.pixmapHeight),Qt.KeepAspectRatio, Qt.SmoothTransformation)
         self.setPixmap(pixmap)
         
-    def setMinimizeIcon(self):
+    def setMinimizeIcon(self, opacity=0.6):
+        self.buttonStyle = "min"
         self.setToolTip("Minimize")
         pixmap = QPixmap(250, 250)
         pixmap.fill(self.backgroundColor)
         painter = QPainter()
         painter.begin(pixmap)
         painter.setRenderHint(QPainter.Antialiasing)
+        painter.setOpacity(opacity)
         pen = QPen(self.foregroundColor)
         pen.setWidth(30)
         painter.setPen(pen)
@@ -118,13 +126,15 @@ class LabelButtons(QLabel):
         pixmap = pixmap.scaled(QSize(self.pixmapWidth, self.pixmapHeight),Qt.KeepAspectRatio, Qt.SmoothTransformation)
         self.setPixmap(pixmap)
         
-    def setSpinBoxUpIcon(self):
+    def setSpinBoxUpIcon(self, opacity=0.6):
+        self.buttonStyle = "spinUp"
         self.setToolTip("+ 1")
         pixmap = QPixmap(250, 250)
         pixmap.fill(self.backgroundColor)
         painter = QPainter()
         painter.begin(pixmap)
         painter.setRenderHint(QPainter.Antialiasing)
+        painter.setOpacity(opacity)
         brush = QBrush(self.foregroundColor)
         painter.setBrush(brush)
         pen = QPen(self.foregroundColor)
@@ -138,13 +148,15 @@ class LabelButtons(QLabel):
         pixmap = pixmap.scaled(QSize(self.pixmapWidth, self.pixmapHeight),Qt.KeepAspectRatio, Qt.SmoothTransformation)
         self.setPixmap(pixmap)
         
-    def setSpinBoxDownIcon(self):
+    def setSpinBoxDownIcon(self, opacity=0.6):
+        self.buttonStyle = "spinDown"
         self.setToolTip("- 1")
         pixmap = QPixmap(250, 250)
         pixmap.fill(self.backgroundColor)
         painter = QPainter()
         painter.begin(pixmap)
         painter.setRenderHint(QPainter.Antialiasing)
+        painter.setOpacity(opacity)
         brush = QBrush(self.foregroundColor)
         painter.setBrush(brush)
         pen = QPen(self.foregroundColor)
@@ -158,6 +170,21 @@ class LabelButtons(QLabel):
         pixmap = pixmap.scaled(QSize(self.pixmapWidth, self.pixmapHeight),Qt.KeepAspectRatio, Qt.SmoothTransformation)
         self.setPixmap(pixmap)
         
+    def changeOpacity(self, opacity):
+        if self.buttonStyle == "undock":
+            self.setUndockIcon(opacity) 
+        elif self.buttonStyle == "dock":
+            self.setDockIcon(opacity) 
+        elif self.buttonStyle == "min":
+            self.setMinimizeIcon(opacity) 
+        elif self.buttonStyle == "max":
+            self.setMaximizeIcon(opacity) 
+        elif self.buttonStyle == "spinUp":
+            self.setSpinBoxUpIcon(opacity) 
+        elif self.buttonStyle == "spinDown":
+            self.setSpinBoxDownIcon(opacity) 
+ 
+        
     def mouseReleaseEvent(self, event):
         if self.underMouse():
             self.clicked.emit()
@@ -166,6 +193,8 @@ class SpinBoxImageView(QHBoxLayout):
     valueChanged = pyqtSignal(int)
     def __init__(self, backgroundColor, foregroundColor, value, height, fontSize):
         QHBoxLayout.__init__(self)
+        self.backgroundColor = backgroundColor
+        self.foregroundColor = foregroundColor
         
         self.labelLayout = QVBoxLayout()
         self.upLabel = LabelButtons(backgroundColor, foregroundColor, height/2, height/2)
@@ -193,8 +222,17 @@ class SpinBoxImageView(QHBoxLayout):
         font = self.spinBox.font()
         font.setPixelSize(fontSize)
         self.spinBox.setFont(font)
-        self.spinBox.setStyleSheet("QSpinBox { color: " + str(foregroundColor.name()) + "; font: bold; background-color: " + str(backgroundColor.name()) + "; border:0;}")
-    
+        rgb = foregroundColor.getRgb()
+        rgba_string = "rgba("+str(rgb[0])+","+str(rgb[1])+","+str(rgb[2])+","+str(0.6*100)+"%)"
+        self.spinBox.setStyleSheet("QSpinBox { color: " + rgba_string + "; font: bold; background-color: " + str(backgroundColor.name()) + "; border:0;}")
+
+    def changeOpacity(self, opacity):
+        rgb = self.foregroundColor.getRgb()
+        rgba_string = "rgba("+str(rgb[0])+","+str(rgb[1])+","+str(rgb[2])+","+str(opacity*100)+"%)"
+        self.spinBox.setStyleSheet("QSpinBox { color: " + rgba_string + "; font: bold; background-color: " + str(self.backgroundColor.name()) + "; border:0;}")
+        self.upLabel.changeOpacity(opacity)
+        self.downLabel.changeOpacity(opacity)
+
     def spinBoxValueChanged(self, value):
         self.valueChanged.emit(value)    
     
@@ -225,60 +263,70 @@ class imageView2DHud(QWidget):
         self.layout.setSpacing(0)
         
     def createImageView2DHud(self, axis, value, backgroundColor, foregroundColor):
-        width = 20
-        height = 20 
+        self.axis = axis
+        self.backgroundColor = backgroundColor
+        self.foregroundColor = foregroundColor
+        self.labelsWidth = 20
+        self.labelsheight = 20 
         
         self.layout.addSpacing(4)
-        self.axisLabel = QLabel()
-        self.axisLabel.setAttribute(Qt.WA_TransparentForMouseEvents, True)
-        pixmap = QPixmap(250, 250)
-        pixmap.fill(backgroundColor)
-        painter = QPainter()
-        painter.begin(pixmap)
-        font = QFont()
-        font.setBold(True)
-        font.setPixelSize(250-30)
-        path = QPainterPath()
-        path.addText(QPointF(50, 250-50), font, axis)
-        brush = QBrush(foregroundColor)
-        painter.setBrush(brush)
-        painter.drawPath(path)        
-        painter.setFont(font)
-        painter.end()
-        pixmap = pixmap.scaled(QSize(width,height),Qt.KeepAspectRatio, Qt.SmoothTransformation)
-        self.axisLabel.setPixmap(pixmap)  
-        self.layout.addWidget(self.axisLabel)
-        
+        self.createAxisLabel()
         self.layout.addSpacing(1)
         
-        self.sliceSelector = SpinBoxImageView(backgroundColor, foregroundColor, value, height, 12)
+        self.sliceSelector = SpinBoxImageView(backgroundColor, foregroundColor, value, self.labelsheight, 12)
         self.layout.addLayout(self.sliceSelector)
-      
         self.layout.addStretch()
         
-        self.dockButton = LabelButtons(backgroundColor, foregroundColor, width, height)
+        self.dockButton = LabelButtons(backgroundColor, foregroundColor, self.labelsWidth, self.labelsheight)
         self.dockButton.clicked.connect(self.on_dockButton)
         self.dockButton.setUndockIcon()
         self.layout.addWidget(self.dockButton)
-        
         self.layout.addSpacing(4)
         
-        self.maxButton = LabelButtons(backgroundColor, foregroundColor, width, height)
+        self.maxButton = LabelButtons(backgroundColor, foregroundColor, self.labelsWidth, self.labelsheight)
         self.maxButton.clicked.connect(self.on_maxButton)
         self.maxButton.setMaximizeIcon()
         self.layout.addWidget(self.maxButton)
         self.layout.addSpacing(4)
-    
-#    def spinBoxChanged(self, value):
-#        self.valueChanged.emit(value)
+        
         
     def on_dockButton(self):
         self.dockButtonClicked.emit()
-    
         
     def on_maxButton(self):
         self.maximizeButtonClicked.emit()
         
+    def createAxisLabel(self):
+        self.axisLabel = QLabel()
+        self.axisLabel.setAttribute(Qt.WA_TransparentForMouseEvents, True)
+        pixmap = self.createAxisLabelPixmap()
+        self.axisLabel.setPixmap(pixmap)  
+        self.layout.addWidget(self.axisLabel)
+    
+    def createAxisLabelPixmap(self, opacity=0.6):
+        pixmap = QPixmap(250, 250)
+        pixmap.fill(self.backgroundColor)
+        painter = QPainter()
+        painter.begin(pixmap)
+        painter.setOpacity(opacity)
+        font = QFont()
+        font.setBold(True)
+        font.setPixelSize(250-30)
+        path = QPainterPath()
+        path.addText(QPointF(50, 250-50), font, self.axis)
+        brush = QBrush(self.foregroundColor)
+        painter.setBrush(brush)
+        painter.drawPath(path)        
+        painter.setFont(font)
+        painter.end()
+        pixmap = pixmap.scaled(QSize(self.labelsWidth,self.labelsheight),Qt.KeepAspectRatio, Qt.SmoothTransformation)
+        return pixmap
+    
+    def changeOpacity(self, opacity):
+        self.axisLabel.setPixmap(self.createAxisLabelPixmap(opacity))
+        self.sliceSelector.changeOpacity(opacity)
+        self.dockButton.changeOpacity(opacity)
+        self.maxButton.changeOpacity(opacity)
             
 class QuadStatusBar(QHBoxLayout):
     def __init__(self, parent=None ):

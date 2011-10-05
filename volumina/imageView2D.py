@@ -126,7 +126,7 @@ class ImageView2D(QGraphicsView):
         # invisible cursor to enable custom cursor
         self._hiddenCursor = QCursor(Qt.BlankCursor)
         # For screen recording BlankCursor doesn't work
-        #self.hiddenCursor = QCursor(Qt.ArrowCursor)
+        #self.hiddenCursor = QCursor(Qt.ArrowCursor)  
         
     def _cleanUp(self):        
         self._ticker.stop()
@@ -233,10 +233,11 @@ class ImageView2D(QGraphicsView):
         self._hud.setVisible(hide)
     
     def focusInEvent(self, event):
+        self._hud.changeOpacity(1)
         self.focusChanged.emit()
-                    
-    def centerImage(self):
-        self.centerOn(self.sceneRect().width()/2 + self.sceneRect().x(), self.sceneRect().height()/2 + self.sceneRect().y()) 
+        
+    def focusOutEvent(self, event):
+        self._hud.changeOpacity(0.6)
      
     def changeViewPort(self,qRectf):
         self.fitInView(qRectf,mode = Qt.KeepAspectRatio)
