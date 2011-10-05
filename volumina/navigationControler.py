@@ -1,5 +1,5 @@
-from PyQt4.QtCore import QObject, QTimer, QEvent, Qt, QPointF, pyqtSignal
-from PyQt4.QtGui  import QColor, QCursor, QMouseEvent, QApplication, QPainter, QPen
+from PyQt4.QtCore import QObject, QTimer, QEvent, Qt, QPointF, pyqtSignal, QRectF
+from PyQt4.QtGui  import QColor, QCursor, QMouseEvent, QApplication, QPainter, QPen, QGraphicsView
 
 import  copy
 from functools import partial
@@ -124,6 +124,12 @@ class NavigationInterpreter(QObject):
             imageview._dragMode = True
             if imageview._ticker.isActive():
                 imageview._deltaPan = QPointF(0, 0)
+                
+        if event.button() == Qt.LeftButton:
+            if imageview._isRubberBandZoom:
+                imageview.setDragMode(QGraphicsView.RubberBandDrag)
+                self._rubberBandStart = event.pos()
+        
 
         if event.buttons() == Qt.RightButton:
             #make sure that we have the cursor at the correct position
@@ -141,6 +147,13 @@ class NavigationInterpreter(QObject):
             imageview._lastPanPoint = releasePoint
             imageview._dragMode = False
             imageview._ticker.start(20)
+            
+        if event.button() == Qt.LeftButton:
+            if imageview._isRubberBandZoom:
+                imageview.setDragMode(QGraphicsView.NoDrag)
+                rect = QRectF(imageview.mapToScene(self._rubberBandStart), imageview.mapToScene(event.pos()))
+                imageview.fitInView(rect, Qt.KeepAspectRatio)
+                imageview._isRubberBandZoom = False
 
     def onMouseDoubleClickEvent( self, imageview, event ):
         dataMousePos = imageview.mapScene2Data(imageview.mapToScene(event.pos()))

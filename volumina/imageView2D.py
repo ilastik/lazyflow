@@ -63,6 +63,8 @@ class ImageView2D(QGraphicsView):
         self.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         self.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         
+        self._isRubberBandZoom = False
+        
         #these attributes are exposed as public properties above
         self._sliceShape  = None #2D shape of this view's shown image
         self._slices = None #number of slices that are stacked
