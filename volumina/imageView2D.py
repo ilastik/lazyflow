@@ -221,7 +221,9 @@ class ImageView2D(QGraphicsView):
 
     def fitImage(self):
         self.fitInView(self.sceneRect(), Qt.KeepAspectRatio)
-        
+        width, height = self.size().width() / self.sceneRect().width(), self.height() / self.sceneRect().height()
+        self._zoomFactor = min(width, height)
+                
     def centerImage(self):
         self.centerOn(self.sceneRect().width()/2 + self.sceneRect().x(), self.sceneRect().height()/2 + self.sceneRect().y()) 
         
@@ -243,10 +245,18 @@ class ImageView2D(QGraphicsView):
      
     def changeViewPort(self,qRectf):
         self.fitInView(qRectf,mode = Qt.KeepAspectRatio)
+        width, height = self.size().width() / qRectf.width(), self.height() / qRectf.height()
+        self._zoomFactor = min(width, height)
 
     def doScale(self, factor):
         self._zoomFactor = self._zoomFactor * factor
         self.scale(factor, factor)
+        
+    def doScaleTo(self, zoom=1):
+        factor = ( 1 / self._zoomFactor ) * zoom
+        self._zoomFactor = zoom
+        self.scale(factor, factor)
+        
 
 #*******************************************************************************
 # i f   _ _ n a m e _ _   = =   " _ _ m a i n _ _ "                            *
