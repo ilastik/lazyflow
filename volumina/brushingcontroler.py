@@ -1,5 +1,5 @@
-from PyQt4.QtCore import QObject, QEvent, QPointF, Qt
-from PyQt4.QtGui import QPainter, QPen, QApplication
+from PyQt4.QtCore import QObject, QEvent, QPointF, Qt, QRectF
+from PyQt4.QtGui import QPainter, QPen, QApplication, QGraphicsView
 
 from eventswitch import InterpreterABC
 
@@ -154,6 +154,11 @@ class BrushingInterpreter( QObject ):
             #don't draw if flicker the view
             if imageview._ticker.isActive():
                 return
+            #don't draw if zooming
+            if imageview._isRubberBandZoom:
+                imageview.setDragMode(QGraphicsView.RubberBandDrag)
+                self._rubberBandStart = event.pos()
+                return
             if QApplication.keyboardModifiers() == Qt.ShiftModifier:
                 self._navCtrl._brushingModel.setErasing()
                 self._navCtrl._tempErase = True
@@ -161,6 +166,17 @@ class BrushingInterpreter( QObject ):
             self._navCtrl.beginDrawing(imageview, imageview.mousePos)
 
     def onMouseReleaseEvent( self, imageview, event ):
+        if event.button() == Qt.LeftButton:
+            if imageview._isRubberBandZoom:
+                imageview.setDragMode(QGraphicsView.NoDrag)
+                rect = QRectF(imageview.mapToScene(self._rubberBandStart), imageview.mapToScene(event.pos()))
+                imageview.fitInView(rect, Qt.KeepAspectRatio)
+                imageview._isRubberBandZoom = False
+                width, height = imageview.size().width() / rect.width(), imageview.height() / rect.height()
+                imageview._zoomFactor = min(width, height)
+                imageview.setCursor(imageview._cursorBackup)
+                return
+            
         imageview.mousePos = imageview.mapScene2Data(imageview.mapToScene(event.pos()))
         
         if event.button() == Qt.MidButton:
