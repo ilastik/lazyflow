@@ -129,6 +129,7 @@ class NavigationInterpreter(QObject):
             if imageview._isRubberBandZoom:
                 imageview.setDragMode(QGraphicsView.RubberBandDrag)
                 self._rubberBandStart = event.pos()
+                return
         
 
         if event.buttons() == Qt.RightButton:
@@ -154,6 +155,10 @@ class NavigationInterpreter(QObject):
                 rect = QRectF(imageview.mapToScene(self._rubberBandStart), imageview.mapToScene(event.pos()))
                 imageview.fitInView(rect, Qt.KeepAspectRatio)
                 imageview._isRubberBandZoom = False
+                width, height = imageview.size().width() / rect.width(), imageview.height() / rect.height()
+                imageview._zoomFactor = min(width, height)
+                imageview.setCursor(imageview._cursorBackup)
+                return
 
     def onMouseDoubleClickEvent( self, imageview, event ):
         dataMousePos = imageview.mapScene2Data(imageview.mapToScene(event.pos()))
