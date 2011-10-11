@@ -97,16 +97,14 @@ class NavigationInterpreter(QObject):
             if k_alt:
                 self._navCtrl.changeSliceRelative(10, self._navCtrl._views.index(imageview))
             elif k_ctrl:
-                scaleFactor = 1.1
-                imageview.doScale(scaleFactor)
+                imageview.zoomIn()
             else:
                 self._navCtrl.changeSliceRelative(1, self._navCtrl._views.index(imageview))
         else:
             if k_alt:
                 self._navCtrl.changeSliceRelative(-10, self._navCtrl._views.index(imageview))
             elif k_ctrl:
-                scaleFactor = 0.9
-                imageview.doScale(scaleFactor)
+                imageview.zoomOut()
             else:
                 self._navCtrl.changeSliceRelative(-1, self._navCtrl._views.index(imageview))
         if k_ctrl:

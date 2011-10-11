@@ -103,8 +103,7 @@ class BrushingInterpreter( QObject ):
                     imageview._isDrawing = True
                 self._navCtrl.changeSliceRelative(10, self._navCtrl._views.index(imageview))
             elif k_ctrl:
-                scaleFactor = 1.1
-                imageview.doScale(scaleFactor)
+                imageview.zoomIn()
             else:
                 if self._navCtrl._isDrawing:
                     self._navCtrl.endDrawing(imageview, imageview.mousePos)
@@ -117,8 +116,7 @@ class BrushingInterpreter( QObject ):
                     self._navCtrl._isDrawing = True
                 self._navCtrl.changeSliceRelative(-10, self._navCtrl._views.index(imageview))
             elif k_ctrl:
-                scaleFactor = 0.9
-                imageview.doScale(scaleFactor)
+                imageview.zoomOut()
             else:
                 if self._navCtrl._isDrawing:
                     self._navCtrl.endDrawing(imageview, imageview.mousePos)
