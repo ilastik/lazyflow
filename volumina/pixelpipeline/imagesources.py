@@ -1,5 +1,9 @@
-import volumina
-from volumina.colorama import Fore, Back, Style
+try:
+    import volumina
+    from volumina.colorama import Fore, Back, Style
+except:
+    from colorama import Fore, Back, Style
+
 
 from PyQt4.QtCore import QObject, QRect, pyqtSignal, QMutex
 from PyQt4.QtGui import QImage

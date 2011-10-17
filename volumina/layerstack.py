@@ -100,6 +100,7 @@ class LayerStackModel(QAbstractListModel):
             self._layerStack.insert(row, Layer())
             beginRow += 1
         self.endInsertRows()
+        #What. Nr1
         assert self.rowCount() == oldRowCount+1
         return True
             

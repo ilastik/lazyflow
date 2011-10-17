@@ -29,8 +29,11 @@
 
 import numpy
 
-import volumina
-from volumina.colorama import Fore, Back, Style
+try:
+    import volumina
+    from volumina.colorama import Fore, Back, Style
+except:
+    from colorama import Fore, Back, Style
 
 from functools import partial
 from PyQt4.QtCore import QRect, QRectF, QMutex, QPointF, Qt, QSizeF

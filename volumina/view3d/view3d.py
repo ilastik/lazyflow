@@ -1,14 +1,14 @@
 from vtk import vtkRenderer, vtkConeSource, vtkPolyDataMapper, vtkActor, \
-                vtkImplicitPlaneWidget2, vtkImplicitPlaneRepresentation, \
-                vtkObject, vtkPNGReader, vtkImageActor, QVTKWidget2, \
-                vtkRenderWindow, vtkOrientationMarkerWidget, vtkAxesActor, \
-                vtkTransform, vtkPolyData, vtkPoints, vtkCellArray, \
-                vtkTubeFilter, vtkQImageToImageSource, vtkImageImport, \
-                vtkDiscreteMarchingCubes, vtkWindowedSincPolyDataFilter, \
-                vtkMaskFields, vtkGeometryFilter, vtkThreshold, vtkDataObject, \
-                vtkDataSetAttributes, vtkCutter, vtkPlane, vtkPropAssembly, \
-                vtkGenericOpenGLRenderWindow, QVTKWidget, vtkOBJExporter, \
-                vtkPropCollection
+                    vtkImplicitPlaneWidget2, vtkImplicitPlaneRepresentation, \
+                    vtkObject, vtkPNGReader, vtkImageActor, QVTKWidget2, \
+                    vtkRenderWindow, vtkOrientationMarkerWidget, vtkAxesActor, \
+                    vtkTransform, vtkPolyData, vtkPoints, vtkCellArray, \
+                    vtkTubeFilter, vtkQImageToImageSource, vtkImageImport, \
+                    vtkDiscreteMarchingCubes, vtkWindowedSincPolyDataFilter, \
+                    vtkMaskFields, vtkGeometryFilter, vtkThreshold, vtkDataObject, \
+                    vtkDataSetAttributes, vtkCutter, vtkPlane, vtkPropAssembly, \
+                    vtkGenericOpenGLRenderWindow, QVTKWidget, vtkOBJExporter, \
+                    vtkPropCollection
 
 from PyQt4.QtGui import QWidget, QVBoxLayout, QHBoxLayout, QPushButton, \
                         QSizePolicy, QSpacerItem, QIcon, QFileDialog, \

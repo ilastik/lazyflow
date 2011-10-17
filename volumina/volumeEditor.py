@@ -13,6 +13,7 @@ from brushingmodel import BrushingModel
 from pixelpipeline.imagepump import ImagePump
 from slicingtools import SliceProjection
 
+
 useVTK = True
 try:
     from view3d.view3d import OverviewScene
