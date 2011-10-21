@@ -1,15 +1,15 @@
-from PyQt4.QtCore import QObject
-
-from singlesplitter import EventSwitch
+from PyQt4.QtCore import QObject    
 from imageScene2D import ImageScene2D
 from imageView2D import ImageView2D
-from singlesplitter import PositionModel
-from singlesplitter import NavigationControler, NavigationInterpreter
-from brushingcontroler import BrushingInterpreter, BrushingControler
+from singlesplitter import  PositionModel, NavigationControler, NavigationInterpreter, \
+                            EventSwitch
 from brushingmodel import BrushingModel
 from pixelpipeline.imagepump import ImagePump
 from slicingtools import SliceProjection
-from numpy import zeros
+from pixelpipeline.datasources import ArraySource
+from volumina.layer import GrayscaleLayer
+from volumina.layerstack import LayerStackModel
+
 
 useVTK = True
 try:
@@ -20,32 +20,34 @@ except:
     useVTK = False
 
 #*******************************************************************************
-# I m a g e E d i t o r                                                      *
+# I m a g e E d i t o r                                                        *
 #*******************************************************************************
 
 class ImageEditor( QObject ):
         
 
-    def __init__( self, shape, layerStackModel, labelsink=None):
+    def __init__( self, shape = None, layerStackModel = None ,twoDArray=None):
         super(ImageEditor, self).__init__()
-        assert(len(shape) == 5)
-
-        ##
-        ## properties
-        ##
-        self._shape = shape        
         
-
-        ##
-        ## base components, intiation
-        ##
-        self.layerStack = layerStackModel
+        
+        self._shape = shape        
+        self._twoDArry = twoDArray
+        self._layerStack = layerStackModel
+        
+        if twoDArray is not None:
+            source = ArraySource(twoDArray)
+            layerstack = LayerStackModel()
+            layerstack.append(GrayscaleLayer(source)) 
+            self._shape = source._array.shape
+            self._layerStack = layerstack
+            
         self.imageScene = ImageScene2D()
-        self.imageView = ImageView2D(self.imageScene)
-        self.imagepump = self._initImagePump()
         self.posModel = PositionModel(self._shape)
-        self.brushingModel = BrushingModel()
+        self.imagepump = self._initImagePump()
         self.imageScene.stackedImageSources = self.imagepump.stackedImageSources
+        self.imageView = ImageView2D(self.imageScene)
+        
+        self.brushingModel = BrushingModel()
         
         ##
         ## interaction
@@ -55,7 +57,9 @@ class ImageEditor( QObject ):
 
         # navigation control
         v3d = self.view3d if useVTK else None
+        
         syncedSliceSources = self.imagepump.syncedSliceSources 
+        
         self.navCtrl      = NavigationControler(self.imageView, syncedSliceSources, self.posModel, self.brushingModel, view3d=v3d)
         self.navInterpret = NavigationInterpreter(self.navCtrl)
 
@@ -65,7 +69,7 @@ class ImageEditor( QObject ):
         ##
         ## connect
         ##  
-        self.imageView.sliceShape=self.posModel.sliceShape(0) 
+        self.imageView.sliceShape=self._shape
         self.posModel.cursorPositionChanged.connect(self.navCtrl.moveCrosshair)
         
         
@@ -75,8 +79,7 @@ class ImageEditor( QObject ):
     ##
     def _initImagePump( self ):
         
-        #IDEA: Make function that determines SliceProjection for any given Array
-        alongTXC = SliceProjection( abscissa = 2, ordinate = 3, along = [0,1,4] )    
-        imagepump = ImagePump( self.layerStack, alongTXC )
+        TwoDProjection = SliceProjection(0,1,[])
+        imagepump = ImagePump( self._layerStack, TwoDProjection )
         return imagepump
     

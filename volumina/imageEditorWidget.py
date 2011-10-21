@@ -28,15 +28,15 @@
 #    or implied, of their employers.
 
 from PyQt4.QtCore import Qt
-from PyQt4.QtGui import QApplication, QWidget, \
-                        QSplitter, QHBoxLayout,  \
-                        QColor, QSizePolicy
+from PyQt4.QtGui import QApplication, QWidget, QSplitter, QHBoxLayout, QColor,\
+                        QSizePolicy
 from singlesplitter import SingleView, SingleStatusBar
 from pixelpipeline.datasources import ArraySource
 from imageEditor import ImageEditor
 
+
 #*******************************************************************************
-# I m a g e E d i t o r W i d g e t                                          *
+# I m a g e E d i t o r W i d g e t                                            *
 #*******************************************************************************
 
 class ImageEditorWidget(QWidget):
@@ -86,24 +86,20 @@ if __name__ == "__main__":
     from volumina.layer import GrayscaleLayer
     from volumina.layerstack import LayerStackModel
     from testing import TwoDtestVolume
-    from singlesplitter import SingleTool
     
     app = QApplication(sys.argv)
     
     s = QSplitter()
     
-    N = 100
-                
-    singlehelper = SingleTool()
-    twoDtestVolume = TwoDtestVolume(N)
-    fiveDtestVolume = singlehelper.embed2Din5D(twoDtestVolume)
-    source = ArraySource(fiveDtestVolume)
+    twoDtestVolume = TwoDtestVolume(200)
+    source = ArraySource(twoDtestVolume)
     layerstack = LayerStackModel()
-    layerstack.append( GrayscaleLayer( source ) )
+    layerstack.append(GrayscaleLayer(source)) 
     shape = source._array.shape
-    editor = ImageEditor(shape, layerstack)
-                
-
+    #editor = ImageEditor(shape, layerstack)
+    editor = ImageEditor(None,None,twoDtestVolume)
+    
+    
     widget = ImageEditorWidget(parent=None, editor=editor)
 
 

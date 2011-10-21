@@ -27,80 +27,39 @@
 #    authors and should not be interpreted as representing official policies, either expressed
 #    or implied, of their employers.
 
-from PyQt4.QtCore import Qt, pyqtSignal, QPointF, QSize
-from PyQt4.QtGui import QSizePolicy, QWidget, QVBoxLayout
+from PyQt4.QtCore import Qt, QPointF, QSize, pyqtSignal, QEvent, QObject, QTimer
+from PyQt4.QtGui import QSizePolicy, QWidget, QVBoxLayout, QColor
             
 from PyQt4.QtGui import QLabel, QPen, QPainter, QPixmap, QHBoxLayout, \
-                        QFont, QPainterPath, QBrush, QSpinBox, QAbstractSpinBox, \
-                        QCheckBox
-import numpy
-
-
-class ImageView2DFloatingWindow(QWidget):
-    onCloseClick = pyqtSignal()
-    def __init__(self):
-        QWidget.__init__(self)
-        
-    def closeEvent(self, event):
-        self.onCloseClick.emit()
-        event.ignore()
+                        QFont, QPainterPath, QBrush, QSpinBox, QAbstractSpinBox
+from abc import ABCMeta, abstractmethod
+from pixelpipeline.asyncabcs import _has_attributes
 
 class ImageView2DDockWidget(QWidget):
     def __init__(self, graphicsView):
         QWidget.__init__(self)
         
         self.graphicsView = graphicsView
-        self._isDocked = True
-        self._isMaximized = False
-        
-        self.setContentsMargins(0, 0, 0, 0)
         
         self.layout = QVBoxLayout()
         self.layout.setContentsMargins(0, 0, 0, 0)
         self.setLayout(self.layout)
         
-        self.windowForGraphicsView = ImageView2DFloatingWindow()
+        self.windowForGraphicsView = QWidget()
         self.windowForGraphicsView.layout = QVBoxLayout()
         self.windowForGraphicsView.layout.setContentsMargins(0, 0, 0, 0)
         self.windowForGraphicsView.setLayout(self.windowForGraphicsView.layout)
-        
     
         self.addGraphicsView()
     
-    def connectHud(self):
-        self.graphicsView._hud.dockButtonClicked.connect(self.onDockButton)
-        self.graphicsView._hud.maximizeButtonClicked.connect(self.onMaxButton)
-        
     def addGraphicsView(self):
         self.layout.addWidget(self.graphicsView)
         
     def removeGraphicsView(self):
         self.layout.removeWidget(self.graphicsView)
         
-    def undockView(self):
-        self._isDocked = False
-        self.graphicsView._hud.dockButton.setDockIcon()
-        self.graphicsView._hud.maxButton.setEnabled(False)
-        
-        self.removeGraphicsView()
-        self.windowForGraphicsView.layout.addWidget(self.graphicsView)
-        self.windowForGraphicsView.show()
-        self.windowForGraphicsView.raise_()
-    
-        
-        self.windowForGraphicsView.layout.removeWidget(self.graphicsView)
-        self.windowForGraphicsView.hide()
-        self.addGraphicsView()
-
-class SingleTool(object):
-    def embed2Din5D(self,twoDArray):
-        m,n=twoDArray.shape
-        fiveDArray = numpy.zeros((1,1,m,n,1))
-        fiveDArray[0,0,:,:,0] = twoDArray
-        return fiveDArray
-
 class SingleView(QWidget):
-    def __init__(self, parent, view1):
+    def __init__(self, parent, view):
         QWidget.__init__(self, parent)
         
         self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
@@ -111,10 +70,10 @@ class SingleView(QWidget):
         self.layout.setContentsMargins(4, 4, 4, 4)
         self.layout.setSpacing(0)
          
-        self.imageView2D_1 = view1
+        self.imageView2D = view
          
-        self.dock_main = ImageView2DDockWidget(self.imageView2D_1)
-        self.layout.addWidget(self.dock_main)
+        self.main = ImageView2DDockWidget(self.imageView2D)
+        self.layout.addWidget(self.main)
 
     def addStatusBar(self, bar):
         self.statusBar = bar
@@ -122,10 +81,6 @@ class SingleView(QWidget):
         
     def setGrayScaleToQuadStatusBar(self, gray):
         self.quadViewStatusBar.setGrayScale(gray)
-        
-    def setMouseCoordsToQuadStatusBar(self, x, y, z):
-        self.quadViewStatusBar.setMouseCoords1(x,y)
-        
     
 class SingleStatusBar(QHBoxLayout):
     def __init__(self, parent=None ):
@@ -157,19 +112,19 @@ class SingleStatusBar(QHBoxLayout):
         painter.end()
         pixmap = pixmap.scaled(QSize(20,20),Qt.KeepAspectRatio, Qt.SmoothTransformation)
         self.xLabel.setPixmap(pixmap)
-        self.xSpinBox = QSpinBox()
-        self.xSpinBox.setAttribute(Qt.WA_TransparentForMouseEvents, True)
-        self.xSpinBox.setEnabled(False)
-        self.xSpinBox.setAlignment(Qt.AlignCenter)
-        self.xSpinBox.setToolTip("xSpinBox")
-        self.xSpinBox.setButtonSymbols(QAbstractSpinBox.NoButtons)
-        self.xSpinBox.setMaximumHeight(20)
-        self.xSpinBox.setMaximum(9999)
-        font = self.xSpinBox.font()
+        self.ySpinBox = QSpinBox()
+        self.ySpinBox.setAttribute(Qt.WA_TransparentForMouseEvents, True)
+        self.ySpinBox.setEnabled(False)
+        self.ySpinBox.setAlignment(Qt.AlignCenter)
+        self.ySpinBox.setToolTip("ySpinBox")
+        self.ySpinBox.setButtonSymbols(QAbstractSpinBox.NoButtons)
+        self.ySpinBox.setMaximumHeight(20)
+        self.ySpinBox.setMaximum(9999)
+        font = self.ySpinBox.font()
         font.setPixelSize(14)
-        self.xSpinBox.setFont(font)
-        self.xSpinBox.setStyleSheet("QSpinBox { color: " + str(xforegroundColor.name()) + "; font: bold; background-color: " + str(xbackgroundColor.name()) + "; border:0;}")
-        self.addWidget(self.xSpinBox)
+        self.ySpinBox.setFont(font)
+        self.ySpinBox.setStyleSheet("QSpinBox { color: " + str(xforegroundColor.name()) + "; font: bold; background-color: " + str(xbackgroundColor.name()) + "; border:0;}")
+        self.addWidget(self.ySpinBox)
         
         self.yLabel = QLabel()
         self.yLabel.setAttribute(Qt.WA_TransparentForMouseEvents, True)
@@ -193,26 +148,25 @@ class SingleStatusBar(QHBoxLayout):
         painter.end()
         pixmap = pixmap.scaled(QSize(20,20),Qt.KeepAspectRatio, Qt.SmoothTransformation)
         self.yLabel.setPixmap(pixmap)
-        self.ySpinBox = QSpinBox()
-        self.ySpinBox.setAttribute(Qt.WA_TransparentForMouseEvents, True)
-        self.ySpinBox.setEnabled(False)
-        self.ySpinBox.setAlignment(Qt.AlignCenter)
-        self.ySpinBox.setToolTip("ySpinBox")
-        self.ySpinBox.setButtonSymbols(QAbstractSpinBox.NoButtons)
-        self.ySpinBox.setMaximumHeight(20)
-        self.ySpinBox.setMaximum(9999)
-        font = self.ySpinBox.font()
+        self.xSpinBox = QSpinBox()
+        self.xSpinBox.setAttribute(Qt.WA_TransparentForMouseEvents, True)
+        self.xSpinBox.setEnabled(False)
+        self.xSpinBox.setAlignment(Qt.AlignCenter)
+        self.xSpinBox.setToolTip("xSpinBox")
+        self.xSpinBox.setButtonSymbols(QAbstractSpinBox.NoButtons)
+        self.xSpinBox.setMaximumHeight(20)
+        self.xSpinBox.setMaximum(9999)
+        font = self.xSpinBox.font()
         font.setPixelSize(14)
-        self.ySpinBox.setFont(font)
-        self.ySpinBox.setStyleSheet("QSpinBox { color: " + str(yforegroundColor.name()) + "; font: bold; background-color: " + str(ybackgroundColor.name()) + "; border:0;}")
-        self.addWidget(self.ySpinBox)
+        self.xSpinBox.setFont(font)
+        self.xSpinBox.setStyleSheet("QSpinBox { color: " + str(yforegroundColor.name()) + "; font: bold; background-color: " + str(ybackgroundColor.name()) + "; border:0;}")
+        self.addWidget(self.xSpinBox)
         self.addStretch()
             
-    def setMouseCoords(self, x, y, z):
-        self.xSpinBox.setValue(z)
+    def setMouseCoords(self, x, y):
         self.ySpinBox.setValue(y)
+        self.xSpinBox.setValue(x)
 
-from PyQt4.QtCore import QObject, QTimer
 
 #*******************************************************************************
 # P o s i t i o n M o d e l                                                    *
@@ -220,106 +174,50 @@ from PyQt4.QtCore import QObject, QTimer
 
 class PositionModel(QObject):
     """
-    Currently viewed position within a 5D data volume
-    (time, x,y,z, channels).
-    
+    Currently viewed position within a 2D data volume
+    (x,y).
     By writing into the public properties of the PositionModel,
     the user can manipulate the volume viewer by writing code
     in the same way as would be possible by manipulating the
     viewer with a mouse.
     """
     
-    channelChanged         = pyqtSignal(int)
     cursorPositionChanged  = pyqtSignal(object, object)
-    slicingPositionChanged = pyqtSignal(object, object)
-    slicingPositionSettled = pyqtSignal(bool)
     
     scrollDelay = 300
     
-    def __init__(self, shape5D, parent=None):
+    def __init__(self, shape2D, parent=None):
         QObject.__init__(self, parent)
         
-        assert len(shape5D) == 5
-        
         #init property fields
-        self._cursorPos  = [0,0,0]
-        self._slicingPos = [0,0,0]
-
+        self._cursorPos  = [0,0]
         self._channel    = 0
-        self._shape5D    = shape5D
-        
+        self._shape2D    = shape2D
         """
-        Index of the currently active view in [0,1,2].
-        A view is active when the mouse cursor hovered over it last.
+        Since its only one view, activeView is set to 0 be default
         """
         self.activeView = 0
-
-        #call property setters to trigger updates etc. 
-        self.cursorPos   = self._cursorPos
-        self.slicingPos  = self._slicingPos
-        self.channel     = self._channel
         
         self._scrollTimer = QTimer()
         self._scrollTimer.setInterval(self.scrollDelay)
         self._scrollTimer.setSingleShot(True)
         self._scrollTimer.timeout.connect(self._onScrollTimer)
         
-        self._slicingSettled = True
-        
-    def sliceShape(self, axis):
-        """
-        returns the 2D shape of slices perpendicular to axis
-        """
-        shape = self._shape5D[1:4]
-        if len(shape) == 2:
-            return shape
-        else:
-            shape = list(shape)
-            del shape[axis]
-            return numpy.asarray(shape)
-    
     @property
     def shape( self ):
         """
         the spatial shape
         """
-        return self._shape5D[1:4]
-        
-    @property    
-    def time( self ):
-        """
-        the currently shown index of the time dimension
-        """
-        return self._time
-    @time.setter
-    def time( self, value ):
-        if value < 0 or value >= self._shape5D[0] or value == self._time:
-            return
-        self._time = value    
-        self.timeChanged.emit(value)
-
-    @property
-    def channel( self ):
-        """
-        the currently shown index of the channel dimension
-        """
-        return self._channel
-    @channel.setter
-    def channel(self, value):
-        if value < 0 or value >= self._shape5D[4] or value == self._channel:
-            return
-        self._channel = value    
-        self.channelChanged.emit(value)
+        return self._shape2D
     
     @property
     def cursorPos(self):
         """
-        Returns the spatial position (x,y,z) that is defined by
-        the slice number of the slice under the cursor and the position
-        on the cursor on that slice.
-        Notice the difference to `slicingPos`.
+        Returns the spatial position (x,y) that is defined by the position of
+        the mouse.
         """
         return self._cursorPos
+    
     @cursorPos.setter
     def cursorPos(self, coordinates):
         if coordinates == self._cursorPos:
@@ -328,57 +226,17 @@ class PositionModel(QObject):
         self._cursorPos = coordinates
         self.cursorPositionChanged.emit(self.cursorPos, oldPos)
     
-    @property
-    def slicingPos(self):
-        """
-        Returns the spatial position (x,y,z) that the volume viewer is currently
-        configured to show.
-        Notice the difference to `cursorPos`. Here, we mean the position as defined
-        by the three slice views.
-        """
-        return self._slicingPos
-    @slicingPos.setter
-    def slicingPos(self, pos):
-        if pos == self._slicingPos:
-            return
-        oldPos = self._slicingPos
-        
-        self._slicingPos = pos
-        
-        if self._slicingSettled:
-            print "unsettle"
-            self._slicingSettled = False
-            self.slicingPositionSettled.emit(False)
-        self._scrollTimer.start()
-        
-        self.slicingPositionChanged.emit(self.slicingPos, oldPos)
-        
     def _onScrollTimer(self):
         print "settled"
         self._slicingSettled = True
         self.slicingPositionSettled.emit(True)
-        
-from PyQt4.QtCore import QEvent
-from PyQt4.QtGui  import QColor
-import  copy
-
-def posView2D(pos3d, axis):
-    """convert from a 3D position to a 2D position on the slicing plane
-       perpendicular to axis"""
-    pos2d = copy.deepcopy(pos3d)    
-    del pos2d[axis]
-    return pos2d
-
 #*******************************************************************************
 # N a v i g a t i o n I n t e r p r e t e r                                    *
 #*******************************************************************************
 
 class NavigationInterpreter(QObject):
     """
-    Provides slots to listens to mouse/keyboard events from multiple
-    slice views and interprets them as actions upon a N-D volume
-    (whereas the individual ImageView2D/ImageScene2D know nothing about the
-    data they display).
+    Provides slots to listens to mouse/keyboard events from one slice view.
 
     """
     def __init__(self, navigationcontroler):
@@ -451,12 +309,7 @@ class NavigationControler(QObject):
         if self._view.hud:
             self._view.hud.bgColor = self.axisColors[0]
         
-#        for axis, v in enumerate(self._views):
-#            #FIXME: Bad dependency here on hud to be available!
-#            if v.hud: v.hud.bgColor = self.axisColors[axis]
-#        
-        
-    def __init__(self, imageView2D, sliceSources, positionModel, brushingModel, time = 0, channel = 0, view3d=None):
+    def __init__(self, imageView2D, sliceSources, positionModel, brushingModel, view3d=None):
         QObject.__init__(self)
         
         # init fields
@@ -477,53 +330,29 @@ class NavigationControler(QObject):
     def moveCrosshair(self, newPos, oldPos):
         self._updateCrossHairCursor()
 
-        
-                    
-    def changeChannel(self, newChannel):
-        for i in range(3):
-            for src in self._sliceSources[i]:
-                src.setThrough(2, newChannel)
-
     def positionCursor(self, x, y):
         """
         Change position of the crosshair cursor.
-
         x,y  -- cursor position on a certain image scene
-        axis -- perpendicular axis [0,1,2]
         """
-        
-        #we get the 2D coordinates x,y from the view that
-        #shows the projection perpendicular to axis
-        #set this view as active
-        
         newPos = [x,y]
-        newPos.insert(0, self._model.slicingPos[0])
-
         if newPos == self._model.cursorPos:
             return
         if not self._positionValid(newPos):
             return
-
-        self._model.cursorPos = newPos
-
-            
-    
+        self._model.cursorPos = newPos            
     #private functions ########################################################
     
     def _updateCrossHairCursor(self):
-        y,x = posView2D(self._model.cursorPos, axis=self._model.activeView)
+        y,x = self._model.cursorPos
         self._view._crossHairCursor.showXYPosition(x,y)
-        self._view._crossHairCursor.setVisible(self._model.activeView == 0)
+        self._view._crossHairCursor.setVisible(True)
     
     def _positionValid(self, pos):
-        for i in range(3):
+        for i in range(2):
             if pos[i] < 0 or pos[i] >= self._model.shape[i]:
                 return False
         return True
-from PyQt4.QtCore import QObject
-from abc import ABCMeta, abstractmethod
-
-from pixelpipeline.asyncabcs import _has_attributes
 
 class InterpreterABC:
     __metaclass__ = ABCMeta
@@ -531,15 +360,12 @@ class InterpreterABC:
     @abstractmethod
     def start( self ):
         '''Hook method called after installed as an event filter.'''
-
     @abstractmethod    
     def finalize( self ):
         '''Hook method called just before deinstall as an event filter.'''
-
     @abstractmethod    
     def eventFilter( self, watched, event ):
         '''Necessary to act as a Qt event filter. '''
-
     @classmethod
     def __subclasshook__(cls, C):
         if cls is InterpreterABC:
@@ -547,9 +373,6 @@ class InterpreterABC:
                 return True
             return False
         return NotImplemented
-
-
-
 
 class EventSwitch( QObject ):
     @property
@@ -568,13 +391,10 @@ class EventSwitch( QObject ):
         self._imageViews.removeEventFilter(self._interpreter)
         if interpreter:
             self._imageViews.installEventFilter(interpreter)
-
-        
         
         self._interpreter = interpreter
-
         # start the new interpreter after installing 
-        # to avoid inconcistencies
+        # to avoid inconsistencies
         self._interpreter.start()
 
     def __init__( self, imageviews, interpreter=None):

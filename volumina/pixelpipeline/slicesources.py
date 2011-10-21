@@ -13,7 +13,7 @@ projectionAlongTZC = SliceProjection( abscissa = 1, ordinate = 2, along = [0,3,4
 #*******************************************************************************
 
 class SliceRequest( object ):
-    def __init__( self, domainArrayRequest, sliceProjection ):
+    def __init__( self, domainArrayRequest, sliceProjection):
         self._ar = domainArrayRequest
         self._sp = sliceProjection
         
@@ -52,7 +52,7 @@ class SliceSource( QObject ):
         self._through = value
         self.setDirty((slice(None), slice(None)))
     
-    def __init__(self, datasource, sliceProjection = projectionAlongTZC):
+    def __init__(self, datasource, sliceProjection):
         assert isinstance(datasource, SourceABC) , 'wrong type: %s' % str(type(datasource)) 
         super(SliceSource, self).__init__()
 
@@ -60,6 +60,9 @@ class SliceSource( QObject ):
         self._datasource = datasource
         self._datasource.isDirty.connect(self._onDatasourceDirty)
         self._through = len(sliceProjection.along) * [0]
+        
+        if len(self.sliceProjection.along) <= 1:
+            self._through =[]
 
     def setThrough( self, index, value ):
         assert index < len(self.through)
@@ -69,8 +72,11 @@ class SliceSource( QObject ):
 
     def request( self, slicing2D ):
         slicing = self.sliceProjection.domain(self.through, slicing2D[0], slicing2D[1])
+        if len(self.sliceProjection.along) <= 1:
+            slicing = slicing2D
         return SliceRequest(self._datasource.request(slicing), self.sliceProjection)
-
+        
+    
     def setDirty( self, slicing ):
         assert isinstance(slicing, tuple)
         if not is_pure_slicing(slicing):
@@ -112,7 +118,7 @@ class SyncedSliceSources( QObject ):
         super(SyncedSliceSources, self).__init__()
         self._srcs = set(slicesrcs)
         self._through = through
-
+        
     def __iter__( self ):
         return iter(self._srcs)
 
