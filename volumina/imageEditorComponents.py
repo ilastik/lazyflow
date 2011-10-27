@@ -27,13 +27,10 @@
 #    authors and should not be interpreted as representing official policies, either expressed
 #    or implied, of their employers.
 
-from PyQt4.QtCore import Qt, QPointF, QSize, pyqtSignal, QEvent, QObject, QTimer
-from PyQt4.QtGui import QSizePolicy, QWidget, QVBoxLayout, QColor
-            
+from PyQt4.QtCore import Qt, QPointF, QSize, pyqtSignal, QEvent, QObject, QTimer            
 from PyQt4.QtGui import QLabel, QPen, QPainter, QPixmap, QHBoxLayout, \
-                        QFont, QPainterPath, QBrush, QSpinBox, QAbstractSpinBox
-from abc import ABCMeta, abstractmethod
-from pixelpipeline.asyncabcs import _has_attributes
+                        QFont, QPainterPath, QBrush, QSpinBox, QAbstractSpinBox, \
+                        QSizePolicy, QWidget, QVBoxLayout, QColor
 
 class ImageView2DDockWidget(QWidget):
     def __init__(self, graphicsView):
@@ -58,7 +55,7 @@ class ImageView2DDockWidget(QWidget):
     def removeGraphicsView(self):
         self.layout.removeWidget(self.graphicsView)
         
-class SingleView(QWidget):
+class ImageViewWidget(QWidget):
     def __init__(self, parent, view):
         QWidget.__init__(self, parent)
         
@@ -164,9 +161,8 @@ class SingleStatusBar(QHBoxLayout):
         self.addStretch()
             
     def setMouseCoords(self, x, y):
-        self.ySpinBox.setValue(y)
         self.xSpinBox.setValue(x)
-
+        self.ySpinBox.setValue(y)
 
 #*******************************************************************************
 # P o s i t i o n M o d e l                                                    *
@@ -197,7 +193,6 @@ class PositionModel(QObject):
         Since its only one view, activeView is set to 0 be default
         """
         self.activeView = 0
-        
         self._scrollTimer = QTimer()
         self._scrollTimer.setInterval(self.scrollDelay)
         self._scrollTimer.setSingleShot(True)
@@ -284,7 +279,6 @@ class NavigationInterpreter(QObject):
         y = imageview.y = mousePos.y()
         self._navCtrl.positionCursor(x, y)
 
-
 #*******************************************************************************
 # N a v i g a t i o n C o n t r o l e r                                        *
 #*******************************************************************************
@@ -309,7 +303,7 @@ class NavigationControler(QObject):
         if self._view.hud:
             self._view.hud.bgColor = self.axisColors[0]
         
-    def __init__(self, imageView2D, sliceSources, positionModel, brushingModel, view3d=None):
+    def __init__(self, imageView2D, sliceSources, positionModel, brushingModel):
         QObject.__init__(self)
         
         # init fields
@@ -318,7 +312,6 @@ class NavigationControler(QObject):
         self._model = positionModel
         self._beginStackIndex = 0
         self._endStackIndex   = 1
-        self._view3d = view3d
 
         self.drawingEnabled = False
         self._isDrawing = False
@@ -353,53 +346,3 @@ class NavigationControler(QObject):
             if pos[i] < 0 or pos[i] >= self._model.shape[i]:
                 return False
         return True
-
-class InterpreterABC:
-    __metaclass__ = ABCMeta
-    
-    @abstractmethod
-    def start( self ):
-        '''Hook method called after installed as an event filter.'''
-    @abstractmethod    
-    def finalize( self ):
-        '''Hook method called just before deinstall as an event filter.'''
-    @abstractmethod    
-    def eventFilter( self, watched, event ):
-        '''Necessary to act as a Qt event filter. '''
-    @classmethod
-    def __subclasshook__(cls, C):
-        if cls is InterpreterABC:
-            if _has_attributes(C, ['start', 'finalize', 'eventFilter']):
-                return True
-            return False
-        return NotImplemented
-
-class EventSwitch( QObject ):
-    @property
-    def interpreter( self ):
-        return self._interpreter
-
-    @interpreter.setter
-    def interpreter( self, interpreter ):
-        assert(isinstance(interpreter, InterpreterABC))
-        # finalize old interpreter before deinstalling to
-        # avoid inconsistencies when eventloop and eventswitch
-        # are running in different threads
-        if self._interpreter:
-            self._interpreter.finalize()
-
-        self._imageViews.removeEventFilter(self._interpreter)
-        if interpreter:
-            self._imageViews.installEventFilter(interpreter)
-        
-        self._interpreter = interpreter
-        # start the new interpreter after installing 
-        # to avoid inconsistencies
-        self._interpreter.start()
-
-    def __init__( self, imageviews, interpreter=None):
-        super(EventSwitch, self).__init__()
-        self._imageViews = imageviews
-        self._interpreter = None
-        if interpreter:
-            self.interpreter = interpreter

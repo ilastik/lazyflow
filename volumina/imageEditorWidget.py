@@ -30,7 +30,7 @@
 from PyQt4.QtCore import Qt
 from PyQt4.QtGui import QApplication, QWidget, QSplitter, QHBoxLayout, QColor,\
                         QSizePolicy
-from singlesplitter import SingleView, SingleStatusBar
+from imageEditorComponents import ImageViewWidget, SingleStatusBar
 from pixelpipeline.datasources import ArraySource
 from imageEditor import ImageEditor
 
@@ -57,17 +57,17 @@ class ImageEditorWidget(QWidget):
         self.layout.setContentsMargins(0, 0, 0, 0)        
         self.setLayout(self.layout)
         
-        self.singleview = SingleView(self, self._ie.imageView)
+        self.imageViewWigdet = ImageViewWidget(self, self._ie.imageView[0])
         self.singleviewStatusBar = SingleStatusBar()
         self.singleviewStatusBar.createSingleStatusBar(QColor("green"), QColor("white"), QColor("blue"), QColor("white"), QColor("gray"), QColor("white"))
-        self.singleview.addStatusBar(self.singleviewStatusBar)
-        self.layout.addWidget(self.singleview)
+        self.imageViewWigdet.addStatusBar(self.singleviewStatusBar)
+        self.layout.addWidget(self.imageViewWigdet)
 
         self._ie.posModel.cursorPositionChanged.connect(self._updateInfoLabels)
         
         self.updateGeometry()
         self.update()
-        self.singleview.update()        
+        self.imageViewWigdet.update()        
 
     def _updateInfoLabels(self, pos):
         self.singleviewStatusBar.setMouseCoords(*pos)
@@ -79,7 +79,7 @@ class ImageEditorWidget(QWidget):
 if __name__ == "__main__":
     #make the program quit on Ctrl+C
     import sys
-    import signal
+    import signal   
     
     signal.signal(signal.SIGINT, signal.SIG_DFL)
    
@@ -100,7 +100,7 @@ if __name__ == "__main__":
     layerstack.append(GrayscaleLayer(source1))
     layerstack.append(GrayscaleLayer(source2))
     shape = source1._array.shape
-    editor = ImageEditor(shape,layerstack,None)
+    editor = ImageEditor(shape,layerstack)
     
     
     widget = ImageEditorWidget(parent=None, editor=editor)

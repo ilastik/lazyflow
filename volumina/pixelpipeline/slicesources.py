@@ -1,6 +1,5 @@
 from PyQt4.QtCore import QObject, pyqtSignal
 from asyncabcs import SourceABC, RequestABC
-import copy
 import numpy as np
 from volumina.slicingtools import SliceProjection, is_pure_slicing, intersection, sl
 
@@ -60,9 +59,6 @@ class SliceSource( QObject ):
         self._datasource = datasource
         self._datasource.isDirty.connect(self._onDatasourceDirty)
         self._through = len(sliceProjection.along) * [0]
-        
-        if len(self.sliceProjection.along) <= 1:
-            self._through =[]
 
     def setThrough( self, index, value ):
         assert index < len(self.through)
