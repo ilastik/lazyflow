@@ -91,13 +91,16 @@ if __name__ == "__main__":
     
     s = QSplitter()
     
-    twoDtestVolume = TwoDtestVolume(200)
-    source = ArraySource(twoDtestVolume)
+    twoDtestVolume1 = TwoDtestVolume(200)
+    twoDtestVolume2 = TwoDtestVolume(200)
+    twoDtestVolume2[75:125,75:125]=0
+    source1 = ArraySource(twoDtestVolume1)
+    source2 = ArraySource(twoDtestVolume2)
     layerstack = LayerStackModel()
-    layerstack.append(GrayscaleLayer(source)) 
-    shape = source._array.shape
-    #editor = ImageEditor(shape, layerstack)
-    editor = ImageEditor(None,None,twoDtestVolume)
+    layerstack.append(GrayscaleLayer(source1))
+    layerstack.append(GrayscaleLayer(source2))
+    shape = source1._array.shape
+    editor = ImageEditor(shape,layerstack,None)
     
     
     widget = ImageEditorWidget(parent=None, editor=editor)

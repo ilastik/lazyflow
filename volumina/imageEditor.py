@@ -26,21 +26,12 @@ except:
 class ImageEditor( QObject ):
         
 
-    def __init__( self, shape = None, layerStackModel = None ,twoDArray=None):
+    def __init__( self, shape = None, layerStackModel = None):
         super(ImageEditor, self).__init__()
         
         
         self._shape = shape        
-        self._twoDArry = twoDArray
-        self._layerStack = layerStackModel
-        
-        if twoDArray is not None:
-            source = ArraySource(twoDArray)
-            layerstack = LayerStackModel()
-            layerstack.append(GrayscaleLayer(source)) 
-            self._shape = source._array.shape
-            self._layerStack = layerstack
-            
+        self._layerStack = layerStackModel  
         self.imageScene = ImageScene2D()
         self.posModel = PositionModel(self._shape)
         self.imagepump = self._initImagePump()

@@ -12,6 +12,7 @@ from brushingcontroler import BrushingInterpreter, BrushingControler
 from brushingmodel import BrushingModel
 from pixelpipeline.imagepump import ImagePump
 from slicingtools import SliceProjection
+from pixelpipeline.slicesources import SyncedSliceSources
 
 
 useVTK = True
@@ -111,6 +112,7 @@ class VolumeEditor( QObject ):
         self.imageViews[0].setTransform(QTransform(1,0,0,0,1,0,0,0,1))
         self.imageViews[1].setTransform(QTransform(0,1,1,0,0,0))
         self.imageViews[2].setTransform(QTransform(0,1,1,0,0,0))
+        
 
     def scheduleSlicesRedraw(self):
         for s in self.imageScenes:
