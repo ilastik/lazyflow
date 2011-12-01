@@ -11,6 +11,7 @@ from sliceIntersectionMarker import SliceIntersectionMarker
 #*******************************************************************************
 
 class ImageView2D(QGraphicsView):
+    focusChanged = pyqtSignal()
     """
     Shows a ImageScene2D to the user and allows for interactive
     scrolling, panning, zooming etc.
@@ -46,7 +47,7 @@ class ImageView2D(QGraphicsView):
         self._hud = hud
         self.setLayout(QVBoxLayout())
         self.layout().setContentsMargins(0,0,0,0)
-        self.layout().addLayout(self._hud)
+        self.layout().addWidget(self._hud)
         self.layout().addStretch()
     
     def __init__(self, imagescene2d):
@@ -62,6 +63,9 @@ class ImageView2D(QGraphicsView):
         self.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         self.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         
+        self._isRubberBandZoom = False
+        self._cursorBackup = None
+        
         #these attributes are exposed as public properties above
         self._sliceShape  = None #2D shape of this view's shown image
         self._slices = None #number of slices that are stacked
@@ -70,8 +74,8 @@ class ImageView2D(QGraphicsView):
         self._crossHairCursor         = None
         self._sliceIntersectionMarker = None
 
-        self.ticker = QTimer(self)
-        self.ticker.timeout.connect(self._tickerEvent)
+        self._ticker = QTimer(self)
+        self._ticker.timeout.connect(self._tickerEvent)
         
         #
         # Setup the Viewport for fast painting
@@ -125,7 +129,7 @@ class ImageView2D(QGraphicsView):
         # invisible cursor to enable custom cursor
         self._hiddenCursor = QCursor(Qt.BlankCursor)
         # For screen recording BlankCursor doesn't work
-        #self.hiddenCursor = QCursor(Qt.ArrowCursor)
+        #self.hiddenCursor = QCursor(Qt.ArrowCursor)  
         
     def _cleanUp(self):        
         self._ticker.stop()
@@ -215,13 +219,45 @@ class ImageView2D(QGraphicsView):
 
     def zoomIn(self):
         self.doScale(1.1)
+
+    def fitImage(self):
+        self.fitInView(self.sceneRect(), Qt.KeepAspectRatio)
+        width, height = self.size().width() / self.sceneRect().width(), self.height() / self.sceneRect().height()
+        self._zoomFactor = min(width, height)
+                
+    def centerImage(self):
+        self.centerOn(self.sceneRect().width()/2 + self.sceneRect().x(), self.sceneRect().height()/2 + self.sceneRect().y()) 
         
+    def toggleHud(self):
+        if self._hud.isVisible():
+            self._hud.setVisible(False)
+        else:
+            self._hud.setVisible(True)
+            
+    def hideHud(self, hide):
+        self._hud.setVisible(hide)
+    
+    def focusInEvent(self, event):
+        self._hud.changeOpacity(1)
+        self.focusChanged.emit()
+        
+    def focusOutEvent(self, event):
+        self._hud.changeOpacity(0.6)
+     
     def changeViewPort(self,qRectf):
         self.fitInView(qRectf,mode = Qt.KeepAspectRatio)
+        width, height = self.size().width() / qRectf.width(), self.height() / qRectf.height()
+        self._zoomFactor = min(width, height)
 
     def doScale(self, factor):
         self._zoomFactor = self._zoomFactor * factor
         self.scale(factor, factor)
+        
+    def doScaleTo(self, zoom=1):
+        factor = ( 1 / self._zoomFactor ) * zoom
+        self._zoomFactor = zoom
+        self.scale(factor, factor)
+        
 
 #*******************************************************************************
 # i f   _ _ n a m e _ _   = =   " _ _ m a i n _ _ "                            *

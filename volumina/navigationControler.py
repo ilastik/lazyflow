@@ -1,5 +1,5 @@
-from PyQt4.QtCore import QObject, QTimer, QEvent, Qt, QPointF, pyqtSignal
-from PyQt4.QtGui  import QColor, QCursor, QMouseEvent, QApplication, QPainter, QPen
+from PyQt4.QtCore import QObject, QTimer, QEvent, Qt, QPointF, pyqtSignal, QRectF
+from PyQt4.QtGui  import QColor, QCursor, QMouseEvent, QApplication, QPainter, QPen, QGraphicsView
 
 import  copy
 from functools import partial
@@ -73,7 +73,7 @@ class NavigationInterpreter(QObject):
             imageview._panning()
             imageview._lastPanPoint = event.pos()
             return
-        if imageview.ticker.isActive():
+        if imageview._ticker.isActive():
             #the view is still scrolling
             #do nothing until it comes to a complete stop
             return
@@ -97,16 +97,14 @@ class NavigationInterpreter(QObject):
             if k_alt:
                 self._navCtrl.changeSliceRelative(10, self._navCtrl._views.index(imageview))
             elif k_ctrl:
-                scaleFactor = 1.1
-                imageview.doScale(scaleFactor)
+                imageview.zoomIn()
             else:
                 self._navCtrl.changeSliceRelative(1, self._navCtrl._views.index(imageview))
         else:
             if k_alt:
                 self._navCtrl.changeSliceRelative(-10, self._navCtrl._views.index(imageview))
             elif k_ctrl:
-                scaleFactor = 0.9
-                imageview.doScale(scaleFactor)
+                imageview.zoomOut()
             else:
                 self._navCtrl.changeSliceRelative(-1, self._navCtrl._views.index(imageview))
         if k_ctrl:
@@ -122,8 +120,15 @@ class NavigationInterpreter(QObject):
             imageview._lastPanPoint = event.pos()
             imageview._crossHairCursor.setVisible(False)
             imageview._dragMode = True
-            if imageview.ticker.isActive():
+            if imageview._ticker.isActive():
                 imageview._deltaPan = QPointF(0, 0)
+                
+        if event.button() == Qt.LeftButton:
+            if imageview._isRubberBandZoom:
+                imageview.setDragMode(QGraphicsView.RubberBandDrag)
+                self._rubberBandStart = event.pos()
+                return
+        
 
         if event.buttons() == Qt.RightButton:
             #make sure that we have the cursor at the correct position
@@ -140,7 +145,18 @@ class NavigationInterpreter(QObject):
             releasePoint = event.pos()
             imageview._lastPanPoint = releasePoint
             imageview._dragMode = False
-            imageview.ticker.start(20)
+            imageview._ticker.start(20)
+            
+        if event.button() == Qt.LeftButton:
+            if imageview._isRubberBandZoom:
+                imageview.setDragMode(QGraphicsView.NoDrag)
+                rect = QRectF(imageview.mapToScene(self._rubberBandStart), imageview.mapToScene(event.pos()))
+                imageview.fitInView(rect, Qt.KeepAspectRatio)
+                imageview._isRubberBandZoom = False
+                width, height = imageview.size().width() / rect.width(), imageview.height() / rect.height()
+                imageview._zoomFactor = min(width, height)
+                imageview.setCursor(imageview._cursorBackup)
+                return
 
     def onMouseDoubleClickEvent( self, imageview, event ):
         dataMousePos = imageview.mapScene2Data(imageview.mapToScene(event.pos()))

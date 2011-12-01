@@ -1,5 +1,5 @@
-from PyQt4.QtCore import QObject, QEvent, QPointF, Qt
-from PyQt4.QtGui import QPainter, QPen, QApplication
+from PyQt4.QtCore import QObject, QEvent, QPointF, Qt, QRectF
+from PyQt4.QtGui import QPainter, QPen, QApplication, QGraphicsView
 
 from eventswitch import InterpreterABC
 
@@ -68,7 +68,7 @@ class BrushingInterpreter( QObject ):
             imageview._panning()
             imageview._lastPanPoint = event.pos()
             return
-        if imageview.ticker.isActive():
+        if imageview._ticker.isActive():
             #the view is still scrolling
             #do nothing until it comes to a complete stop
             return
@@ -103,8 +103,7 @@ class BrushingInterpreter( QObject ):
                     imageview._isDrawing = True
                 self._navCtrl.changeSliceRelative(10, self._navCtrl._views.index(imageview))
             elif k_ctrl:
-                scaleFactor = 1.1
-                imageview.doScale(scaleFactor)
+                imageview.zoomIn()
             else:
                 if self._navCtrl._isDrawing:
                     self._navCtrl.endDrawing(imageview, imageview.mousePos)
@@ -117,8 +116,7 @@ class BrushingInterpreter( QObject ):
                     self._navCtrl._isDrawing = True
                 self._navCtrl.changeSliceRelative(-10, self._navCtrl._views.index(imageview))
             elif k_ctrl:
-                scaleFactor = 0.9
-                imageview.doScale(scaleFactor)
+                imageview.zoomOut()
             else:
                 if self._navCtrl._isDrawing:
                     self._navCtrl.endDrawing(imageview, imageview.mousePos)
@@ -137,7 +135,7 @@ class BrushingInterpreter( QObject ):
             imageview._lastPanPoint = event.pos()
             imageview._crossHairCursor.setVisible(False)
             imageview._dragMode = True
-            if imageview.ticker.isActive():
+            if imageview._ticker.isActive():
                 imageview._deltaPan = QPointF(0, 0)
 
         if event.buttons() == Qt.RightButton:
@@ -152,7 +150,12 @@ class BrushingInterpreter( QObject ):
         
         if event.buttons() == Qt.LeftButton:
             #don't draw if flicker the view
-            if imageview.ticker.isActive():
+            if imageview._ticker.isActive():
+                return
+            #don't draw if zooming
+            if imageview._isRubberBandZoom:
+                imageview.setDragMode(QGraphicsView.RubberBandDrag)
+                self._rubberBandStart = event.pos()
                 return
             if QApplication.keyboardModifiers() == Qt.ShiftModifier:
                 self._navCtrl._brushingModel.setErasing()
@@ -161,6 +164,17 @@ class BrushingInterpreter( QObject ):
             self._navCtrl.beginDrawing(imageview, imageview.mousePos)
 
     def onMouseReleaseEvent( self, imageview, event ):
+        if event.button() == Qt.LeftButton:
+            if imageview._isRubberBandZoom:
+                imageview.setDragMode(QGraphicsView.NoDrag)
+                rect = QRectF(imageview.mapToScene(self._rubberBandStart), imageview.mapToScene(event.pos()))
+                imageview.fitInView(rect, Qt.KeepAspectRatio)
+                imageview._isRubberBandZoom = False
+                width, height = imageview.size().width() / rect.width(), imageview.height() / rect.height()
+                imageview._zoomFactor = min(width, height)
+                imageview.setCursor(imageview._cursorBackup)
+                return
+            
         imageview.mousePos = imageview.mapScene2Data(imageview.mapToScene(event.pos()))
         
         if event.button() == Qt.MidButton:
@@ -168,7 +182,7 @@ class BrushingInterpreter( QObject ):
             releasePoint = event.pos()
             imageview._lastPanPoint = releasePoint
             imageview._dragMode = False
-            imageview.ticker.start(20)
+            imageview._ticker.start(20)
         if self._navCtrl._isDrawing:
             self._navCtrl.endDrawing(imageview, imageview.mousePos)
         if self._navCtrl._tempErase:
