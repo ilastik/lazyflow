@@ -22,27 +22,17 @@ def posView2D(pos3d, axis):
 class NavigationInterpreter(QObject):
     """
     Provides slots to listens to mouse/keyboard events from multiple
-    slice views and interprets them as actions upon a N-D volume
-    (whereas the individual ImageView2D/ImageScene2D know nothing about the
-    data they display).
+    slice views and interprets them as actions upon a N-D volume.
 
     """
     def __init__(self, navigationcontroler):
-        """
-        Constructs an interpreter which will update the
-        PositionModel model.
-        
-        The user of this class needs to make the appropriate connections
-        from the ImageView2D to the methods of this class from the outside 
-        himself.
-        """
         QObject.__init__(self)
         self._navCtrl = navigationcontroler
 
     def start( self ):
         self._navCtrl.drawingEnabled = False
 
-    def finalize( self ):
+    def stop( self ):
         pass
 
     def eventFilter( self, watched, event ):
