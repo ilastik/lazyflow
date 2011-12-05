@@ -33,7 +33,7 @@ class BrushingInterpreter( QObject ):
     def start( self ):
         self._navCtrl.drawingEnabled = True
 
-    def finalize( self ):
+    def stop( self ):
         if self._navCtrl._isDrawing:
             for imageview in self._navCtrl._views:
                 self._navCtrl.endDrawing(imageview, imageview.mousePos)
