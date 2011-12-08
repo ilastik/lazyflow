@@ -27,20 +27,21 @@
 #    authors and should not be interpreted as representing official policies, either expressed
 #    or implied, of their employers.
 
-from PyQt4.QtCore import Qt, QTimer
+from PyQt4.QtCore import Qt, QTimer, QRectF
 from PyQt4.QtGui import QApplication, QWidget, QShortcut, QKeySequence, \
                         QSplitter, QVBoxLayout, QHBoxLayout, QPushButton, \
-                        QColor, QSizePolicy
+                        QColor, QSizePolicy, QAction, QIcon
 
 import numpy, copy
 from functools import partial
 
 from quadsplitter import QuadView
       
-from sliceSelectorHud import imageView2DHud, QuadStatusBar
+from sliceSelectorHud import ImageView2DHud, QuadStatusBar
 from pixelpipeline.datasources import ArraySource, LazyflowSinkSource
 
 from volumeEditor import VolumeEditor
+import volumina.icons_rc
 
 #*******************************************************************************
 # V o l u m e E d i t o r W i d g e t                                          *
@@ -55,9 +56,47 @@ class VolumeEditorWidget(QWidget):
         
         if editor!=None:
             self.init(editor)
+
+        self.allZoomToFit = QAction(QIcon(":/icons/icons/view-fullscreen.png"), "Zoom to &Fit", self)
+        self.allZoomToFit.triggered.connect(self._fitToScreen)
+
+        self.allToggleHUD = QAction(QIcon(), "Show &HUDs", self)
+        self.allToggleHUD.setCheckable(True)
+        self.allToggleHUD.setChecked(True)
+        self.allToggleHUD.toggled.connect(self._toggleHUDs)
+
+        self.allCenter = QAction(QIcon(), "&Center views", self)
+        self.allCenter.triggered.connect(self._centerAllImages)
+
+        self.selectedCenter = QAction(QIcon(), "C&enter view", self)
+        self.selectedCenter.triggered.connect(self._centerImage)
+
+        self.selectedZoomToFit = QAction(QIcon(":/icons/icons/view-fullscreen.png"), "Zoom to Fit", self)
+        self.selectedZoomToFit.triggered.connect(self._fitImage)
+
+        self.selectedZoomToOriginal = QAction(QIcon(), "Reset Zoom", self)
+        self.selectedZoomToOriginal.triggered.connect(self._restoreImageToOriginalSize)
+
+        self.rubberBandZoom = QAction(QIcon(), "Rubberband Zoom", self)
+        self.rubberBandZoom.triggered.connect(self._rubberBandZoom)
+
+        self.toggleSelectedHUD = QAction(QIcon(), "Show HUD", self)
+        self.toggleSelectedHUD.setCheckable(True)
+        self.toggleSelectedHUD.setChecked(True)
+        self.toggleSelectedHUD.toggled.connect(self._toggleSelectedHud)
+
+
+    def _onShapeChanged(self):
+        self.quadview.statusBar.channelSpinBox.setRange(0,self.editor.posModel.shape5D[-1] - 1)
+        self.quadview.statusBar.timeSpinBox.setRange(0,self.editor.posModel.shape5D[0] - 1)
+        
+        for i in range(3):
+            #FIXME: do not depend on order in imageViews here
+            self.editor.imageViews[2-i].hud.setMaximum(self.editor.posModel.volumeExtent(i)-1)
     
     def init(self, volumina):
         self._ve = volumina
+        self.editor = volumina
 
         self.layout = QHBoxLayout()
         self.layout.setContentsMargins(0, 0, 0, 0)
@@ -68,9 +107,9 @@ class VolumeEditorWidget(QWidget):
         axisLabels = ["X", "Y", "Z"]
         axisColors = [QColor("#dc143c"), QColor("green"), QColor("blue")]
         for i, v in enumerate(self._ve.imageViews):
-            v.hud = imageView2DHud()
+            v.hud = ImageView2DHud()
             #connect interpreter
-            v.hud.createImageView2DHud(axisLabels[i], self._ve.posModel.volumeExtent(i), axisColors[i], QColor("white"))
+            v.hud.createImageView2DHud(axisLabels[i], 0, axisColors[i], QColor("white"))
             v.hud.sliceSelector.valueChanged.connect(partial(self._ve.navCtrl.changeSliceAbsolute, axis=i))
 
         self.quadview = QuadView(self, self._ve.imageViews[2], self._ve.imageViews[0], self._ve.imageViews[1], self._ve.view3d)
@@ -79,8 +118,6 @@ class VolumeEditorWidget(QWidget):
         self.quadview.addStatusBar(self.quadViewStatusBar)
         self.layout.addWidget(self.quadview)
 
-        self.quadview.statusBar.channelSpinBox.setRange(0,self._ve._shape[-1] - 1)
-        self.quadview.statusBar.timeSpinBox.setRange(0,self._ve._shape[0] - 1)
         def setChannel(c):
             print "set channel = %d, posModel has channel = %d" % (c, self._ve.posModel.channel)
             if c == self._ve.posModel.channel:
@@ -110,10 +147,57 @@ class VolumeEditorWidget(QWidget):
         # shortcuts
         self._initShortcuts()
 
+        self.editor.shapeChanged.connect(self._onShapeChanged)
         
         self.updateGeometry()
         self.update()
         self.quadview.update()
+
+    def _toggleDebugPatches(show):
+        self.editor.showDebugPatches = show
+
+    def _fitToScreen(self):
+        shape = self.editor.posModel.shape
+        for i, v in enumerate(self.editor.imageViews):
+            s = list(copy.copy(shape))
+            del s[i]
+            v.changeViewPort(v.scene().data2scene.mapRect(QRectF(0,0,*s)))  
+            
+    def _fitImage(self):
+        if self.editor._lastImageViewFocus is not None:
+            self.editor.imageViews[self.editor._lastImageViewFocus].fitImage()
+            
+    def _restoreImageToOriginalSize(self):
+        if self.editor._lastImageViewFocus is not None:
+            self.editor.imageViews[self.editor._lastImageViewFocus].doScaleTo()
+                
+    def _rubberBandZoom(self):
+        if self.editor._lastImageViewFocus is not None:
+            if not self.editor.imageViews[self.editor._lastImageViewFocus]._isRubberBandZoom:
+                self.editor.imageViews[self.editor._lastImageViewFocus]._isRubberBandZoom = True
+                self.editor.imageViews[self.editor._lastImageViewFocus]._cursorBackup = self.editor.imageViews[self.editor._lastImageViewFocus].cursor()
+                self.editor.imageViews[self.editor._lastImageViewFocus].setCursor(Qt.CrossCursor)
+            else:
+                self.editor.imageViews[self.editor._lastImageViewFocus]._isRubberBandZoom = False
+                self.editor.imageViews[self.editor._lastImageViewFocus].setCursor(self.editor.imageViews[self.editor._lastImageViewFocus]._cursorBackup)
+            
+    
+    def _toggleHUDs(self, checked):
+        for i, v in enumerate(self.editor.imageViews):
+            v.setHudVisible(checked)
+            
+    def _toggleSelectedHud(self, checked):
+        print self.editor._lastImageViewFocus
+        if self.editor._lastImageViewFocus is not None:
+            self.editor.imageViews[self.editor._lastImageViewFocus].setHudVisible(checked)
+            
+    def _centerAllImages(self):
+        for i, v in enumerate(self.editor.imageViews):
+            v.centerImage()
+            
+    def _centerImage(self):
+        if self.editor._lastImageViewFocus is not None:
+            self.editor.imageViews[self.editor._lastImageViewFocus].centerImage()
 
     def _shortcutHelper(self, keySequence, group, description, parent, function, context = None, enabled = None):
         shortcut = QShortcut(QKeySequence(keySequence), parent, member=function, ambiguousMember=function)

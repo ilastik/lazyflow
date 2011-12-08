@@ -108,10 +108,12 @@ class ImageScene2D(QGraphicsScene):
         self._initializePatches()
 
     def _onAboutToResize(self, newSize):
-        self._renderThread.stop()
+        if self._renderThread:
+            self._renderThread.stop()
         self._numLayers = newSize
         self._initializePatches()
-        self._renderThread.start()
+        if self._renderThread:
+            self._renderThread.start()
 
     @property
     def showDebugPatches(self):
@@ -170,6 +172,7 @@ class ImageScene2D(QGraphicsScene):
         self._updatableTiles = []
 
         # tiled rendering of patches
+        self._tiling         = None
         self._imageLayers    = None
         self._compositeLayer = None
         self._brushingLayer  = None
@@ -187,7 +190,8 @@ class ImageScene2D(QGraphicsScene):
         self._slicingPositionSettled = True
     
         def cleanup():
-            self._renderThread.stop()
+            if self._renderThread:
+                self._renderThread.stop()
         self.destroyed.connect(cleanup)
     
     def _initializePatches(self):
@@ -232,6 +236,9 @@ class ImageScene2D(QGraphicsScene):
         self._invalidateRect(rect)
             
     def _invalidateRect(self, rect = QRect()):
+        if not self._renderThread:
+            return
+
         if not rect.isValid():
             #everything is invalidated
             #we cancel all requests
@@ -275,6 +282,9 @@ class ImageScene2D(QGraphicsScene):
         self.invalidate(r, QGraphicsScene.BackgroundLayer)
 
     def drawForeground(self, painter, rect):
+        if self._numLayers == 0 or not self._renderThread:
+            return
+
         patches = self._tiling.intersectedF(rect)
 
         for tileId in patches:
@@ -289,6 +299,9 @@ class ImageScene2D(QGraphicsScene):
         self._slicingPositionSettled = settled
     
     def drawBackground(self, painter, rect):
+        if self._numLayers == 0 or not self._renderThread:
+            return
+
         #Find all patches that intersect the given 'rect'.
 
         patches = self._tiling.intersectedF(rect)

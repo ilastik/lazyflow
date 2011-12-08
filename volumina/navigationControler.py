@@ -1,7 +1,9 @@
-from PyQt4.QtCore import QObject, QTimer, QEvent, Qt, QPointF, pyqtSignal, QRectF
-from PyQt4.QtGui  import QColor, QCursor, QMouseEvent, QApplication, QPainter, QPen, QGraphicsView
+from PyQt4.QtCore import QObject, QTimer, QEvent, Qt, QPointF, pyqtSignal, \
+                         QRectF
+from PyQt4.QtGui  import QColor, QCursor, QMouseEvent, QApplication, \
+                         QPainter, QPen, QGraphicsView
 
-import  copy
+import copy
 from functools import partial
 
 from imageView2D import ImageView2D
@@ -258,11 +260,15 @@ class NavigationControler(QObject):
                 src.setThrough(0, newTime)
     
     def changeChannel(self, newChannel):
+        if self._model.shape is None:
+            return
         for i in range(3):
             for src in self._sliceSources[i]:
                 src.setThrough(2, newChannel)
 
     def changeSliceRelative(self, delta, axis):
+        if self._model.shape is None:
+            return
         """
         Change slice along a certain axis relative to current slice.
 
@@ -356,6 +362,8 @@ class NavigationControler(QObject):
             src.setThrough(1, num)
 
     def _positionValid(self, pos):
+        if self._model.shape is None:
+            return False
         for i in range(3):
             if pos[i] < 0 or pos[i] >= self._model.shape[i]:
                 return False
