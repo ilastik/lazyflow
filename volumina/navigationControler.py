@@ -185,13 +185,6 @@ class NavigationControler(QObject):
     views (representing the spatial X, Y and Z slicings)
     accordingly.
     """
-    # all the following signals refer to data coordinates
-    drawing            = pyqtSignal(QPointF)
-    beginDraw          = pyqtSignal(QPointF, object)
-    endDraw            = pyqtSignal(QPointF)
-    
-    erasingToggled     = pyqtSignal(bool)            
-    
     @property
     def axisColors( self ):
         return self._axisColors
@@ -214,7 +207,7 @@ class NavigationControler(QObject):
         for v in self._views:
             v._sliceIntersectionMarker.setVisibility(show)
         
-    def __init__(self, imageView2Ds, sliceSources, positionModel, brushingModel, time = 0, channel = 0, view3d=None):
+    def __init__(self, imageView2Ds, sliceSources, positionModel, time = 0, channel = 0, view3d=None):
         QObject.__init__(self)
         assert len(imageView2Ds) == 3
 
@@ -225,10 +218,6 @@ class NavigationControler(QObject):
         self._beginStackIndex = 0
         self._endStackIndex   = 1
         self._view3d = view3d
-
-        self._isDrawing = False
-        self._tempErase = False
-        self._brushingModel = brushingModel
 
         self.axisColors = [QColor(255,0,0,255), QColor(0,255,0,255), QColor(0,0,255,255)]
     
@@ -342,16 +331,6 @@ class NavigationControler(QObject):
             return
 
         self._model.cursorPos = newPos
-
-            
-    def beginDrawing(self, imageview, pos):
-        imageview.mousePos = pos
-        self._isDrawing  = True
-        self._brushingModel.beginDrawing(pos, imageview.sliceShape)
-
-    def endDrawing(self, imageview, pos): 
-        self._isDrawing = False
-        self._brushingModel.endDrawing(pos)
     
     #private functions ########################################################
     

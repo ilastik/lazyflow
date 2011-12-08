@@ -50,7 +50,7 @@ class BrushingInterpreter( QObject ):
             pass # ignore
 
     def stop( self ):
-        if self._navCtrl._isDrawing:
+        if self._brushingCtrl._isDrawing:
             for imageview in self._navCtrl._views:
                 self._brushingCtrl.endDrawing(imageview, imageview.mousePos)
         self._current_state = self.FINAL
@@ -141,7 +141,7 @@ class BrushingInterpreter( QObject ):
 
         o = imageview.scene().data2scene.map(QPointF(imageview.oldX,imageview.oldY))
         n = imageview.scene().data2scene.map(QPointF(imageview.x,imageview.y))
-        pen = QPen(self._navCtrl._brushingModel.drawColor, self._navCtrl._brushingModel.brushSize)
+        pen = QPen(self._brushingCtrl._brushingModel.drawColor, self._brushingCtrl._brushingModel.brushSize)
         imageview.scene().drawLine(o, n, pen)
         self._brushingCtrl._brushingModel.moveTo(imageview.mousePos)
         

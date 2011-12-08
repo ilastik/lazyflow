@@ -82,7 +82,7 @@ class VolumeEditor( QObject ):
         # navigation control
         v3d = self.view3d if useVTK else None
         syncedSliceSources = [self.imagepumps[i].syncedSliceSources for i in [0,1,2]]
-        self.navCtrl      = NavigationControler(self.imageViews, syncedSliceSources, self.posModel, self.brushingModel, view3d=v3d)
+        self.navCtrl      = NavigationControler(self.imageViews, syncedSliceSources, self.posModel, view3d=v3d)
         self.navInterpret = NavigationInterpreter(self.navCtrl)
 
         # brushing control
