@@ -147,17 +147,26 @@ class ImageSceneRenderThread(QThread):
         r = image.size() 
         p.fillRect(0, 0, round(r.width()), round(r.height()), Qt.white)
 
+        drawn = False
         for i, v in enumerate(reversed(self._stackedIms)):
             visible, layerOpacity, layerImageSource = v
             if visible:
                 layerNr = len(self._stackedIms) - i - 1
                 patch = self._imageLayers[layerNr][patchNumber]
-                
-                if patch.imgVer != patch.dataVer:
+              
+                assert patch.imgVer <= patch.dataVer, "imgVer=%d, dataVer=%d" % (patch.imgVer, patch.dataVer)
+                #draw at least the bottom-most visible patch so that the white
+                #background will not flicker through, but do not draw any other
+                #outdated patches on top
+                if drawn and patch.imgVer < patch.dataVer:
+                    #this patch is outdated, therefore do not composite it
+                    #on top; it will become visible when it's underlying data
+                    #is up-to-date
                     continue
                 
                 p.setOpacity(layerOpacity)
                 p.drawImage(0, 0, patch.image)
+                drawn = True
         p.end()
         compositePatch.imgVer = compositePatch.reqVer
         
