@@ -64,7 +64,6 @@ class BrushingModel(QObject):
         self.pos = None
         self.erasing = False
         
-        #on which layer do we want to draw when self.drawingEnabled?
         self.drawOnto = None
         
         #an empty scene, where we add all drawn line segments

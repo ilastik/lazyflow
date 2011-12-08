@@ -8,11 +8,11 @@ class InterpreterABC:
     
     @abstractmethod
     def start( self ):
-        '''Hook method called after installed as an event filter.'''
+        '''Start the interpretation of an event stream.'''
 
     @abstractmethod    
-    def finalize( self ):
-        '''Hook method called just before deinstall as an event filter.'''
+    def stop( self ):
+        '''Stop the interpretation of the event stream.'''
 
     @abstractmethod    
     def eventFilter( self, watched, event ):
@@ -21,7 +21,7 @@ class InterpreterABC:
     @classmethod
     def __subclasshook__(cls, C):
         if cls is InterpreterABC:
-            if _has_attributes(C, ['start', 'finalize', 'eventFilter']):
+            if _has_attributes(C, ['start', 'stop', 'eventFilter']):
                 return True
             return False
         return NotImplemented
@@ -37,11 +37,11 @@ class EventSwitch( QObject ):
     @interpreter.setter
     def interpreter( self, interpreter ):
         assert(isinstance(interpreter, InterpreterABC))
-        # finalize old interpreter before deinstalling to
+        # stop old interpreter before deinstalling to
         # avoid inconsistencies when eventloop and eventswitch
         # are running in different threads
         if self._interpreter:
-            self._interpreter.finalize()
+            self._interpreter.stop()
 
         # deinstall old and install new interpreter
         for view in self._imageViews:
