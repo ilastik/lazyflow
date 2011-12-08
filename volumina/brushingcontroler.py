@@ -130,7 +130,7 @@ class BrushingInterpreter( QObject ):
         self._brushingCtrl.beginDrawing(imageview, imageview.mousePos)
     
     def onExit_draw( self, imageview, event ):
-        self._brushingCtrl.endDrawing(imageview, imageview.mousePos)
+        self._brushingCtrl.endDrawing(imageview.mousePos)
         #if self._navCtrl._tempErase:
         #    print "disabling erasing"
         #    self._navCtrl._brushingModel.disableErasing()
