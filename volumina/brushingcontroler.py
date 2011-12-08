@@ -35,10 +35,11 @@ class BrushingInterpreter( QObject ):
     def state( self ):
         return self._current_state
 
-    def __init__( self, navigationControler ):
+    def __init__( self, navigationControler, brushingControler ):
         QObject.__init__( self )
         self._navCtrl = navigationControler
         self._navIntr = NavigationInterpreter( navigationControler )
+        self._brushingCtrl = brushingControler
         self._current_state = self.FINAL
 
     def start( self ):
@@ -51,7 +52,7 @@ class BrushingInterpreter( QObject ):
     def stop( self ):
         if self._navCtrl._isDrawing:
             for imageview in self._navCtrl._views:
-                self._navCtrl.endDrawing(imageview, imageview.mousePos)
+                self._brushingCtrl.endDrawing(imageview, imageview.mousePos)
         self._current_state = self.FINAL
         self._navIntr.stop()
 
@@ -126,10 +127,10 @@ class BrushingInterpreter( QObject ):
         #    self._navCtrl._brushingModel.setErasing()
         #    self._navCtrl._tempErase = True
         imageview.mousePos = imageview.mapScene2Data(imageview.mapToScene(event.pos()))
-        self._navCtrl.beginDrawing(imageview, imageview.mousePos)
+        self._brushingCtrl.beginDrawing(imageview, imageview.mousePos)
     
     def onExit_draw( self, imageview, event ):
-        self._navCtrl.endDrawing(imageview, imageview.mousePos)
+        self._brushingCtrl.endDrawing(imageview, imageview.mousePos)
         #if self._navCtrl._tempErase:
         #    print "disabling erasing"
         #    self._navCtrl._brushingModel.disableErasing()
@@ -142,7 +143,7 @@ class BrushingInterpreter( QObject ):
         n = imageview.scene().data2scene.map(QPointF(imageview.x,imageview.y))
         pen = QPen(self._navCtrl._brushingModel.drawColor, self._navCtrl._brushingModel.brushSize)
         imageview.scene().drawLine(o, n, pen)
-        self._navCtrl._brushingModel.moveTo(imageview.mousePos)
+        self._brushingCtrl._brushingModel.moveTo(imageview.mousePos)
         
 #*******************************************************************************
 # B r u s h i n g C o n t r o l e r                                            *
@@ -156,6 +157,18 @@ class BrushingControler(QObject):
         self._brushingModel = brushingModel
         self._brushingModel.brushStrokeAvailable.connect(self._writeIntoSink)
         self._positionModel = positionModel
+
+        self._isDrawing = False
+        self._tempErase = False
+
+    def beginDrawing(self, imageview, pos):
+        imageview.mousePos = pos
+        self._isDrawing  = True
+        self._brushingModel.beginDrawing(pos, imageview.sliceShape)
+
+    def endDrawing(self, imageview, pos): 
+        self._isDrawing = False
+        self._brushingModel.endDrawing(pos)
         
     def _writeIntoSink(self, brushStrokeOffset, labels):
         activeView = self._positionModel.activeView
