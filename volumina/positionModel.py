@@ -51,8 +51,14 @@ class PositionModel(QObject):
     cursorPositionChanged  = pyqtSignal(object, object)
     slicingPositionChanged = pyqtSignal(object, object)
     slicingPositionSettled = pyqtSignal(bool)
-    
-    scrollDelay = 300
+   
+    #When the user does not scroll through the stack for more than 300 ms,
+    #we call the position 'settled', and slicingPositionSettled will be
+    #emittted as true.
+    #This is needed to let the proress indicator pies be shown after a short
+    #delay only, so that they do not appear when the data arrives fast
+    #(viewing raw data only)
+    scrollDelay = 300 #in ms.
     
     @property
     def shape5D(self):
