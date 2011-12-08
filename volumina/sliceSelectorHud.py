@@ -242,7 +242,7 @@ class SpinBoxImageView(QHBoxLayout):
     def setNewValue(self, value):
         self.spinBox.setMaximum(value)
         self.spinBox.setSuffix("/" + str(value))
-        
+    
     def on_upLabel(self):
         self.spinBox.setValue(self.spinBox.value() + 1)
         
@@ -250,8 +250,7 @@ class SpinBoxImageView(QHBoxLayout):
         self.spinBox.setValue(self.spinBox.value() - 1)
         
             
-class imageView2DHud(QWidget):
-#    valueChanged = pyqtSignal(int)
+class ImageView2DHud(QWidget):
     dockButtonClicked = pyqtSignal()
     maximizeButtonClicked = pyqtSignal()
     def __init__(self, parent=None ):
@@ -288,7 +287,9 @@ class imageView2DHud(QWidget):
         self.maxButton.setMaximizeIcon()
         self.layout.addWidget(self.maxButton)
         self.layout.addSpacing(4)
-        
+    
+    def setMaximum(self, v):
+        self.sliceSelector.setNewValue(v)
         
     def on_dockButton(self):
         self.dockButtonClicked.emit()
