@@ -8,10 +8,7 @@ class InterpreterABC:
     
     @abstractmethod
     def start( self ):
-        '''Start the interpretation of an event stream.
-
-        A repeated call to start() will reset the interpreter to its inital state.
-        '''
+        '''Start the interpretation of an event stream.'''
 
     @abstractmethod    
     def stop( self ):

@@ -20,11 +20,6 @@ def posView2D(pos3d, axis):
 #*******************************************************************************
 
 class NavigationInterpreter(QObject):
-    """
-    Provides slots to listens to mouse/keyboard events from multiple
-    slice views and interprets them as actions upon a N-D volume.
-
-    """
     # states
     FINAL = 0
     DEFAULT_MODE = 1
@@ -33,19 +28,21 @@ class NavigationInterpreter(QObject):
     def __init__(self, navigationcontroler):
         QObject.__init__(self)
         self._navCtrl = navigationcontroler
-
-        # states
         self._current_state = self.FINAL 
 
     def start( self ):
-        self._navCtrl.drawingEnabled = False
-        self._current_state = self.DEFAULT_MODE
+        if self._current_state == self.FINAL:
+            self._navCtrl.drawingEnabled = False
+            self._current_state = self.DEFAULT_MODE
+        else:
+            pass # ignore
 
     def stop( self ):
         self._current_state = self.FINAL
 
     def eventFilter( self, watched, event ):
         etype = event.type()
+        ### the following implements a simple state machine
         if self._current_state == self.DEFAULT_MODE:
             ### default mode -> drag mode
             if etype == QEvent.MouseButtonPress and event.button() == Qt.MidButton:
