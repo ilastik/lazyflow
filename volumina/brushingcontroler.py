@@ -52,7 +52,7 @@ class BrushingInterpreter( QObject ):
     def stop( self ):
         if self._brushingCtrl._isDrawing:
             for imageview in self._navCtrl._views:
-                self._brushingCtrl.endDrawing(imageview, imageview.mousePos)
+                self._brushingCtrl.endDrawing(imageview.mousePos)
         self._current_state = self.FINAL
         self._navIntr.stop()
 
@@ -166,7 +166,7 @@ class BrushingControler(QObject):
         self._isDrawing  = True
         self._brushingModel.beginDrawing(pos, imageview.sliceShape)
 
-    def endDrawing(self, imageview, pos): 
+    def endDrawing(self, pos): 
         self._isDrawing = False
         self._brushingModel.endDrawing(pos)
         
