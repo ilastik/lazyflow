@@ -2,6 +2,7 @@ from PyQt4.QtCore import QObject, QEvent, QPointF, Qt, QRectF
 from PyQt4.QtGui import QPainter, QPen, QApplication, QGraphicsView
 
 from eventswitch import InterpreterABC
+from navigationControler import NavigationInterpreter()
 
 #*******************************************************************************
 # C r o s s h a i r C o n t r o l e r                                          *
@@ -25,21 +26,36 @@ class CrosshairControler(QObject):
 #*******************************************************************************
 
 class BrushingInterpreter( QObject ):
-    def __init__( self, navigationInterpreter, navigationControler ):
+    # states
+    FINAL = 0
+    DEFAULT_MODE = 1
+    DRAW_MODE = 2
+
+    @property
+    def state( self ):
+        return self._current_state
+
+    def __init__( self, navigationControler ):
         QObject.__init__( self )
         self._navCtrl = navigationControler
-        self._navIntr = navigationInterpreter 
+        self._navIntr = NavigationInterpreter( navigationControler )
+        self._current_state = self.FINAL
 
     def start( self ):
-        self._navCtrl.drawingEnabled = True
+        if self._current_state == self.FINAL:
+            self._navCtrl.drawingEnabled = True
+            self._current_state = self.DEFAULT_MODE
+        else:
+            pass # ignore
 
     def stop( self ):
         if self._navCtrl._isDrawing:
             for imageview in self._navCtrl._views:
                 self._navCtrl.endDrawing(imageview, imageview.mousePos)
         self._navCtrl.drawingEnabled = False
+        self._current_state = self.FINAL
 
-    def eventFilter( self, watched, event ):
+    def eventFilterLegacy( self, watched, event ):
         etype = event.type()
         if etype == QEvent.MouseMove:
             self.onMouseMoveEvent( watched, event )
@@ -59,6 +75,54 @@ class BrushingInterpreter( QObject ):
         else:
             return False
 
+    def eventFilter( self, watched, event ):
+        etype = event.type()
+        ### the following implements a simple state machine
+        if self._current_state == self.DEFAULT_MODE:
+            ### default mode -> draw mode
+            if etype == QEvent.MouseButtonPress and event.button() == Qt.LeftButton:
+                # navigation interpreter also has to be in 
+                # default mode to avoid inconsistencies
+                if self._navIntr.state() == self._navIntr.DEFAULT_MODE:
+                    print "default->draw"
+                    self._current_state = self.DRAW_MODE
+                    self.onEntry_draw( watched, event )
+                    return True
+                else:
+                    return self._navIntr.eventFilter( watched, event )
+
+            ## actions in default mode
+            # let the navigation interpreter handle common events
+            return self._navIntr.eventFilter( watched, event )
+
+        elif self._current_state == self.DRAW_MODE:
+            ### draw mode -> default mode
+            if etype == QEvent.MouseButtonRelease and event.button() == Qt.LeftButton:
+                print "draw->default"
+                self.onExit_draw( watched, event )
+                self._current_state == self.DEFAULT_MODE
+                self.onEntry_default( watched, event )
+                return True
+
+        return False
+
+    ###
+    ### Default Mode
+    ###
+    def onEntry_default( imageview, event ):
+        pass
+
+    ###
+    ### Draw Mode
+    ###
+    def onEntry_draw( imageview, event ):
+        pass
+    
+    def onExit_draw( imageview, event ):
+        pass
+
+    ###
+    ### LEGACY
 
     def onMouseMoveEvent( self, imageview, event ):
         if imageview._dragMode == True:

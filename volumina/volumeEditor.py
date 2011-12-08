@@ -87,7 +87,7 @@ class VolumeEditor( QObject ):
 
         # brushing control
         #self.crosshairControler = CrosshairControler() 
-        self.brushingInterpreter = BrushingInterpreter(self.navInterpret, self.navCtrl)
+        self.brushingInterpreter = BrushingInterpreter(self.navCtrl)
         self.brushingControler = BrushingControler(self.brushingModel, self.posModel, labelsink)        
 
         # initial interaction mode
