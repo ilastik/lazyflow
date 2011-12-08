@@ -44,7 +44,6 @@ class BrushingInterpreter( QObject ):
     def start( self ):
         if self._current_state == self.FINAL:
             self._navIntr.start()
-            self._navCtrl.drawingEnabled = True
             self._current_state = self.DEFAULT_MODE
         else:
             pass # ignore
@@ -53,7 +52,6 @@ class BrushingInterpreter( QObject ):
         if self._navCtrl._isDrawing:
             for imageview in self._navCtrl._views:
                 self._navCtrl.endDrawing(imageview, imageview.mousePos)
-        self._navCtrl.drawingEnabled = False
         self._current_state = self.FINAL
         self._navIntr.stop()
 

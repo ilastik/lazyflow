@@ -36,7 +36,6 @@ class NavigationInterpreter(QObject):
 
     def start( self ):
         if self._current_state == self.FINAL:
-            self._navCtrl.drawingEnabled = False
             self._current_state = self.DEFAULT_MODE
         else:
             pass # ignore
@@ -89,7 +88,7 @@ class NavigationInterpreter(QObject):
     ### Default Mode
     ###
     def onEntry_default( self, imageview, event ):
-        self._navCtrl.drawingEnabled = False
+        pass
 
     def onWheel_default( self, imageview, event ):
         navCtrl = self._navCtrl
@@ -227,7 +226,6 @@ class NavigationControler(QObject):
         self._endStackIndex   = 1
         self._view3d = view3d
 
-        self.drawingEnabled = False
         self._isDrawing = False
         self._tempErase = False
         self._brushingModel = brushingModel
