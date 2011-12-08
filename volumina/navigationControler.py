@@ -25,6 +25,10 @@ class NavigationInterpreter(QObject):
     DEFAULT_MODE = 1
     DRAG_MODE = 2
 
+    @property
+    def state( self ):
+        return self._current_state
+
     def __init__(self, navigationcontroler):
         QObject.__init__(self)
         self._navCtrl = navigationcontroler
