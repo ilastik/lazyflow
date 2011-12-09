@@ -27,7 +27,6 @@ except ImportError:
 # V i e w e r                                                                 *
 #******************************************************************************
 
-
 class Viewer(QMainWindow):
     """High-level API to view multi-dimensional arrays.
 
@@ -37,7 +36,7 @@ class Viewer(QMainWindow):
 
     def __init__(self, parent=None):
         QMainWindow.__init__(self, parent)
-        uiDirectory = os.path.split(__file__)[0]
+        uiDirectory = os.path.split(volumina.__file__)[0]
         if uiDirectory == '':
             uiDirectory = '.'
         loadUi(uiDirectory + '/viewer.ui', self)
