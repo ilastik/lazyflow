@@ -192,8 +192,8 @@ if __name__ == '__main__':
     #FIXME: this does not work
     #d = d.view(vigra.VigraArray)
 
-    v.addLayer(d, type='randomcolors', name="numpy 3D", visible=True)
-    v.addLayer(d[numpy.newaxis, ..., numpy.newaxis], type='randomcolors', \
+    v.addLayer(d, display='randomcolors', name="numpy 3D", visible=True)
+    v.addLayer(d[numpy.newaxis, ..., numpy.newaxis], display='randomcolors', \
                name="numpy 5D", visible=False)
 
     v.title = 'My Data Example'
