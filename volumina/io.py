@@ -4,6 +4,8 @@ Volumine works with 5d array-like objects assuming the coordinate
 system (time, x, y, z, channel). This module provides methods to convert other
 data types to this expected format.
 '''
+import os
+import os.path as path
 import numpy as np
 from volumina.slicingtools import sl, slicing2shape
 
@@ -19,8 +21,8 @@ except ImportError:
 if _has_lazyflow:
     class Op5ifyer(Operator):
         name = "5Difyer"
-        inputSlots = [InputSlot("Input", stype="ndarray")]
-        outputSlots = [OutputSlot("Output", stype="ndarray")]
+        inputSlots = [InputSlot("Input", stype='ndarray')]
+        outputSlots = [OutputSlot("Output")]
         def notifyConnectAll(self):
             shape = self.inputs["Input"].shape
             assert len(shape) == 3
@@ -28,16 +30,18 @@ if _has_lazyflow:
             self.outputs["Output"]._shape = outShape
             self.outputs["Output"]._dtype = self.inputs["Input"].dtype
             self.outputs["Output"]._axistags = self.inputs["Input"].axistags
+
         def getOutSlot(self, slot, key, resultArea):
             assert key[0] == slice(0,1,None)
             assert key[-1] == slice(0,1,None)
             req = self.inputs["Input"][key[1:-1]].writeInto(resultArea[0,:,:,:,0])
-            req.wait()
+            return req.wait()
+
+        def notifyDirty(self,slot,key):
+            self.outputs["Output"].setDirty(key)
 
 
-###
-### array-like objects
-###
+
 class Array5d( object ):
     '''Embed a array with dim = 3 into the volumina coordinate system.'''
     def __init__( self, array, dtype=np.uint8):
@@ -56,3 +60,5 @@ class Array5d( object ):
 
     def astype( self, dtype):
         return Array5d( self.a, dtype )
+
+
