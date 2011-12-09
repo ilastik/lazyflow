@@ -46,6 +46,9 @@ class NavigationInterpreter(QObject):
         self._current_state = self.FINAL
 
     def eventFilter( self, watched, event ):
+        if self._navCtrl.enableNavigation == False:
+            return True        
+
         etype = event.type()
         ### the following implements a simple state machine
         if self._current_state == self.DEFAULT_MODE:
@@ -186,7 +189,18 @@ class NavigationControler(QObject):
     in a given PositionModel and updates three slice
     views (representing the spatial X, Y and Z slicings)
     accordingly.
+
+    properties:
+    
+    indicateSliceIntersection -- whether to show red/green/blue lines
+        indicating the position of the other two slice views on each slice
+        view
+    
+    enableNavigation -- whether the position is allowed to be changed
     """
+
+    navigationEnabled = pyqtSignal(bool)
+
     @property
     def axisColors( self ):
         return self._axisColors
@@ -208,7 +222,15 @@ class NavigationControler(QObject):
         self._indicateSliceIntersection = show
         for v in self._views:
             v._sliceIntersectionMarker.setVisibility(show)
-        
+       
+    @property
+    def enableNavigation(self):
+        return self._navigationEnabled
+    @enableNavigation.setter
+    def enableNavigation(self, enabled):
+        self._navigationEnabled = enabled
+        self.navigationEnabled.emit(enabled)
+
     def __init__(self, imageView2Ds, sliceSources, positionModel, time = 0, channel = 0, view3d=None):
         QObject.__init__(self)
         assert len(imageView2Ds) == 3
@@ -220,6 +242,7 @@ class NavigationControler(QObject):
         self._beginStackIndex = 0
         self._endStackIndex   = 1
         self._view3d = view3d
+        self._navigationEnabled = True
 
         self.axisColors = [QColor(255,0,0,255), QColor(0,255,0,255), QColor(0,0,255,255)]
     
