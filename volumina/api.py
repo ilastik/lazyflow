@@ -6,7 +6,9 @@ from volumina.layer import *
 from volumina.layerstack import LayerStackModel
 from volumina.volumeEditor import VolumeEditor
 
-from PyQt4.QtGui import QMainWindow, QApplication, QIcon, QAction, qApp
+from PyQt4.QtCore import QRectF
+from PyQt4.QtGui import QMainWindow, QApplication, QIcon, QAction, qApp, \
+    QImage, QPainter
 from PyQt4.uic import loadUi
 import volumina.icons_rc
 
@@ -80,6 +82,8 @@ class Viewer(QMainWindow):
 
         self.editor.newImageView2DFocus.connect(self._setIconToViewMenu)
 
+        self._renderScreenshotDisconnect = None
+
     def _setIconToViewMenu(self):
         focused = self.editor.imageViews[self.editor._lastImageViewFocus]
         self.actionOnly_for_current_view.setIcon(\
@@ -96,6 +100,54 @@ class Viewer(QMainWindow):
                 qColor = QColor(*color)
                 colors.append(qColor.rgba())
         return colors
+
+    def renderScreenshot(self, axis, blowup=1, filename="/tmp/volumina_screenshot.png"):
+        """Save the complete slice as shown by the slice view 'axis'
+        in the GUI as an image
+        
+        axis -- 0, 1, 2 (x, y, or z slice view)
+        blowup -- enlarge written image by this factor
+        filename -- output file
+        """
+
+        print "Rendering screenshot for axis=%d to '%s'" % (axis, filename)
+        s = self.editor.imageScenes[axis]
+        self.editor.navCtrl.enableNavigation = False
+        func = partial(self._renderScreenshot, s, blowup, filename)
+        self._renderScreenshotDisconnect = func
+        s._renderThread.patchAvailable.connect(func)
+        nRequested = 0
+        for patchNumber in range(len(s._tiling)):
+            p = s.tileProgress(patchNumber)
+            if p < 1.0:
+                s.requestPatch(patchNumber)
+                nRequested += 1
+        print "  need to compute %d of %d patches" % (nRequested, len(s._tiling))
+        if nRequested == 0:
+            #If no tile needed to be requested, the 'patchAvailable' signal
+            #of the render thread will never come.
+            #In this case, we need to call the implementation ourselves:
+            self._renderScreenshot(s, blowup, filename, patchNumber=0)
+
+    def _renderScreenshot(self, s, blowup, filename, patchNumber):
+        progress = 0
+        for patchNumber in range(len(s._tiling)):
+            p = s.tileProgress(patchNumber) 
+            progress += p
+        progress = progress/float(len(s._tiling))
+        if progress == 1.0:
+            s._renderThread.patchAvailable.disconnect(self._renderScreenshotDisconnect)
+            
+            img = QImage(int(round((blowup*s.sceneRect().size().width()))),
+                         int(round((blowup*s.sceneRect().size().height()))),
+                         QImage.Format_ARGB32)
+            screenshotPainter = QPainter(img)
+            screenshotPainter.setRenderHint(QPainter.Antialiasing, True)
+            s.render(screenshotPainter, QRectF(0, 0, img.width()-1, img.height()-1), s.sceneRect())
+            print "  saving to '%s'" % filename
+            img.save(filename)
+            del screenshotPainter
+            self.editor.navCtrl.enableNavigation = True
 
     def addLayer(self, a, display='grayscale', opacity=1.0, \
                  name='Unnamed Layer', visible=True):
