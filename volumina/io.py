@@ -21,11 +21,11 @@ except ImportError:
 if _has_lazyflow:
     class Op5ifyer(Operator):
         name = "5Difyer"
-        inputSlots = [InputSlot("Input", stype='ndarray')]
+        inputSlots = [InputSlot("Input")]
         outputSlots = [OutputSlot("Output")]
         def notifyConnectAll(self):
             shape = self.inputs["Input"].shape
-            assert len(shape) == 3
+            assert len(shape) == 3, shape
             outShape = (1,) + shape + (1,)
             self.outputs["Output"]._shape = outShape
             self.outputs["Output"]._dtype = self.inputs["Input"].dtype
