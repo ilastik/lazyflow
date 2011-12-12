@@ -237,6 +237,8 @@ class Viewer(QMainWindow):
             QIcon(focused._hud.axisLabel.pixmap()))
 
     def _randomColors(self, M=256):
+        """Generates a pleasing color table with M entries."""
+
         colors = []
         for i in range(M):
             if i == 0:
@@ -259,6 +261,10 @@ if __name__ == '__main__':
         from lazyflow.graph import Operator, OutputSlot, InputSlot
 
         class OpOnDemand(Operator):
+            """This simple operator draws (upon any request)
+            a number from [0,255] and returns a uniform array containing
+            only the drawn number to satisy the request."""
+
             name = "OpOnDemand"
             category = "Debug"
 
