@@ -106,7 +106,8 @@ if __name__ == "__main__":
     layerstack.append(GrayscaleLayer(source1))
     layerstack.append(GrayscaleLayer(source2))
     shape = source1._array.shape
-    editor = ImageEditor(shape,layerstack)
+    editor = ImageEditor(layerstack)
+    editor.dataShape = twoDtestVolume2.shape
     
     
     widget = ImageEditorWidget(parent=None, editor=editor)

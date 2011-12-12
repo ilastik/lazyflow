@@ -25,8 +25,12 @@ if _has_lazyflow:
         outputSlots = [OutputSlot("Output")]
         def notifyConnectAll(self):
             shape = self.inputs["Input"].shape
-            assert len(shape) == 3, shape
-            outShape = (1,) + shape + (1,)
+            assert len(shape) in [2,3], shape
+            if len(shape) == 2:
+                outShape = (1,) + shape + (1,1,)
+            else:
+                outShape = (1,) + shape + (1,)
+            self.ndim = len(shape)
             self.outputs["Output"]._shape = outShape
             self.outputs["Output"]._dtype = self.inputs["Input"].dtype
             self.outputs["Output"]._axistags = self.inputs["Input"].axistags
@@ -34,7 +38,11 @@ if _has_lazyflow:
         def getOutSlot(self, slot, key, resultArea):
             assert key[0] == slice(0,1,None)
             assert key[-1] == slice(0,1,None)
-            req = self.inputs["Input"][key[1:-1]].writeInto(resultArea[0,:,:,:,0])
+            if self.ndim == 3:
+                req = self.inputs["Input"][key[1:-1]].writeInto(resultArea[0,:,:,:,0])
+            else:
+                assert key[-2] == slice(0,1,None)
+                req = self.inputs["Input"][key[1:-1]].writeInto(resultArea[0,:,:,0,0])
             return req.wait()
 
         def notifyDirty(self,slot,key):

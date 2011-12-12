@@ -163,13 +163,13 @@ class PositionModelImage(QObject):
     
     cursorPositionChanged  = pyqtSignal(object, object)
     
-    def __init__(self, shape2D, parent=None):
+    def __init__(self, parent=None):
         QObject.__init__(self, parent)
         
         #init property fields
         self._cursorPos  = [0,0]
         self._channel    = 0
-        self._shape2D    = shape2D
+        self._shape2D    = None
         
     @property
     def shape( self ):
@@ -177,6 +177,9 @@ class PositionModelImage(QObject):
         the spatial shape
         """
         return self._shape2D
+    @shape.setter
+    def shape( self, s ):
+        self._shape2D = s
     
     @property
     def cursorPos(self):
@@ -348,6 +351,8 @@ class NavigationControlerImage(QObject):
         self._view._crossHairCursor.setVisible(True)
     
     def _positionValid(self, pos):
+        if self._model.shape is None:
+            return False
         for i in range(2):
             if pos[i] < 0 or pos[i] >= self._model.shape[i]:
                 return False

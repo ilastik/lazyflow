@@ -5,6 +5,9 @@ from volumina.pixelpipeline.datasources import *
 from volumina.layer import *
 from volumina.layerstack import LayerStackModel
 from volumina.volumeEditor import VolumeEditor
+from volumina.imageEditor import ImageEditor
+from volumina.imageEditorWidget import ImageEditorWidget
+from volumina.volumeEditorWidget import VolumeEditorWidget
 
 from PyQt4.QtCore import QRectF
 from PyQt4.QtGui import QMainWindow, QApplication, QIcon, QAction, qApp, \
@@ -46,14 +49,16 @@ class Viewer(QMainWindow):
         loadUi(uiDirectory + '/viewer.ui', self)
 
         self._dataShape = None
+        self.editor = None
+
+        self.actionQuit.triggered.connect(qApp.quit)
+        #when connecting in renderScreenshot to a partial(...) function,
+        #we need to remember the created function to be able to disconnect
+        #to it later
+        self._renderScreenshotDisconnect = None
 
         self.layerstack = LayerStackModel()
         self.layerWidget.init(self.layerstack)
-        self.editor = VolumeEditor(self.layerstack, labelsink=None)
-        self.volumeEditorWidget.init(self.editor)
-        self.layerstack = self.editor.layerStack
-
-        self.layerWidget.setModel(self.layerstack)
         model = self.layerstack
         self.UpButton.clicked.connect(model.moveSelectedUp)
         model.canMoveSelectedUp.connect(self.UpButton.setEnabled)
@@ -62,31 +67,12 @@ class Viewer(QMainWindow):
         self.DeleteButton.clicked.connect(model.deleteSelected)
         model.canDeleteSelected.connect(self.DeleteButton.setEnabled)
 
-        self.actionQuit.triggered.connect(qApp.quit)
-
-        w = self.volumeEditorWidget
-        self.menuView.addAction(w.allZoomToFit)
-        self.menuView.addAction(w.allToggleHUD)
-        self.menuView.addAction(w.allCenter)
-        self.menuView.addSeparator()
-        self.actionOnly_for_current_view = QAction(QIcon(), \
+        self.actionCurrentView = QAction(QIcon(), \
             "Only for selected view", self.menuView)
-        f = self.actionOnly_for_current_view.font()
+        f = self.actionCurrentView.font()
         f.setBold(True)
-        self.actionOnly_for_current_view.setFont(f)
-        self.menuView.addAction(self.actionOnly_for_current_view)
-        self.menuView.addAction(w.selectedZoomToFit)
-        self.menuView.addAction(w.toggleSelectedHUD)
-        self.menuView.addAction(w.selectedCenter)
-        self.menuView.addAction(w.selectedZoomToOriginal)
-        self.menuView.addAction(w.rubberBandZoom)
+        self.actionCurrentView.setFont(f)
 
-        self.editor.newImageView2DFocus.connect(self._setIconToViewMenu)
-
-        #when connecting in renderScreenshot to a partial(...) function,
-        #we need to remember the created function to be able to disconnect
-        #to it later
-        self._renderScreenshotDisconnect = None
 
     def renderScreenshot(self, axis, blowup=1, filename="/tmp/volumina_screenshot.png"):
         """Save the complete slice as shown by the slice view 'axis'
@@ -117,7 +103,9 @@ class Viewer(QMainWindow):
             self._renderScreenshot(s, blowup, filename, patchNumber=0)
 
     def addLayer(self, a, display='grayscale', opacity=1.0, \
-                 name='Unnamed Layer', visible=True):
+                 name='Unnamed Layer', visible=True, interpretChannelsAs=None):
+        print "adding layer '%s', shape=%r, %r" % (name, a.shape, type(a))
+
         """Adds a new layer on top of the layer stack (such that it will be
         above all currently defined layers). The array 'a' may be a simple
         numpy.ndarray or implicitly defined via a LazyflowArraySource.
@@ -126,6 +114,20 @@ class Viewer(QMainWindow):
         by passing this object to self.removeLayer, or by giving a unique
         name.
         """
+
+        if hasattr(a, 'axistags') and not hasattr(a, '_metaParent'):
+            #vigra array with axistags
+            a = a.withAxes('t', 'x', 'y', 'z', 'c').view(numpy.ndarray)
+
+        if len(a.shape) not in [2,3,5]:
+            raise RuntimeError("Cannot interpret array with: shape=%r" \
+                               % a.shape)
+
+        volumeImage = True
+        if len(a.shape) == 2:
+            volumeImage = False
+        if len(a.shape) == 3 and a.shape[2] == 3 and interpretChannelsAs == 'RGB':
+            volumeImage = False
 
         Source = ArraySource
         if hasattr(a, '_metaParent'):
@@ -137,15 +139,9 @@ class Viewer(QMainWindow):
                 o.inputs['Input'].connect(a)
                 a = o.outputs['Output']
                 print "  -> new shape: %r" % (a.shape,)
-        elif hasattr(a, 'axistags'):
-            #vigra array with axistags
-            a = a.withAxes('t', 'x', 'y', 'z', 'c')
-        elif len(a.shape) != 5 and isinstance(a, numpy.ndarray):
-            #numpy array; no axistags available
-            if len(a.shape) != 3:
-                raise RuntimeError("Cannot convert to 5D array: shape=%r" \
-                                   % a.shape)
+        elif len(a.shape) != 5 and isinstance(a, numpy.ndarray) and volumeImage:
             a = a[numpy.newaxis, ..., numpy.newaxis]
+
         elif not isinstance(a, numpy.ndarray): 
             # not a numpy array. Maybe h5py or something else. Embed it.
             if(hasattr(a, 'dtype')):
@@ -153,13 +149,30 @@ class Viewer(QMainWindow):
             else:
                 a = Array5d(a, dtype=np.uint8)                
 
-        if self.editor.dataShape != a.shape or len(self.layerstack) == 0:
+        if volumeImage and (self.editor is None or self.editor.dataShape != a.shape):
+            if self.editor:
+                print "  new volume layer '%s', shape %r is not compatible with existing shape %r" % (name, a.shape, self.editor.dataShape)
             self.layerstack.clear()
+            if isinstance(self.editor, ImageEditor) or self.editor is None:
+                self._initVolumeViewing()
             self.editor.dataShape = a.shape
+            print "  --> resetting viewer to shape=%r and zero layers" % (self.editor.dataShape,) 
+        elif not volumeImage and (self.editor is None or self.editor.dataShape != a.shape[0:2]):
+            if self.editor:
+                print "  new image layer '%s', shape %r is not compatible with existing shape %r" % (name, a.shape[0:2], self.editor.dataShape)
+            self.layerstack.clear()
+            if isinstance(self.editor, VolumeEditor) or self.editor is None:
+                self._initImageViewing()
+            self.editor.dataShape = a.shape[0:2]
+            print "  --> resetting viewer to shape=%r and zero layers" % (self.editor.dataShape,) 
 
         if display == 'grayscale':
-            source = Source(a)
-            layer = GrayscaleLayer(source)
+            if interpretChannelsAs == None:
+                source = Source(a)
+                layer = GrayscaleLayer(source)
+            elif interpretChannelsAs == "RGB":
+                layer = RGBALayer(Source(a[:,:,0]), Source(a[:,:,1]), Source(a[:,:,2]))
+        
         elif display == 'randomcolors':
             if a.dtype != numpy.uint8:
                 print "layer '%s': implicit conversion from %s to uint8" \
@@ -211,6 +224,63 @@ class Viewer(QMainWindow):
 
     ### private implementations
 
+    def _initVolumeViewing(self):
+        self.layerstack.clear()
+
+        self.editor = VolumeEditor(self.layerstack, labelsink=None)
+
+        if not isinstance(self.viewer, VolumeEditorWidget):
+            splitterSizes = self.splitter.sizes()
+            self.viewer.setParent(None)
+            del self.viewer
+            self.viewer = VolumeEditorWidget()
+            self.splitter.insertWidget(0, self.viewer)
+            self.splitter.setSizes(splitterSizes)
+            self.viewer.init(self.editor)
+
+            w = self.viewer
+            self.menuView.addAction(w.allZoomToFit)
+            self.menuView.addAction(w.allToggleHUD)
+            self.menuView.addAction(w.allCenter)
+            self.menuView.addSeparator()
+            self.menuView.addAction(self.actionCurrentView)
+            self.menuView.addAction(w.selectedZoomToFit)
+            self.menuView.addAction(w.toggleSelectedHUD)
+            self.menuView.addAction(w.selectedCenter)
+            self.menuView.addAction(w.selectedZoomToOriginal)
+            self.menuView.addAction(w.rubberBandZoom)
+
+            self.editor.newImageView2DFocus.connect(self._setIconToViewMenu)
+
+    def _initImageViewing(self):
+
+        if not isinstance(self.viewer, ImageEditorWidget):
+            self.layerstack.clear()
+            print "changing to 2D viewer"
+            
+            w = self.viewer
+            if isinstance(w, VolumeEditor):
+                self.menuView.removeAction(w.allZoomToFit)
+                self.menuView.removeAction(w.allToggleHUD)
+                self.menuView.removeAction(w.allCenter)
+                self.menuView.removeAction(self.actionCurrentView)
+                self.menuView.removeAction(w.selectedZoomToFit)
+                self.menuView.removeAction(w.toggleSelectedHUD)
+                self.menuView.removeAction(w.selectedCenter)
+                self.menuView.removeAction(w.selectedZoomToOriginal)
+                self.menuView.removeAction(w.rubberBandZoom)
+
+            #remove 3D viewer
+            splitterSizes = self.splitter.sizes()
+            self.viewer.setParent(None)
+            del self.viewer
+
+            self.viewer = ImageEditorWidget()
+            self.editor = ImageEditor(layerStackModel=self.layerstack)
+            self.viewer.init(self.editor)
+            self.splitter.insertWidget(0, self.viewer)
+            self.splitter.setSizes(splitterSizes)
+
     def _renderScreenshot(self, s, blowup, filename, patchNumber):
         progress = 0
         for patchNumber in range(len(s._tiling)):
@@ -233,7 +303,7 @@ class Viewer(QMainWindow):
 
     def _setIconToViewMenu(self):
         focused = self.editor.imageViews[self.editor._lastImageViewFocus]
-        self.actionOnly_for_current_view.setIcon(\
+        self.actionCurrentView.setIcon(\
             QIcon(focused._hud.axisLabel.pixmap()))
 
     def _randomColors(self, M=256):
@@ -256,6 +326,9 @@ class Viewer(QMainWindow):
 #******************************************************************************
 
 if __name__ == '__main__':
+    from scipy import lena
+    from volumina import _testing
+    lenaRGB = vigra.impex.readImage(os.path.split(volumina._testing.__file__)[0]+"/lena.png").view(numpy.ndarray).swapaxes(0,1)
 
     if haveLazyflow:
         from lazyflow.graph import Operator, OutputSlot, InputSlot
@@ -289,6 +362,9 @@ if __name__ == '__main__':
 
     v = Viewer()
     v.show()
+
+    v.addLayer(lena(), name='lena gray')
+    v.addLayer(lenaRGB, name='lena RGB', interpretChannelsAs='RGB')
 
     d = (numpy.random.random((1000, 800, 50)) * 255).astype(numpy.uint8)
     assert d.ndim == 3
