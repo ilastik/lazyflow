@@ -1,6 +1,11 @@
-from vtk import vtkPropAssembly, vtkImplicitPlaneRepresentation, vtkPolyData, vtkPoints, \
+try:
+    from vtk import vtkPropAssembly, vtkImplicitPlaneRepresentation, vtkPolyData, vtkPoints, \
                 vtkCellArray, vtkImplicitPlaneWidget2, vtkTubeFilter, vtkPolyDataMapper, \
                 vtkActor, vtkPlane
+
+except:
+    print 'Vtk not found in slicingPlanesWidget'
+    vtkfound = 'false'
 
 #*******************************************************************************
 # S l i c i n g P l a n e s W i d g e t                                        *

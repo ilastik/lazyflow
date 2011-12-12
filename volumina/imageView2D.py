@@ -104,7 +104,8 @@ class ImageView2D(QGraphicsView):
         self.scene().addItem(self._sliceIntersectionMarker)
         #FIXME: Use a QAction here so that we do not have to synchronize
         #between this initial state and the toggle button's initial state
-        self._sliceIntersectionMarker.setVisibility(True)
+        if self._hud is not None:
+            self._sliceIntersectionMarker.setVisibility(True)
  
         #FIXME: this should be private, but is currently used from
         #       within the image scene renderer
@@ -229,17 +230,21 @@ class ImageView2D(QGraphicsView):
         self.centerOn(self.sceneRect().width()/2 + self.sceneRect().x(), self.sceneRect().height()/2 + self.sceneRect().y()) 
     
     def toggleHud(self):
-        self._hud.setVisible(not self._hud.isVisible())
+        if self._hud is not None:
+            self._hud.setVisible(not self._hud.isVisible())
 
     def setHudVisible(self, visible):
-        self._hud.setVisible(visible)
+        if self._hud is not None:
+            self._hud.setVisible(visible)
     
     def focusInEvent(self, event):
-        self._hud.changeOpacity(1)
+        if self._hud is not None:
+            self._hud.changeOpacity(1)
         self.focusChanged.emit()
         
     def focusOutEvent(self, event):
-        self._hud.changeOpacity(0.6)
+        if self._hud is not None:
+            self._hud.changeOpacity(0.6)
      
     def changeViewPort(self,qRectf):
         self.fitInView(qRectf,mode = Qt.KeepAspectRatio)

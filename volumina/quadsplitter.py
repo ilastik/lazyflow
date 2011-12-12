@@ -216,6 +216,7 @@ class QuadView(QWidget):
     
     def horizontalSplitterMoved(self, x, y):
         sizes = self.splitHorizontal1.sizes()
+        #What. Nr2
         if self.splitHorizontal2.closestLegalPosition(x, y) < self.splitHorizontal2.closestLegalPosition(x, y):
             sizeLeft = self.splitHorizontal1.closestLegalPosition(x, y)
         else:

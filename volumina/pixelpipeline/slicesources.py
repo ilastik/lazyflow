@@ -1,6 +1,5 @@
 from PyQt4.QtCore import QObject, pyqtSignal
 from asyncabcs import SourceABC, RequestABC
-import copy
 import numpy as np
 from volumina.slicingtools import SliceProjection, is_pure_slicing, intersection, sl
 
@@ -69,8 +68,11 @@ class SliceSource( QObject ):
 
     def request( self, slicing2D ):
         slicing = self.sliceProjection.domain(self.through, slicing2D[0], slicing2D[1])
+        if len(self.sliceProjection.along) <= 1:
+            slicing = slicing2D
         return SliceRequest(self._datasource.request(slicing), self.sliceProjection)
-
+        
+    
     def setDirty( self, slicing ):
         assert isinstance(slicing, tuple)
         if not is_pure_slicing(slicing):
@@ -112,7 +114,7 @@ class SyncedSliceSources( QObject ):
         super(SyncedSliceSources, self).__init__()
         self._srcs = set(slicesrcs)
         self._through = through
-
+        
     def __iter__( self ):
         return iter(self._srcs)
 

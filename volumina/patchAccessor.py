@@ -45,7 +45,7 @@ class PatchAccessor():
         (size_x, size_y) -- 2D shape
         blockSize        -- maximum width/height of patches
         
-        Constructs a PatchAccessor that while divide the given shape
+        Constructs a PatchAccessor that will divide the given shape
         into patches that have a maximum given size.
         """
         

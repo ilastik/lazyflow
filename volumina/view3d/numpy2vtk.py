@@ -1,4 +1,9 @@
-from vtk import vtkImageImport
+try:
+    from vtk import vtkImageImport
+except:
+    print 'Vtk not found in numpy2vtk'
+    vtkfound = 'false'
+
 import numpy
 
 def __numpyTypeToVtkType(dtype):

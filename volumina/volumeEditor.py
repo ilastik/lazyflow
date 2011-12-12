@@ -10,8 +10,9 @@ from positionModel import PositionModel
 from navigationControler import NavigationControler, NavigationInterpreter
 from brushingcontroler import BrushingInterpreter, BrushingControler
 from brushingmodel import BrushingModel
-from pixelpipeline.imagepump import ImagePump
 from slicingtools import SliceProjection
+from pixelpipeline.slicesources import SyncedSliceSources
+
 
 useVTK = True
 try:
@@ -121,6 +122,7 @@ class VolumeEditor( QObject ):
         self.imageViews[0].setTransform(QTransform(1,0,0,0,1,0,0,0,1))
         self.imageViews[1].setTransform(QTransform(0,1,1,0,0,0))
         self.imageViews[2].setTransform(QTransform(0,1,1,0,0,0))
+        
 
     def scheduleSlicesRedraw(self):
         for s in self.imageScenes:
@@ -160,9 +162,9 @@ class VolumeEditor( QObject ):
         alongTZC = SliceProjection( abscissa = 1, ordinate = 2, along = [0,3,4] )
 
         imagepumps = []
-        imagepumps.append(ImagePump( self.layerStack, alongTXC ))
-        imagepumps.append(ImagePump( self.layerStack, alongTYC ))
-        imagepumps.append(ImagePump( self.layerStack, alongTZC ))
+        imagepumps.append(volumina.pixelpipeline.imagepump.ImagePump( self.layerStack, alongTXC ))
+        imagepumps.append(volumina.pixelpipeline.imagepump.ImagePump( self.layerStack, alongTYC ))
+        imagepumps.append(volumina.pixelpipeline.imagepump.ImagePump( self.layerStack, alongTZC ))
         return imagepumps
 
     def _initView3d( self ):

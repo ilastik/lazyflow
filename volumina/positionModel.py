@@ -199,4 +199,3 @@ class PositionModel(QObject):
         print "settled"
         self._slicingSettled = True
         self.slicingPositionSettled.emit(True)
-        
