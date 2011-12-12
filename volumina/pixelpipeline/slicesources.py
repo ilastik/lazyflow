@@ -12,7 +12,7 @@ projectionAlongTZC = SliceProjection( abscissa = 1, ordinate = 2, along = [0,3,4
 #*******************************************************************************
 
 class SliceRequest( object ):
-    def __init__( self, domainArrayRequest, sliceProjection):
+    def __init__( self, domainArrayRequest, sliceProjection ):
         self._ar = domainArrayRequest
         self._sp = sliceProjection
         
@@ -51,7 +51,7 @@ class SliceSource( QObject ):
         self._through = value
         self.setDirty((slice(None), slice(None)))
     
-    def __init__(self, datasource, sliceProjection):
+    def __init__(self, datasource, sliceProjection = projectionAlongTZC):
         assert isinstance(datasource, SourceABC) , 'wrong type: %s' % str(type(datasource)) 
         super(SliceSource, self).__init__()
 
