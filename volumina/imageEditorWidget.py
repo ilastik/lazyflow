@@ -30,7 +30,7 @@
 from PyQt4.QtCore import Qt
 from PyQt4.QtGui import QApplication, QWidget, QSplitter, QHBoxLayout, QColor,\
                         QSizePolicy
-from imageEditorComponents import ImageViewWidget, SingleStatusBar
+from imageEditorComponents import ImageViewWidget, PositionStatusBar2D
 from pixelpipeline.datasources import ArraySource
 from imageEditor import ImageEditor
 
@@ -60,9 +60,13 @@ class ImageEditorWidget(QWidget):
         
        
         self.imageViewWigdet = ImageViewWidget(self, self._ie.imageView[0])
-        self.singleviewStatusBar = SingleStatusBar()
-        self.singleviewStatusBar.createSingleStatusBar(QColor("green"), QColor("white"), QColor("blue"), QColor("white"), QColor("gray"), QColor("white"))
-        self.imageViewWigdet.addStatusBar(self.singleviewStatusBar)
+        self.positionStatusbar2D = PositionStatusBar2D()
+        self.positionStatusbar2D.create(\
+            QColor("green"), QColor("white"), \
+            QColor("blue"), QColor("white"),  \
+            QColor("gray"), QColor("white") \
+        )
+        self.imageViewWigdet.addStatusBar(self.positionStatusbar2D)
         self.layout.addWidget(self.imageViewWigdet)
 
         self._ie.posModel.cursorPositionChanged.connect(self._updateInfoLabels)
@@ -72,7 +76,7 @@ class ImageEditorWidget(QWidget):
         self.imageViewWigdet.update()        
 
     def _updateInfoLabels(self, pos):
-        self.singleviewStatusBar.setMouseCoords(*pos)
+        self.positionStatusbar2D.setMouseCoords(*pos)
              
 #*******************************************************************************
 # i f   _ _ n a m e _ _   = =   " _ _ m a i n _ _ "                            *
@@ -109,7 +113,6 @@ if __name__ == "__main__":
 
 
     s.addWidget(widget)
-    
-    s.showMaximized()
+    s.show()
 
     app.exec_()

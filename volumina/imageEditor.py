@@ -1,7 +1,7 @@
 from PyQt4.QtCore import QObject    
 from imageScene2D import ImageScene2D
-from imageEditorComponents import  PositionModel, NavigationControler,  \
-                                   NavigationInterpreter
+from imageEditorComponents import  PositionModelImage, \
+    NavigationControlerImage, NavigationInterpreterImage
 from eventswitch import EventSwitch
 from brushingmodel import BrushingModel
 import volumina.pixelpipeline.imagepump
@@ -21,7 +21,7 @@ class ImageEditor( QObject ):
         self._shape = shape        
         self._layerStack = layerStackModel  
         self.imageScene = ImageScene2D()
-        self.posModel = PositionModel(self._shape)
+        self.posModel = PositionModelImage(self._shape)
         self.imagepump = self._initImagePump()
         self.imageScene.stackedImageSources = self.imagepump.stackedImageSources
         self.imageView = [ImageView2D(self.imageScene)]
@@ -35,8 +35,8 @@ class ImageEditor( QObject ):
 
         # navigation control
         syncedSliceSources = self.imagepump.syncedSliceSources 
-        self.navCtrl      = NavigationControler(self.imageView[0], syncedSliceSources, self.posModel, self.brushingModel)
-        self.navInterpret = NavigationInterpreter(self.navCtrl)
+        self.navCtrl      = NavigationControlerImage(self.imageView[0], syncedSliceSources, self.posModel, self.brushingModel)
+        self.navInterpret = NavigationInterpreterImage(self.navCtrl)
 
         # initial interaction mode
         self.eventSwitch.interpreter = self.navInterpret

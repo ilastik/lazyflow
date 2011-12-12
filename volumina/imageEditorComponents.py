@@ -33,6 +33,10 @@ from PyQt4.QtGui import QLabel, QPen, QPainter, QPixmap, QHBoxLayout, \
                         QSizePolicy, QWidget, QVBoxLayout, QColor
 from eventswitch import InterpreterABC
 
+#*******************************************************************************
+# I m a g e V i e w W i d g e t                                                * 
+#*******************************************************************************
+
 class ImageViewWidget(QWidget):
     def __init__(self, parent, view):
         QWidget.__init__(self, parent)
@@ -52,16 +56,19 @@ class ImageViewWidget(QWidget):
         self.statusBar = bar
         self.layout.addLayout(self.statusBar)
         
-    def setGrayScaleToQuadStatusBar(self, gray):
-        self.quadViewStatusBar.setGrayScale(gray)
-    
-class SingleStatusBar(QHBoxLayout):
+#*******************************************************************************
+# P o s i t i o n S t a t u s B a r 2 D                                        *
+#*******************************************************************************
+
+class PositionStatusBar2D(QHBoxLayout):
+    """Widget displaying x, y coordinate plus current gray value."""
+
     def __init__(self, parent=None ):
         QHBoxLayout.__init__(self, parent)
         self.setContentsMargins(0,4,0,0)
         self.setSpacing(0)   
         
-    def createSingleStatusBar(self, xbackgroundColor, xforegroundColor, ybackgroundColor, yforegroundColor, graybackgroundColor, grayforegroundColor):             
+    def create(self, xbackgroundColor, xforegroundColor, ybackgroundColor, yforegroundColor, graybackgroundColor, grayforegroundColor):             
         
         self.xLabel = QLabel()
         self.xLabel.setAttribute(Qt.WA_TransparentForMouseEvents, True)
@@ -144,7 +151,7 @@ class SingleStatusBar(QHBoxLayout):
 # P o s i t i o n M o d e l                                                    *
 #*******************************************************************************
 
-class PositionModel(QObject):
+class PositionModelImage(QObject):
     """
     Currently viewed position within a 2D data volume
     (x,y).
@@ -156,8 +163,6 @@ class PositionModel(QObject):
     
     cursorPositionChanged  = pyqtSignal(object, object)
     
-    scrollDelay = 300
-    
     def __init__(self, shape2D, parent=None):
         QObject.__init__(self, parent)
         
@@ -165,14 +170,6 @@ class PositionModel(QObject):
         self._cursorPos  = [0,0]
         self._channel    = 0
         self._shape2D    = shape2D
-        """
-        Since its only one view, activeView is set to 0 be default
-        """
-        self.activeView = 0
-        self._scrollTimer = QTimer()
-        self._scrollTimer.setInterval(self.scrollDelay)
-        self._scrollTimer.setSingleShot(True)
-        self._scrollTimer.timeout.connect(self._onScrollTimer)
         
     @property
     def shape( self ):
@@ -197,15 +194,11 @@ class PositionModel(QObject):
         self._cursorPos = coordinates
         self.cursorPositionChanged.emit(self.cursorPos, oldPos)
     
-    def _onScrollTimer(self):
-        print "settled"
-        self._slicingSettled = True
-        self.slicingPositionSettled.emit(True)
 #*******************************************************************************
 # N a v i g a t i o n I n t e r p r e t e r                                    *
 #*******************************************************************************
 
-class   NavigationInterpreter(QObject):
+class   NavigationInterpreterImage(QObject):
     """
     Provides slots to listens to mouse/keyboard events from one slice view.
 
@@ -302,13 +295,13 @@ class   NavigationInterpreter(QObject):
             newGrviewCenter = grviewCenter + offset
             imageview.centerOn(newGrviewCenter)
             self.onMouseMoveEvent( imageview, event)
-assert issubclass(NavigationInterpreter, InterpreterABC)    
+assert issubclass(NavigationInterpreterImage, InterpreterABC)    
 
 #*******************************************************************************
 # N a v i g a t i o n C o n t r o l e r                                        *
 #*******************************************************************************
 
-class NavigationControler(QObject):
+class NavigationControlerImage(QObject):
     """
     Controler for navigating through the volume.
     
@@ -318,15 +311,6 @@ class NavigationControler(QObject):
     accordingly.
     """
     
-    @property
-    def axisColors( self ):
-        return self._axisColors
-    @axisColors.setter
-    def axisColors( self, colors ):
-        self._axisColors = colors
-        if self._view.hud:
-            self._view.hud.bgColor = self.axisColors[0]
-        
     def __init__(self, imageView2D, sliceSources, positionModel, brushingModel):
         QObject.__init__(self)
         
@@ -342,8 +326,6 @@ class NavigationControler(QObject):
         self._tempErase = False
         self._brushingModel = brushingModel
 
-        self.axisColors = [QColor(255,0,0,255), QColor(0,255,0,255), QColor(0,0,255,255)]
-    
     def moveCrosshair(self, newPos, oldPos):
         self._updateCrossHairCursor()
 
