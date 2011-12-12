@@ -10,7 +10,6 @@ from positionModel import PositionModel
 from navigationControler import NavigationControler, NavigationInterpreter
 from brushingcontroler import BrushingInterpreter, BrushingControler
 from brushingmodel import BrushingModel
-from pixelpipeline.imagepump import ImagePump
 from slicingtools import SliceProjection
 from pixelpipeline.slicesources import SyncedSliceSources
 
@@ -163,9 +162,9 @@ class VolumeEditor( QObject ):
         alongTZC = SliceProjection( abscissa = 1, ordinate = 2, along = [0,3,4] )
 
         imagepumps = []
-        imagepumps.append(ImagePump( self.layerStack, alongTXC ))
-        imagepumps.append(ImagePump( self.layerStack, alongTYC ))
-        imagepumps.append(ImagePump( self.layerStack, alongTZC ))
+        imagepumps.append(volumina.pixelpipeline.imagepump.ImagePump( self.layerStack, alongTXC ))
+        imagepumps.append(volumina.pixelpipeline.imagepump.ImagePump( self.layerStack, alongTYC ))
+        imagepumps.append(volumina.pixelpipeline.imagepump.ImagePump( self.layerStack, alongTZC ))
         return imagepumps
 
     def _initView3d( self ):
