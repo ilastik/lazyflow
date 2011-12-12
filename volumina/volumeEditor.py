@@ -3,6 +3,7 @@ import copy
 from PyQt4.QtCore import Qt, pyqtSignal, QObject
 from PyQt4.QtGui import QApplication, QWidget, QBrush, QPen, QColor, QTransform
 
+import pixelpipeline.imagepump
 from eventswitch import EventSwitch
 from imageScene2D import ImageScene2D
 from imageView2D import ImageView2D
@@ -162,9 +163,9 @@ class VolumeEditor( QObject ):
         alongTZC = SliceProjection( abscissa = 1, ordinate = 2, along = [0,3,4] )
 
         imagepumps = []
-        imagepumps.append(volumina.pixelpipeline.imagepump.ImagePump( self.layerStack, alongTXC ))
-        imagepumps.append(volumina.pixelpipeline.imagepump.ImagePump( self.layerStack, alongTYC ))
-        imagepumps.append(volumina.pixelpipeline.imagepump.ImagePump( self.layerStack, alongTZC ))
+        imagepumps.append(pixelpipeline.imagepump.ImagePump( self.layerStack, alongTXC ))
+        imagepumps.append(pixelpipeline.imagepump.ImagePump( self.layerStack, alongTYC ))
+        imagepumps.append(pixelpipeline.imagepump.ImagePump( self.layerStack, alongTZC ))
         return imagepumps
 
     def _initView3d( self ):
