@@ -4,7 +4,7 @@ from imageEditorComponents import  PositionModel, NavigationControler,  \
                                    NavigationInterpreter
 from eventswitch import EventSwitch
 from brushingmodel import BrushingModel
-from pixelpipeline.imagepump import ImagePump
+import volumina.pixelpipeline.imagepump
 from slicingtools import SliceProjection
 from imageView2D import ImageView2D
 
@@ -55,6 +55,6 @@ class ImageEditor( QObject ):
     def _initImagePump( self ):
         
         TwoDProjection = SliceProjection(0,1,[])
-        imagepump = ImagePump( self._layerStack, TwoDProjection )
+        imagepump = volumina.pixelpipeline.imagepump.ImagePump( self._layerStack, TwoDProjection )
         return imagepump
     
