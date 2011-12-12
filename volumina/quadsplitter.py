@@ -66,8 +66,9 @@ class ImageView2DDockWidget(QWidget):
         self.addGraphicsView()
     
     def connectHud(self):
-        self.graphicsView._hud.dockButtonClicked.connect(self.onDockButton)
-        self.graphicsView._hud.maximizeButtonClicked.connect(self.onMaxButton)
+        if hasattr(self.graphicsView, '_hud'):
+            self.graphicsView._hud.dockButtonClicked.connect(self.onDockButton)
+            self.graphicsView._hud.maximizeButtonClicked.connect(self.onMaxButton)
         
     def onMaxButton(self):
         if self._isMaximized:
@@ -144,8 +145,6 @@ class QuadView(QWidget):
         
         self.imageView2D_3 = view3
         
-        if view4 is None:
-            view4 = QWidget()
         self.testView4 = ImageView2DDockWidget(view4)
         
         self.dock1_ofSplitHorizontal1 = ImageView2DDockWidget(self.imageView2D_1)
