@@ -30,7 +30,7 @@
 from PyQt4.QtCore import Qt
 from PyQt4.QtGui import QApplication, QWidget, QSplitter, QHBoxLayout, QColor,\
                         QSizePolicy
-from imageEditorComponents import ImageViewWidget, SingleStatusBar,ImageView2D
+from imageEditorComponents import ImageViewWidget, SingleStatusBar
 from pixelpipeline.datasources import ArraySource
 from imageEditor import ImageEditor
 
@@ -61,7 +61,6 @@ class ImageEditorWidget(QWidget):
        
         self.imageViewWigdet = ImageViewWidget(self, self._ie.imageView[0])
         self.singleviewStatusBar = SingleStatusBar()
-        self._ie.imageView[0].setImageViewWidget(self.imageViewWigdet)
         self.singleviewStatusBar.createSingleStatusBar(QColor("green"), QColor("white"), QColor("blue"), QColor("white"), QColor("gray"), QColor("white"))
         self.imageViewWigdet.addStatusBar(self.singleviewStatusBar)
         self.layout.addWidget(self.imageViewWigdet)

@@ -36,7 +36,7 @@ class EventSwitch( QObject ):
 
     @interpreter.setter
     def interpreter( self, interpreter ):
-        assert(isinstance(interpreter, InterpreterABC))
+        # assert(isinstance(interpreter, InterpreterABC))
         # stop old interpreter before deinstalling to
         # avoid inconsistencies when eventloop and eventswitch
         # are running in different threads

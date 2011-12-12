@@ -1,11 +1,12 @@
 from PyQt4.QtCore import QObject    
 from imageScene2D import ImageScene2D
 from imageEditorComponents import  PositionModel, NavigationControler,  \
-                                   NavigationInterpreter, ImageView2D
+                                   NavigationInterpreter
 from eventswitch import EventSwitch
 from brushingmodel import BrushingModel
 from pixelpipeline.imagepump import ImagePump
 from slicingtools import SliceProjection
+from imageView2D import ImageView2D
 
 #*******************************************************************************
 # I m a g e E d i t o r                                                        *
