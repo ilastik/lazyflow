@@ -35,6 +35,7 @@ class Viewer(QMainWindow):
 
     Properties:
         title -- window title
+
     """
 
     def __init__(self, parent=None):
@@ -82,24 +83,10 @@ class Viewer(QMainWindow):
 
         self.editor.newImageView2DFocus.connect(self._setIconToViewMenu)
 
+        #when connecting in renderScreenshot to a partial(...) function,
+        #we need to remember the created function to be able to disconnect
+        #to it later
         self._renderScreenshotDisconnect = None
-
-    def _setIconToViewMenu(self):
-        focused = self.editor.imageViews[self.editor._lastImageViewFocus]
-        self.actionOnly_for_current_view.setIcon(\
-            QIcon(focused._hud.axisLabel.pixmap()))
-
-    def randomColors(self, M=256):
-        colors = []
-        for i in range(M):
-            if i == 0:
-                colors.append(QColor(0, 0, 0, 0).rgba())
-            else:
-                h, s, v = random.random(), random.random(), 1.0
-                color = numpy.asarray(colorsys.hsv_to_rgb(h, s, v)) * 255
-                qColor = QColor(*color)
-                colors.append(qColor.rgba())
-        return colors
 
     def renderScreenshot(self, axis, blowup=1, filename="/tmp/volumina_screenshot.png"):
         """Save the complete slice as shown by the slice view 'axis'
@@ -129,28 +116,17 @@ class Viewer(QMainWindow):
             #In this case, we need to call the implementation ourselves:
             self._renderScreenshot(s, blowup, filename, patchNumber=0)
 
-    def _renderScreenshot(self, s, blowup, filename, patchNumber):
-        progress = 0
-        for patchNumber in range(len(s._tiling)):
-            p = s.tileProgress(patchNumber) 
-            progress += p
-        progress = progress/float(len(s._tiling))
-        if progress == 1.0:
-            s._renderThread.patchAvailable.disconnect(self._renderScreenshotDisconnect)
-            
-            img = QImage(int(round((blowup*s.sceneRect().size().width()))),
-                         int(round((blowup*s.sceneRect().size().height()))),
-                         QImage.Format_ARGB32)
-            screenshotPainter = QPainter(img)
-            screenshotPainter.setRenderHint(QPainter.Antialiasing, True)
-            s.render(screenshotPainter, QRectF(0, 0, img.width()-1, img.height()-1), s.sceneRect())
-            print "  saving to '%s'" % filename
-            img.save(filename)
-            del screenshotPainter
-            self.editor.navCtrl.enableNavigation = True
-
     def addLayer(self, a, display='grayscale', opacity=1.0, \
                  name='Unnamed Layer', visible=True):
+        """Adds a new layer on top of the layer stack (such that it will be
+        above all currently defined layers). The array 'a' may be a simple
+        numpy.ndarray or implicitly defined via a LazyflowArraySource.
+
+        Returns the created Layer object. The layer can either be removed
+        by passing this object to self.removeLayer, or by giving a unique
+        name.
+        """
+
         Source = ArraySource
         if hasattr(a, '_metaParent'):
             #this is a lazyflow OutputSlot object
@@ -193,7 +169,7 @@ class Viewer(QMainWindow):
                 else:
                     raise RuntimeError("unhandled dtype=%r" % a.dtype)
             source = Source(a)
-            layer = ColortableLayer(source, self.randomColors())
+            layer = ColortableLayer(source, self._randomColors())
         else:
             raise RuntimeError("unhandled type of overlay")
         layer.name = name
@@ -201,13 +177,79 @@ class Viewer(QMainWindow):
         layer.visible = visible
         self.layerstack.append(layer)
 
+        return layer
+
+    def removeLayer(self, layer):
+        """Remove layer either by given 'Layer' object
+        (as returned by self.addLayer), or by it's name string
+        (as given to the name parameter in self.addLayer)"""
+
+        if isinstance(layer, Layer):
+            idx = self.layerstack.layerIndex(layer)
+            self.layerstack.removeRows(idx, 1)
+        else:
+            idx = [i for i in range(len(self.layerstack)) if \
+                self.layerstack.data(self.layerstack.index(i)).name == layer]
+            if len(idx) > 1:
+                raise RuntimeError("Trying to remove layer '%s', whose name is"
+                    "ambigous as it refers to %d layers" % len(idx))
+                return False
+            self.layerstack.removeRows(idx[0], 1)
+        return True
+
     @property
     def title(self):
+        """Get the window title"""
+
         return self.windowTitle()
 
     @title.setter
     def title(self, t):
+        """Set the window title"""
+        
         self.setWindowTitle(t)
+
+    ### private implementations
+
+    def _renderScreenshot(self, s, blowup, filename, patchNumber):
+        progress = 0
+        for patchNumber in range(len(s._tiling)):
+            p = s.tileProgress(patchNumber) 
+            progress += p
+        progress = progress/float(len(s._tiling))
+        if progress == 1.0:
+            s._renderThread.patchAvailable.disconnect(self._renderScreenshotDisconnect)
+            
+            img = QImage(int(round((blowup*s.sceneRect().size().width()))),
+                         int(round((blowup*s.sceneRect().size().height()))),
+                         QImage.Format_ARGB32)
+            screenshotPainter = QPainter(img)
+            screenshotPainter.setRenderHint(QPainter.Antialiasing, True)
+            s.render(screenshotPainter, QRectF(0, 0, img.width()-1, img.height()-1), s.sceneRect())
+            print "  saving to '%s'" % filename
+            img.save(filename)
+            del screenshotPainter
+            self.editor.navCtrl.enableNavigation = True
+
+    def _setIconToViewMenu(self):
+        focused = self.editor.imageViews[self.editor._lastImageViewFocus]
+        self.actionOnly_for_current_view.setIcon(\
+            QIcon(focused._hud.axisLabel.pixmap()))
+
+    def _randomColors(self, M=256):
+        """Generates a pleasing color table with M entries."""
+
+        colors = []
+        for i in range(M):
+            if i == 0:
+                colors.append(QColor(0, 0, 0, 0).rgba())
+            else:
+                h, s, v = random.random(), random.random(), 1.0
+                color = numpy.asarray(colorsys.hsv_to_rgb(h, s, v)) * 255
+                qColor = QColor(*color)
+                colors.append(qColor.rgba())
+        return colors
+
 
 #******************************************************************************
 #* if __name__ == '__main__':                                                 *
@@ -219,6 +261,10 @@ if __name__ == '__main__':
         from lazyflow.graph import Operator, OutputSlot, InputSlot
 
         class OpOnDemand(Operator):
+            """This simple operator draws (upon any request)
+            a number from [0,255] and returns a uniform array containing
+            only the drawn number to satisy the request."""
+
             name = "OpOnDemand"
             category = "Debug"
 
@@ -253,6 +299,17 @@ if __name__ == '__main__':
     v.addLayer(d, display='randomcolors', name="numpy 3D", visible=True)
     v.addLayer(d[numpy.newaxis, ..., numpy.newaxis], display='randomcolors', \
                name="numpy 5D", visible=False)
+
+    #test adding and removing layers
+    oldLen = len(v.layerstack)
+    l = v.addLayer(numpy.zeros((1000,800,50)))
+    assert len(v.layerstack) == oldLen+1
+    v.removeLayer(l)
+    assert len(v.layerstack) == oldLen
+    l = v.addLayer(numpy.zeros((1000,800,50)), name="xxx")
+    assert len(v.layerstack) == oldLen+1
+    v.removeLayer("xxx")
+    assert len(v.layerstack) == oldLen
 
     v.title = 'My Data Example'
     if haveLazyflow:
