@@ -33,29 +33,6 @@ from PyQt4.QtGui import QLabel, QPen, QPainter, QPixmap, QHBoxLayout, \
                         QSizePolicy, QWidget, QVBoxLayout, QColor
 from eventswitch import InterpreterABC
 
-class ImageView2DDockWidget(QWidget):
-    def __init__(self, graphicsView):
-        QWidget.__init__(self)
-        
-        self.graphicsView = graphicsView
-        
-        self.layout = QVBoxLayout()
-        self.layout.setContentsMargins(0, 0, 0, 0)
-        self.setLayout(self.layout)
-        
-        self.windowForGraphicsView = QWidget()
-        self.windowForGraphicsView.layout = QVBoxLayout()
-        self.windowForGraphicsView.layout.setContentsMargins(0, 0, 0, 0)
-        self.windowForGraphicsView.setLayout(self.windowForGraphicsView.layout)
-    
-        self.addGraphicsView()
-    
-    def addGraphicsView(self):
-        self.layout.addWidget(self.graphicsView)
-        
-    def removeGraphicsView(self):
-        self.layout.removeWidget(self.graphicsView)
-        
 class ImageViewWidget(QWidget):
     def __init__(self, parent, view):
         QWidget.__init__(self, parent)
@@ -69,8 +46,7 @@ class ImageViewWidget(QWidget):
          
         self.imageView2D = view
          
-        self.main = ImageView2DDockWidget(self.imageView2D)
-        self.layout.addWidget(self.main)
+        self.layout.addWidget(self.imageView2D)
 
     def addStatusBar(self, bar):
         self.statusBar = bar
