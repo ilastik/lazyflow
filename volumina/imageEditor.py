@@ -1,8 +1,7 @@
 from PyQt4.QtCore import QObject    
 from imageScene2D import ImageScene2D
-from imageView2D import ImageView2D
 from imageEditorComponents import  PositionModel, NavigationControler,  \
-                                   NavigationInterpreter
+                                   NavigationInterpreter, ImageView2D
 from eventswitch import EventSwitch
 from brushingmodel import BrushingModel
 from pixelpipeline.imagepump import ImagePump
