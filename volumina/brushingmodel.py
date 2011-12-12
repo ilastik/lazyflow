@@ -59,6 +59,7 @@ class BrushingModel(QObject):
         self.bb    = QRect() #bounding box enclosing the drawing
         self.brushSize = self.defaultBrushSize
         self.drawColor = self.defaultColor
+        self._temp_color = None
         self.drawnNumber = self.defaultDrawnNumber
 
         self.pos = None
@@ -80,13 +81,14 @@ class BrushingModel(QObject):
 
     def setErasing(self):
         self.erasing = True
+        self._temp_color = self.drawColor
         self.setBrushColor(self.erasingColor)
         self.brushColorChanged.emit(self.erasingColor)
         self.setDrawnNumber(self.erasingNumber)
     
     def disableErasing(self):
         self.erasing = False
-        self.setBrushColor(self.drawColor)
+        self.setBrushColor(self._temp_color)
         self.brushColorChanged.emit(self.drawColor)
         self.setDrawnNumber(self.drawnNumber)
 

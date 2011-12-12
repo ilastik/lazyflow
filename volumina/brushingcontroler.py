@@ -41,6 +41,9 @@ class BrushingInterpreter( QObject ):
         self._navIntr = NavigationInterpreter( navigationControler )
         self._brushingCtrl = brushingControler
         self._current_state = self.FINAL
+        self._temp_erasing = False # indicates, if user pressed shift
+                                   # for temporary erasing (in
+                                   # contrast to selecting the eraser brush)
 
     def start( self ):
         if self._current_state == self.FINAL:
@@ -55,26 +58,6 @@ class BrushingInterpreter( QObject ):
                 self._brushingCtrl.endDrawing(imageview.mousePos)
         self._current_state = self.FINAL
         self._navIntr.stop()
-
-    def eventFilterLegacy( self, watched, event ):
-        etype = event.type()
-        if etype == QEvent.MouseMove:
-            self.onMouseMoveEvent( watched, event )
-            return True
-        elif etype == QEvent.Wheel:
-            self.onWheelEvent( watched, event )
-            return True
-        elif etype == QEvent.MouseButtonPress:
-            self.onMousePressEvent( watched, event )
-            return True
-        elif etype == QEvent.MouseButtonRelease:
-            self.onMouseReleaseEvent( watched, event )
-            return True
-        elif etype == QEvent.MouseButtonDblClick:
-            self.onMouseDoubleClickEvent( watched, event )
-            return True
-        else:
-            return False
 
     def eventFilter( self, watched, event ):
         etype = event.type()
@@ -122,19 +105,19 @@ class BrushingInterpreter( QObject ):
     ### Draw Mode
     ###
     def onEntry_draw( self, imageview, event ):
-        #if QApplication.keyboardModifiers() == Qt.ShiftModifier:
-        #    print "enabling erasing"
-        #    self._navCtrl._brushingModel.setErasing()
-        #    self._navCtrl._tempErase = True
+        if QApplication.keyboardModifiers() == Qt.ShiftModifier:
+            print "enabling erasing"
+            self._brushingCtrl._brushingModel.setErasing()
+            self._temp_erasing = True
         imageview.mousePos = imageview.mapScene2Data(imageview.mapToScene(event.pos()))
         self._brushingCtrl.beginDrawing(imageview, imageview.mousePos)
     
     def onExit_draw( self, imageview, event ):
         self._brushingCtrl.endDrawing(imageview.mousePos)
-        #if self._navCtrl._tempErase:
-        #    print "disabling erasing"
-        #    self._navCtrl._brushingModel.disableErasing()
-        #    self._navCtrl._tempErase = False
+        if self._temp_erasing:
+            print "disabling erasing"
+            self._brushingCtrl._brushingModel.disableErasing()
+            self._temp_erasing = False
 
     def onMouseMove_draw( self, imageview, event ):
         self._navIntr.onMouseMove_default( imageview, event )
