@@ -21,9 +21,10 @@ import vigra
 
 haveLazyflow = True
 try:
-    from volumina.lazyflowBridge import Op5ifyer
+    from volumina.io import Op5ifyer
 except ImportError:
     haveLazyflow = False
+from volumina.io import Array5d
 
 #******************************************************************************
 # V i e w e r                                                                 *
@@ -139,12 +140,18 @@ class Viewer(QMainWindow):
         elif hasattr(a, 'axistags'):
             #vigra array with axistags
             a = a.withAxes('t', 'x', 'y', 'z', 'c')
-        elif a.ndim != 5:
+        elif len(a.shape) != 5 and isinstance(a, numpy.ndarray):
             #numpy array; no axistags available
-            if a.ndim != 3:
+            if len(a.shape) != 3:
                 raise RuntimeError("Cannot convert to 5D array: shape=%r" \
                                    % a.shape)
             a = a[numpy.newaxis, ..., numpy.newaxis]
+        elif not isinstance(a, numpy.ndarray): 
+            # not a numpy array. Maybe h5py or something else. Embed it.
+            if(hasattr(a, 'dtype')):
+                a = Array5d(a, dtype=a.dtype)
+            else:
+                a = Array5d(a, dtype=np.uint8)                
 
         if self.editor.dataShape != a.shape or len(self.layerstack) == 0:
             self.layerstack.clear()

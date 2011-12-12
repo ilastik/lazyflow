@@ -1,14 +1,11 @@
 from abc import ABCMeta, abstractmethod
 
 def _has_attribute( cls, attr ):
-    if any(attr in B.__dict__ for B in cls.__mro__):
-        return True
-    return False
+    return True if any(attr in B.__dict__ for B in cls.__mro__) else False
 
 def _has_attributes( cls, attrs ):
-    if all(_has_attribute(cls, a) for a in attrs):
-        return True
-    return False
+    return True if all(_has_attribute(cls, a) for a in attrs) else False
+
     
 
 #*******************************************************************************
@@ -27,27 +24,13 @@ class RequestABC:
         pass
 
     @abstractmethod
-    def cancelLock(self):
-        pass
-    
-    @abstractmethod
-    def cancelUnlock(self):
-        pass
-    
-    @abstractmethod
-    def canceled(self):
-        pass
-
-    @abstractmethod
     def cancel( self ):
         pass
 
     @classmethod
     def __subclasshook__(cls, C):
         if cls is RequestABC:
-            if _has_attributes(C, ['wait', 'notify']):
-                return True
-            return False
+            return True if _has_attributes(C, ['wait', 'notify', 'cancel']) else False
         return NotImplemented
 
 
@@ -70,7 +53,5 @@ class SourceABC:
     @classmethod
     def __subclasshook__(cls, C):
         if cls is SourceABC:
-            if _has_attributes(C, ['request', 'setDirty']):
-                return True
-            return False
+            return True if _has_attributes(C, ['request', 'setDirty']) else False
         return NotImplemented

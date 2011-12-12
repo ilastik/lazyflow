@@ -17,7 +17,7 @@ class ArrayRequest( object ):
     
     def getResult(self):
         return self._result
-    
+
     def cancel( self ):
         pass
         
