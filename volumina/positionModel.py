@@ -51,20 +51,38 @@ class PositionModel(QObject):
     cursorPositionChanged  = pyqtSignal(object, object)
     slicingPositionChanged = pyqtSignal(object, object)
     slicingPositionSettled = pyqtSignal(bool)
+   
+    #When the user does not scroll through the stack for more than 300 ms,
+    #we call the position 'settled', and slicingPositionSettled will be
+    #emittted as true.
+    #This is needed to let the proress indicator pies be shown after a short
+    #delay only, so that they do not appear when the data arrives fast
+    #(viewing raw data only)
+    scrollDelay = 300 #in ms.
     
-    scrollDelay = 300
-    
-    def __init__(self, shape5D, parent=None):
+    @property
+    def shape5D(self):
+        return self._shape5D
+    @shape5D.setter
+    def shape5D(self, s):
+        assert len(s) == 5, str(s) + " not dim 5"
+        self._shape5D = s
+
+        #call property setters to trigger updates etc. 
+        self.cursorPos   = self._cursorPos
+        self.slicingPos  = self._slicingPos
+        self.time        = self._time
+        self.channel     = self._channel
+
+    def __init__(self, parent=None):
         QObject.__init__(self, parent)
-        
-        assert len(shape5D) == 5
         
         #init property fields
         self._cursorPos  = [0,0,0]
         self._slicingPos = [0,0,0]
         self._time       = 0
         self._channel    = 0
-        self._shape5D    = shape5D
+        self._shape5D    = None
         
         """
         Index of the currently active view in [0,1,2].
@@ -72,12 +90,6 @@ class PositionModel(QObject):
         """
         self.activeView = 0
 
-        #call property setters to trigger updates etc. 
-        self.cursorPos   = self._cursorPos
-        self.slicingPos  = self._slicingPos
-        self.time        = self._time
-        self.channel     = self._channel
-        
         self._scrollTimer = QTimer()
         self._scrollTimer.setInterval(self.scrollDelay)
         self._scrollTimer.setSingleShot(True)
@@ -90,6 +102,9 @@ class PositionModel(QObject):
         returns the 2D shape of slices perpendicular to axis
         """
         shape = self._shape5D[1:4]
+        if shape is None:
+            return None
+
         if len(shape) == 2:
             return shape
         else:
@@ -108,6 +123,8 @@ class PositionModel(QObject):
         """
         the spatial shape
         """
+        if self._shape5D is None:
+            return None
         return self._shape5D[1:4]
         
     @property    

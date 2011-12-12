@@ -2,6 +2,7 @@ from PyQt4.QtCore import QObject, QEvent, QPointF, Qt, QRectF
 from PyQt4.QtGui import QPainter, QPen, QApplication, QGraphicsView
 
 from eventswitch import InterpreterABC
+from navigationControler import NavigationInterpreter
 
 #*******************************************************************************
 # C r o s s h a i r C o n t r o l e r                                          *
@@ -25,21 +26,37 @@ class CrosshairControler(QObject):
 #*******************************************************************************
 
 class BrushingInterpreter( QObject ):
-    def __init__( self, navigationInterpreter, navigationControler ):
+    # states
+    FINAL = 0
+    DEFAULT_MODE = 1
+    DRAW_MODE = 2
+
+    @property
+    def state( self ):
+        return self._current_state
+
+    def __init__( self, navigationControler, brushingControler ):
         QObject.__init__( self )
         self._navCtrl = navigationControler
-        self._navIntr = navigationInterpreter 
+        self._navIntr = NavigationInterpreter( navigationControler )
+        self._brushingCtrl = brushingControler
+        self._current_state = self.FINAL
 
     def start( self ):
-        self._navCtrl.drawingEnabled = True
+        if self._current_state == self.FINAL:
+            self._navIntr.start()
+            self._current_state = self.DEFAULT_MODE
+        else:
+            pass # ignore
 
-    def finalize( self ):
-        if self._navCtrl._isDrawing:
+    def stop( self ):
+        if self._brushingCtrl._isDrawing:
             for imageview in self._navCtrl._views:
-                self._navCtrl.endDrawing(imageview, imageview.mousePos)
-        self._navCtrl.drawingEnabled = False
+                self._brushingCtrl.endDrawing(imageview.mousePos)
+        self._current_state = self.FINAL
+        self._navIntr.stop()
 
-    def eventFilter( self, watched, event ):
+    def eventFilterLegacy( self, watched, event ):
         etype = event.type()
         if etype == QEvent.MouseMove:
             self.onMouseMoveEvent( watched, event )
@@ -59,141 +76,74 @@ class BrushingInterpreter( QObject ):
         else:
             return False
 
+    def eventFilter( self, watched, event ):
+        etype = event.type()
+        ### the following implements a simple state machine
+        if self._current_state == self.DEFAULT_MODE:
+            ### default mode -> draw mode
+            if etype == QEvent.MouseButtonPress and event.button() == Qt.LeftButton:
+                # navigation interpreter also has to be in 
+                # default mode to avoid inconsistencies
+                if self._navIntr.state == self._navIntr.DEFAULT_MODE:
+                    print "default->draw"
+                    self._current_state = self.DRAW_MODE
+                    self.onEntry_draw( watched, event )
+                    return True
+                else:
+                    return self._navIntr.eventFilter( watched, event )
 
-    def onMouseMoveEvent( self, imageview, event ):
-        if imageview._dragMode == True:
-            #the mouse was moved because the user wants to change
-            #the viewport
-            imageview._deltaPan = QPointF(event.pos() - imageview._lastPanPoint)
-            imageview._panning()
-            imageview._lastPanPoint = event.pos()
-            return
-        if imageview._ticker.isActive():
-            #the view is still scrolling
-            #do nothing until it comes to a complete stop
-            return
-        
-        imageview.mousePos = mousePos = imageview.mapScene2Data(imageview.mapToScene(event.pos()))
-        oldX, oldY = imageview.x, imageview.y
-        x = imageview.x = mousePos.x()
-        y = imageview.y = mousePos.y()
-        self._navCtrl.positionCursor( x, y, self._navCtrl._views.index(imageview))
+            ### actions in default mode
+            # let the navigation interpreter handle common events
+            return self._navIntr.eventFilter( watched, event )
 
-        if self._navCtrl._isDrawing:
-            o   = imageview.scene().data2scene.map(QPointF(oldX,oldY))
-            n   = imageview.scene().data2scene.map(QPointF(x,y))
-            pen = QPen(self._navCtrl._brushingModel.drawColor, self._navCtrl._brushingModel.brushSize)
-            imageview.scene().drawLine(o, n, pen)
-
-            self._navCtrl._brushingModel.moveTo(mousePos)
-
-    def onWheelEvent( self, imageview, event ):
-        k_alt = (event.modifiers() == Qt.AltModifier)
-        k_ctrl = (event.modifiers() == Qt.ControlModifier)
-
-        imageview.mousePos = imageview.mapScene2Data(imageview.mapToScene(event.pos()))
-
-        sceneMousePos = imageview.mapToScene(event.pos())
-        grviewCenter  = imageview.mapToScene(imageview.viewport().rect().center())
-
-        if event.delta() > 0:
-            if k_alt:
-                if self._navCtrl._isDrawing:
-                    self._navCtrl.endDrawing(imageview, imageview.mousePos)
-                    imageview._isDrawing = True
-                self._navCtrl.changeSliceRelative(10, self._navCtrl._views.index(imageview))
-            elif k_ctrl:
-                imageview.zoomIn()
-            else:
-                if self._navCtrl._isDrawing:
-                    self._navCtrl.endDrawing(imageview, imageview.mousePos)
-                    self._navCtrl._isDrawing = True
-                self._navCtrl.changeSliceRelative(1, self._navCtrl._views.index(imageview))
-        else:
-            if k_alt:
-                if self._navCtrl._isDrawing:
-                    self._navCtrl.endDrawing(imageview, imageview.mousePos)
-                    self._navCtrl._isDrawing = True
-                self._navCtrl.changeSliceRelative(-10, self._navCtrl._views.index(imageview))
-            elif k_ctrl:
-                imageview.zoomOut()
-            else:
-                if self._navCtrl._isDrawing:
-                    self._navCtrl.endDrawing(imageview, imageview.mousePos)
-                    self._navCtrl._isDrawing = True
-                self._navCtrl.changeSliceRelative(-1, self._navCtrl._views.index(imageview))
-        if k_ctrl:
-            mousePosAfterScale = imageview.mapToScene(event.pos())
-            offset = sceneMousePos - mousePosAfterScale
-            newGrviewCenter = grviewCenter + offset
-            imageview.centerOn(newGrviewCenter)
-            self.onMouseMoveEvent( imageview, event)
-
-    def onMousePressEvent( self, imageview, event ):
-        if event.button() == Qt.MidButton:
-            imageview.setCursor(QCursor(Qt.SizeAllCursor))
-            imageview._lastPanPoint = event.pos()
-            imageview._crossHairCursor.setVisible(False)
-            imageview._dragMode = True
-            if imageview._ticker.isActive():
-                imageview._deltaPan = QPointF(0, 0)
-
-        if event.buttons() == Qt.RightButton:
-            #make sure that we have the cursor at the correct position
-            #before we call the context menu
-            self.onMouseMoveEvent( imageview, event)
-            imageview.customContextMenuRequested.emit(event.pos())
-            return
-
-        if not self._navCtrl.drawingEnabled:
-            return
-        
-        if event.buttons() == Qt.LeftButton:
-            #don't draw if flicker the view
-            if imageview._ticker.isActive():
-                return
-            #don't draw if zooming
-            if imageview._isRubberBandZoom:
-                imageview.setDragMode(QGraphicsView.RubberBandDrag)
-                self._rubberBandStart = event.pos()
-                return
-            if QApplication.keyboardModifiers() == Qt.ShiftModifier:
-                self._navCtrl._brushingModel.setErasing()
-                self._navCtrl._tempErase = True
-            imageview.mousePos = imageview.mapScene2Data(imageview.mapToScene(event.pos()))
-            self._navCtrl.beginDrawing(imageview, imageview.mousePos)
-
-    def onMouseReleaseEvent( self, imageview, event ):
-        if event.button() == Qt.LeftButton:
-            if imageview._isRubberBandZoom:
-                imageview.setDragMode(QGraphicsView.NoDrag)
-                rect = QRectF(imageview.mapToScene(self._rubberBandStart), imageview.mapToScene(event.pos()))
-                imageview.fitInView(rect, Qt.KeepAspectRatio)
-                imageview._isRubberBandZoom = False
-                width, height = imageview.size().width() / rect.width(), imageview.height() / rect.height()
-                imageview._zoomFactor = min(width, height)
-                imageview.setCursor(imageview._cursorBackup)
-                return
+        elif self._current_state == self.DRAW_MODE:
+            ### draw mode -> default mode
+            if etype == QEvent.MouseButtonRelease and event.button() == Qt.LeftButton:
+                print "draw->default"
+                self.onExit_draw( watched, event )
+                self._current_state = self.DEFAULT_MODE
+                self.onEntry_default( watched, event )
+                return True
             
-        imageview.mousePos = imageview.mapScene2Data(imageview.mapToScene(event.pos()))
-        
-        if event.button() == Qt.MidButton:
-            imageview.setCursor(QCursor())
-            releasePoint = event.pos()
-            imageview._lastPanPoint = releasePoint
-            imageview._dragMode = False
-            imageview._ticker.start(20)
-        if self._navCtrl._isDrawing:
-            self._navCtrl.endDrawing(imageview, imageview.mousePos)
-        if self._navCtrl._tempErase:
-            self._navCtrl._brushingModel.disableErasing()
-            self._navCtrl._tempErase = False
+            ### actions in draw mode
+            elif etype == QEvent.MouseMove:
+                self.onMouseMove_draw( watched, event )
+                return True
 
-    def onMouseDoubleClickEvent( self, imageview, event ):
-        dataMousePos = imageview.mapScene2Data(imageview.mapToScene(event.pos()))
-        imageview.mousePos = dataMousePos # FIXME: remove, when guaranteed, that no longer needed inside imageview
-        self._navCtrl.positionSlice(dataMousePos.x(), dataMousePos.y(), self._navCtrl._views.index(imageview))
-assert issubclass(BrushingInterpreter, InterpreterABC)
+        return False
+
+    ###
+    ### Default Mode
+    ###
+    def onEntry_default( self, imageview, event ):
+        pass
+
+    ###
+    ### Draw Mode
+    ###
+    def onEntry_draw( self, imageview, event ):
+        #if QApplication.keyboardModifiers() == Qt.ShiftModifier:
+        #    print "enabling erasing"
+        #    self._navCtrl._brushingModel.setErasing()
+        #    self._navCtrl._tempErase = True
+        imageview.mousePos = imageview.mapScene2Data(imageview.mapToScene(event.pos()))
+        self._brushingCtrl.beginDrawing(imageview, imageview.mousePos)
+    
+    def onExit_draw( self, imageview, event ):
+        self._brushingCtrl.endDrawing(imageview.mousePos)
+        #if self._navCtrl._tempErase:
+        #    print "disabling erasing"
+        #    self._navCtrl._brushingModel.disableErasing()
+        #    self._navCtrl._tempErase = False
+
+    def onMouseMove_draw( self, imageview, event ):
+        self._navIntr.onMouseMove_default( imageview, event )
+
+        o = imageview.scene().data2scene.map(QPointF(imageview.oldX,imageview.oldY))
+        n = imageview.scene().data2scene.map(QPointF(imageview.x,imageview.y))
+        pen = QPen(self._brushingCtrl._brushingModel.drawColor, self._brushingCtrl._brushingModel.brushSize)
+        imageview.scene().drawLine(o, n, pen)
+        self._brushingCtrl._brushingModel.moveTo(imageview.mousePos)
         
 #*******************************************************************************
 # B r u s h i n g C o n t r o l e r                                            *
@@ -207,6 +157,18 @@ class BrushingControler(QObject):
         self._brushingModel = brushingModel
         self._brushingModel.brushStrokeAvailable.connect(self._writeIntoSink)
         self._positionModel = positionModel
+
+        self._isDrawing = False
+        self._tempErase = False
+
+    def beginDrawing(self, imageview, pos):
+        imageview.mousePos = pos
+        self._isDrawing  = True
+        self._brushingModel.beginDrawing(pos, imageview.sliceShape)
+
+    def endDrawing(self, pos): 
+        self._isDrawing = False
+        self._brushingModel.endDrawing(pos)
         
     def _writeIntoSink(self, brushStrokeOffset, labels):
         activeView = self._positionModel.activeView

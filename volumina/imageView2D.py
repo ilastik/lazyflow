@@ -227,15 +227,12 @@ class ImageView2D(QGraphicsView):
                 
     def centerImage(self):
         self.centerOn(self.sceneRect().width()/2 + self.sceneRect().x(), self.sceneRect().height()/2 + self.sceneRect().y()) 
-        
+    
     def toggleHud(self):
-        if self._hud.isVisible():
-            self._hud.setVisible(False)
-        else:
-            self._hud.setVisible(True)
-            
-    def hideHud(self, hide):
-        self._hud.setVisible(hide)
+        self._hud.setVisible(not self._hud.isVisible())
+
+    def setHudVisible(self, visible):
+        self._hud.setVisible(visible)
     
     def focusInEvent(self, event):
         self._hud.changeOpacity(1)

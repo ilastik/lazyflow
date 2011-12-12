@@ -108,10 +108,12 @@ class ImageScene2D(QGraphicsScene):
         self._initializePatches()
 
     def _onAboutToResize(self, newSize):
-        self._renderThread.stop()
+        if self._renderThread:
+            self._renderThread.stop()
         self._numLayers = newSize
         self._initializePatches()
-        self._renderThread.start()
+        if self._renderThread:
+            self._renderThread.start()
 
     @property
     def showDebugPatches(self):
@@ -170,6 +172,7 @@ class ImageScene2D(QGraphicsScene):
         self._updatableTiles = []
 
         # tiled rendering of patches
+        self._tiling         = None
         self._imageLayers    = None
         self._compositeLayer = None
         self._brushingLayer  = None
@@ -187,7 +190,8 @@ class ImageScene2D(QGraphicsScene):
         self._slicingPositionSettled = True
     
         def cleanup():
-            self._renderThread.stop()
+            if self._renderThread:
+                self._renderThread.stop()
         self.destroyed.connect(cleanup)
     
     def _initializePatches(self):
@@ -232,6 +236,9 @@ class ImageScene2D(QGraphicsScene):
         self._invalidateRect(rect)
             
     def _invalidateRect(self, rect = QRect()):
+        if not self._renderThread:
+            return
+
         if not rect.isValid():
             #everything is invalidated
             #we cancel all requests
@@ -275,6 +282,9 @@ class ImageScene2D(QGraphicsScene):
         self.invalidate(r, QGraphicsScene.BackgroundLayer)
 
     def drawForeground(self, painter, rect):
+        if self._numLayers == 0 or not self._renderThread:
+            return
+
         patches = self._tiling.intersectedF(rect)
 
         for tileId in patches:
@@ -287,29 +297,45 @@ class ImageScene2D(QGraphicsScene):
     def indicateSlicingPositionSettled(self, settled):
         self._dirtyIndicator.setVisible(settled)
         self._slicingPositionSettled = settled
-    
+   
+    def tileProgress(self, tileId):
+        numDirtyLayers = 0
+        for layer in self._imageLayers:
+            _p = layer[tileId]
+            _p.lock()
+            if _p.imgVer != _p.dataVer:
+                numDirtyLayers += 1
+            _p.unlock()
+        progress = 1.0 - numDirtyLayers/float(self._numLayers)
+        return progress
+
+    def requestPatch(self, tileId):
+        for layerNr, tiledLayer in enumerate(self._imageLayers):
+            p = tiledLayer[tileId]
+            p.lock()
+            if p.imgVer != p.dataVer and p.reqVer != p.dataVer:
+                #
+                if volumina.verboseRequests:
+                    volumina.printLock.acquire()
+                    print Fore.RED + "ImageScene2D '%s' asks for layer=%d, patch %d = (x=%d, y=%d, w=%d, h=%d)" \
+                          % (self.objectName(), layerNr, p.tileId, p.patchRectF.x(), p.patchRectF.y(), \
+                             Np.patchRectF.width(), p.patchRectF.height()) + Fore.RESET
+                    volumina.printLock.release()
+                #
+                self._renderThread.requestPatch((layerNr, tileId))
+                p.reqVer = p.dataVer
+            p.unlock()
+        
     def drawBackground(self, painter, rect):
+        if self._numLayers == 0 or not self._renderThread:
+            return
+
         #Find all patches that intersect the given 'rect'.
 
         patches = self._tiling.intersectedF(rect)
 
         for tileId in patches: 
-            for layerNr, tiledLayer in enumerate(self._imageLayers):
-                p = tiledLayer[tileId]
-        
-                p.lock()
-                if p.imgVer != p.dataVer and p.reqVer != p.dataVer:
-                    #
-                    if volumina.verboseRequests:
-                        volumina.printLock.acquire()
-                        print Fore.RED + "ImageScene2D '%s' asks for layer=%d, patch %d = (x=%d, y=%d, w=%d, h=%d)" \
-                              % (self.objectName(), layerNr, p.tileId, p.patchRectF.x(), p.patchRectF.y(), \
-                                 Np.patchRectF.width(), p.patchRectF.height()) + Fore.RESET
-                        volumina.printLock.release()
-                    #
-                    self._renderThread.requestPatch((layerNr, tileId))
-                    p.reqVer = p.dataVer
-                p.unlock()
+            self.requestPatch(tileId)
         
         #draw composite patches
         tiles = [self._compositeLayer[i] for i in patches]
@@ -319,13 +345,6 @@ class ImageScene2D(QGraphicsScene):
         #calculate progress information for 'pie' progress indicators on top
         #of each tile
         for tileId in patches:
-            numDirtyLayers = 0
-            for layer in self._imageLayers:
-                _p = layer[tileId]
-                _p.lock()
-                if _p.imgVer != _p.dataVer:
-                    numDirtyLayers += 1
-                _p.unlock()
-            progress = 1.0 - numDirtyLayers/float(self._numLayers)
+            progress = self.tileProgress(tileId)
             self._dirtyIndicator.setTileProgress(tileId, progress) 
                     

@@ -224,16 +224,48 @@ class OverviewScene(QWidget):
     def TogglePlaneWidgetZ(self):
         self.planes.TogglePlaneWidget(2)
         self.qvtk.update()
-    
-    def __init__(self, shape, parent=None):
+   
+    @property
+    def dataShape(self):
+        return self._dataShape
+    @dataShape.setter
+    def dataShape(self, shape):
+        self._dataShape = shape
+        
+        if self.planes:
+            self.qvtk.renderer.RemoveActor(self.planes)
+            del self.planes
+        self.planes = SlicingPlanesWidget(shape, self.qvtk.GetInteractor())
+        #self.planes.SetInteractor(self.qvtk.GetInteractor())
+        self.planes.AddObserver("CoordinatesEvent", self.slicingCallback)
+        self.planes.SetCoordinate([0,0,0])
+        self.planes.SetPickable(False)
+        
+        ## Add RGB arrow axes
+        if self.axes:
+            self.qvtk.renderer.RemoveActor(self.axes)
+            del self.axes
+        self.axes = vtkAxesActor();
+        self.axes.AxisLabelsOff()
+        self.axes.SetTotalLength(0.5*shape[0], 0.5*shape[1], 0.5*shape[2])
+        self.axes.SetShaftTypeToCylinder()
+        self.qvtk.renderer.AddActor(self.axes)
+        
+        self.qvtk.renderer.AddActor(self.planes)
+        self.qvtk.renderer.ResetCamera() 
+        #for some reason, we have to do this afterwards!
+        self.planes.togglePlanesOn()
+
+    def __init__(self, parent=None):
         super(OverviewScene, self).__init__(parent)
         
         self.colorTable = None
         self.anaglyph = False
-        self.sceneShape = shape
         self.sceneItems = []
         self.cutter = 3*[None]
         self.objects = []
+        self.planes = None
+        self.axes = None
         
         layout = QVBoxLayout()
         layout.setMargin(0)
@@ -280,22 +312,6 @@ class OverviewScene(QWidget):
         hbox.addWidget(bExportMesh)
         layout.addLayout(hbox)
         
-        self.planes = SlicingPlanesWidget(shape)
-        self.planes.SetInteractor(self.qvtk.GetInteractor())
-        self.planes.AddObserver("CoordinatesEvent", self.slicingCallback)
-        self.planes.SetCoordinate([0,0,0])
-        self.planes.SetPickable(False)
-        
-        ## Add RGB arrow axes
-        self.axes = vtkAxesActor();
-        self.axes.AxisLabelsOff()
-        self.axes.SetTotalLength(0.5*shape[0], 0.5*shape[1], 0.5*shape[2])
-        self.axes.SetShaftTypeToCylinder()
-        self.qvtk.renderer.AddActor(self.axes)
-        
-        self.qvtk.renderer.AddActor(self.planes)
-        self.qvtk.renderer.ResetCamera() 
-        
         self.connect(b1, SIGNAL("clicked()"), self.TogglePlaneWidgetX)
         self.connect(b2, SIGNAL("clicked()"), self.TogglePlaneWidgetY)
         self.connect(b3, SIGNAL("clicked()"), self.TogglePlaneWidgetZ)
@@ -303,8 +319,6 @@ class OverviewScene(QWidget):
         self.connect(bExportMesh, SIGNAL("clicked()"), self.exportMesh)
         bCutter.toggled.connect(self.useCutterToggled)
         self.connect(self.qvtk, SIGNAL("objectPicked"), self.__onObjectPicked)
-        
-        self.qvtk.setFocus()
 
     @property
     def useCutter(self):

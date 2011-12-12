@@ -1,7 +1,9 @@
-from PyQt4.QtCore import QObject, QTimer, QEvent, Qt, QPointF, pyqtSignal, QRectF
-from PyQt4.QtGui  import QColor, QCursor, QMouseEvent, QApplication, QPainter, QPen, QGraphicsView
+from PyQt4.QtCore import QObject, QTimer, QEvent, Qt, QPointF, pyqtSignal, \
+                         QRectF
+from PyQt4.QtGui  import QColor, QCursor, QMouseEvent, QApplication, \
+                         QPainter, QPen, QGraphicsView
 
-import  copy
+import copy
 from functools import partial
 
 from imageView2D import ImageView2D
@@ -20,148 +22,159 @@ def posView2D(pos3d, axis):
 #*******************************************************************************
 
 class NavigationInterpreter(QObject):
-    """
-    Provides slots to listens to mouse/keyboard events from multiple
-    slice views and interprets them as actions upon a N-D volume
-    (whereas the individual ImageView2D/ImageScene2D know nothing about the
-    data they display).
+    # states
+    FINAL = 0
+    DEFAULT_MODE = 1
+    DRAG_MODE = 2
 
-    """
+    @property
+    def state( self ):
+        return self._current_state
+
     def __init__(self, navigationcontroler):
-        """
-        Constructs an interpreter which will update the
-        PositionModel model.
-        
-        The user of this class needs to make the appropriate connections
-        from the ImageView2D to the methods of this class from the outside 
-        himself.
-        """
         QObject.__init__(self)
         self._navCtrl = navigationcontroler
+        self._current_state = self.FINAL 
 
     def start( self ):
-        self._navCtrl.drawingEnabled = False
+        if self._current_state == self.FINAL:
+            self._current_state = self.DEFAULT_MODE
+        else:
+            pass # ignore
 
-    def finalize( self ):
-        pass
+    def stop( self ):
+        self._current_state = self.FINAL
 
     def eventFilter( self, watched, event ):
+        if self._navCtrl.enableNavigation == False:
+            return True        
+
         etype = event.type()
-        if etype == QEvent.MouseMove:
-            self.onMouseMoveEvent( watched, event )
-            return True
-        elif etype == QEvent.Wheel:
-            self.onWheelEvent( watched, event )
-            return True
-        elif etype == QEvent.MouseButtonPress:
-            self.onMousePressEvent( watched, event )
-            return True
-        elif etype == QEvent.MouseButtonRelease:
-            self.onMouseReleaseEvent( watched, event )
-            return True
-        elif etype == QEvent.MouseButtonDblClick:
-            self.onMouseDoubleClickEvent( watched, event )
-            return True
-        else:
-            return False
+        ### the following implements a simple state machine
+        if self._current_state == self.DEFAULT_MODE:
+            ### default mode -> drag mode
+            if etype == QEvent.MouseButtonPress and event.button() == Qt.MidButton:
+                print "default->drag"
+                # self.onExit_default(): call it here, if needed
+                self._current_state = self.DRAG_MODE
+                self.onEntry_drag( watched, event )
+                return True
 
-    def onMouseMoveEvent( self, imageview, event ):
-        if imageview._dragMode == True:
-            #the mouse was moved because the user wants to change
-            #the viewport
-            imageview._deltaPan = QPointF(event.pos() - imageview._lastPanPoint)
-            imageview._panning()
-            imageview._lastPanPoint = event.pos()
-            return
-        if imageview._ticker.isActive():
-            #the view is still scrolling
-            #do nothing until it comes to a complete stop
-            return
-        
-        imageview.mousePos = mousePos = imageview.mapScene2Data(imageview.mapToScene(event.pos()))
-        oldX, oldY = imageview.x, imageview.y
-        x = imageview.x = mousePos.x()
-        y = imageview.y = mousePos.y()
-        self._navCtrl.positionCursor( x, y, self._navCtrl._views.index(imageview))
+            ### actions in default mode
+            elif etype == QEvent.MouseMove:
+                self.onMouseMove_default( watched, event )
+                return True
+            elif etype == QEvent.Wheel:
+                 self.onWheel_default( watched, event )
+                 return True
+            elif etype == QEvent.MouseButtonDblClick:
+                self.onMouseDoubleClick_default( watched, event )
+                return True
+            elif etype == QEvent.MouseButtonPress and event.button() == Qt.RightButton:
+                self.onMousePressRight_default( watched, event )
+                return True
+        elif self._current_state == self.DRAG_MODE:
+            ### drag mode -> default mode
+            if etype == QEvent.MouseButtonRelease and event.button() == Qt.MidButton:
+                print "drag->default"
+                self.onExit_drag( watched, event)
+                self._current_state = self.DEFAULT_MODE
+                self.onEntry_default( watched, event )
+                return True
+            
+            ### actions in drag mode
+            elif etype == QEvent.MouseMove:
+                self.onMouseMove_drag( watched, event )
+                return True
 
-    def onWheelEvent( self, imageview, event ):
+        return False
+
+    ###
+    ### Default Mode
+    ###
+    def onEntry_default( self, imageview, event ):
+        pass
+
+    def onWheel_default( self, imageview, event ):
+        navCtrl = self._navCtrl
         k_alt = (event.modifiers() == Qt.AltModifier)
         k_ctrl = (event.modifiers() == Qt.ControlModifier)
 
         imageview.mousePos = imageview.mapScene2Data(imageview.mapToScene(event.pos()))
 
         sceneMousePos = imageview.mapToScene(event.pos())
-        grviewCenter  = imageview.mapToScene(imageview.viewport().rect().center())
+        grviewCenter = imageview.mapToScene(imageview.viewport().rect().center())
 
         if event.delta() > 0:
             if k_alt:
-                self._navCtrl.changeSliceRelative(10, self._navCtrl._views.index(imageview))
+                navCtrl.changeSliceRelative(10, navCtrl._views.index(imageview))
             elif k_ctrl:
-                imageview.zoomIn()
+                scaleFactor = 1.1
+                imageview.doScale(scaleFactor)
             else:
-                self._navCtrl.changeSliceRelative(1, self._navCtrl._views.index(imageview))
+                navCtrl.changeSliceRelative(1, navCtrl._views.index(imageview))
         else:
             if k_alt:
-                self._navCtrl.changeSliceRelative(-10, self._navCtrl._views.index(imageview))
+                navCtrl.changeSliceRelative(-10, navCtrl._views.index(imageview))
             elif k_ctrl:
-                imageview.zoomOut()
+                scaleFactor = 0.9
+                imageview.doScale(scaleFactor)
             else:
-                self._navCtrl.changeSliceRelative(-1, self._navCtrl._views.index(imageview))
+                navCtrl.changeSliceRelative(-1, navCtrl._views.index(imageview))
         if k_ctrl:
             mousePosAfterScale = imageview.mapToScene(event.pos())
             offset = sceneMousePos - mousePosAfterScale
             newGrviewCenter = grviewCenter + offset
             imageview.centerOn(newGrviewCenter)
-            self.onMouseMoveEvent( imageview, event)
+            self.onMouseMove_default( imageview, event )
 
-    def onMousePressEvent( self, imageview, event ):
-        if event.button() == Qt.MidButton:
-            imageview.setCursor(QCursor(Qt.SizeAllCursor))
-            imageview._lastPanPoint = event.pos()
-            imageview._crossHairCursor.setVisible(False)
-            imageview._dragMode = True
-            if imageview._ticker.isActive():
-                imageview._deltaPan = QPointF(0, 0)
-                
-        if event.button() == Qt.LeftButton:
-            if imageview._isRubberBandZoom:
-                imageview.setDragMode(QGraphicsView.RubberBandDrag)
-                self._rubberBandStart = event.pos()
-                return
-        
-
-        if event.buttons() == Qt.RightButton:
-            #make sure that we have the cursor at the correct position
-            #before we call the context menu
-            self.onMouseMoveEvent( imageview, event)
-            imageview.customContextMenuRequested.emit(event.pos())
+    def onMouseMove_default( self, imageview, event ):
+        if imageview._ticker.isActive():
+            #the view is still scrolling
+            #do nothing until it comes to a complete stop
             return
 
-    def onMouseReleaseEvent( self, imageview, event ):
-        imageview.mousePos = imageview.mapScene2Data(imageview.mapToScene(event.pos()))
-        
-        if event.button() == Qt.MidButton:
-            imageview.setCursor(QCursor())
-            releasePoint = event.pos()
-            imageview._lastPanPoint = releasePoint
-            imageview._dragMode = False
-            imageview._ticker.start(20)
-            
-        if event.button() == Qt.LeftButton:
-            if imageview._isRubberBandZoom:
-                imageview.setDragMode(QGraphicsView.NoDrag)
-                rect = QRectF(imageview.mapToScene(self._rubberBandStart), imageview.mapToScene(event.pos()))
-                imageview.fitInView(rect, Qt.KeepAspectRatio)
-                imageview._isRubberBandZoom = False
-                width, height = imageview.size().width() / rect.width(), imageview.height() / rect.height()
-                imageview._zoomFactor = min(width, height)
-                imageview.setCursor(imageview._cursorBackup)
-                return
+        imageview.mousePos = mousePos = imageview.mapScene2Data(imageview.mapToScene(event.pos()))
+        imageview.oldX, imageview.oldY = imageview.x, imageview.y
+        x = imageview.x = mousePos.x()
+        y = imageview.y = mousePos.y()
+        self._navCtrl.positionCursor( x, y, self._navCtrl._views.index(imageview))
 
-    def onMouseDoubleClickEvent( self, imageview, event ):
+    def onMousePressRight_default( self, imageview, event ):
+        #make sure that we have the cursor at the correct position
+        #before we call the context menu
+        self.onMouseMove_default( imageview, event )
+        pos = event.pos()
+        imageview.customContextMenuRequested.emit( pos )
+        
+    def onMouseDoubleClick_default( self, imageview, event ):
         dataMousePos = imageview.mapScene2Data(imageview.mapToScene(event.pos()))
         imageview.mousePos = dataMousePos # FIXME: remove, when guaranteed, that no longer needed inside imageview
         self._navCtrl.positionSlice(dataMousePos.x(), dataMousePos.y(), self._navCtrl._views.index(imageview))
+
+    ###
+    ### Drag Mode
+    ###
+    def onEntry_drag( self, imageview, event ):
+        imageview.setCursor(QCursor(Qt.SizeAllCursor))
+        imageview._lastPanPoint = event.pos()
+        imageview._crossHairCursor.setVisible(False)
+        imageview._dragMode = True
+        if imageview._ticker.isActive():
+            imageview._deltaPan = QPointF(0, 0)
+
+    def onExit_drag( self, imageview, event ):
+        imageview.mousePos = imageview.mapScene2Data(imageview.mapToScene(event.pos()))
+        imageview.setCursor(QCursor())
+        releasePoint = event.pos()
+        imageview._lastPanPoint = releasePoint
+        imageview._dragMode = False
+        imageview._ticker.start(20)
+
+    def onMouseMove_drag( self, imageview, event ):
+        imageview._deltaPan = QPointF(event.pos() - imageview._lastPanPoint)
+        imageview._panning()
+        imageview._lastPanPoint = event.pos()
 assert issubclass(NavigationInterpreter, InterpreterABC)    
 
 #*******************************************************************************
@@ -176,14 +189,18 @@ class NavigationControler(QObject):
     in a given PositionModel and updates three slice
     views (representing the spatial X, Y and Z slicings)
     accordingly.
+
+    properties:
+    
+    indicateSliceIntersection -- whether to show red/green/blue lines
+        indicating the position of the other two slice views on each slice
+        view
+    
+    enableNavigation -- whether the position is allowed to be changed
     """
-    # all the following signals refer to data coordinates
-    drawing            = pyqtSignal(QPointF)
-    beginDraw          = pyqtSignal(QPointF, object)
-    endDraw            = pyqtSignal(QPointF)
-    
-    erasingToggled     = pyqtSignal(bool)            
-    
+
+    navigationEnabled = pyqtSignal(bool)
+
     @property
     def axisColors( self ):
         return self._axisColors
@@ -205,8 +222,16 @@ class NavigationControler(QObject):
         self._indicateSliceIntersection = show
         for v in self._views:
             v._sliceIntersectionMarker.setVisibility(show)
-        
-    def __init__(self, imageView2Ds, sliceSources, positionModel, brushingModel, time = 0, channel = 0, view3d=None):
+       
+    @property
+    def enableNavigation(self):
+        return self._navigationEnabled
+    @enableNavigation.setter
+    def enableNavigation(self, enabled):
+        self._navigationEnabled = enabled
+        self.navigationEnabled.emit(enabled)
+
+    def __init__(self, imageView2Ds, sliceSources, positionModel, time = 0, channel = 0, view3d=None):
         QObject.__init__(self)
         assert len(imageView2Ds) == 3
 
@@ -217,11 +242,7 @@ class NavigationControler(QObject):
         self._beginStackIndex = 0
         self._endStackIndex   = 1
         self._view3d = view3d
-
-        self.drawingEnabled = False
-        self._isDrawing = False
-        self._tempErase = False
-        self._brushingModel = brushingModel
+        self._navigationEnabled = True
 
         self.axisColors = [QColor(255,0,0,255), QColor(0,255,0,255), QColor(0,0,255,255)]
     
@@ -262,11 +283,15 @@ class NavigationControler(QObject):
                 src.setThrough(0, newTime)
     
     def changeChannel(self, newChannel):
+        if self._model.shape is None:
+            return
         for i in range(3):
             for src in self._sliceSources[i]:
                 src.setThrough(2, newChannel)
 
     def changeSliceRelative(self, delta, axis):
+        if self._model.shape is None:
+            return
         """
         Change slice along a certain axis relative to current slice.
 
@@ -335,16 +360,6 @@ class NavigationControler(QObject):
             return
 
         self._model.cursorPos = newPos
-
-            
-    def beginDrawing(self, imageview, pos):
-        imageview.mousePos = pos
-        self._isDrawing  = True
-        self._brushingModel.beginDrawing(pos, imageview.sliceShape)
-
-    def endDrawing(self, imageview, pos): 
-        self._isDrawing = False
-        self._brushingModel.endDrawing(pos)
     
     #private functions ########################################################
     
@@ -370,6 +385,8 @@ class NavigationControler(QObject):
             src.setThrough(1, num)
 
     def _positionValid(self, pos):
+        if self._model.shape is None:
+            return False
         for i in range(3):
             if pos[i] < 0 or pos[i] >= self._model.shape[i]:
                 return False

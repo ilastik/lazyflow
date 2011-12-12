@@ -1,3 +1,4 @@
+*.swp
 *.pyc
 *~
 *.kdev4
@@ -6,4 +7,5 @@
 .pydevproject
 .settings/
 *.kate-swp
+.ropeproject
 *.DS_Store

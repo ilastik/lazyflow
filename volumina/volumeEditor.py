@@ -29,6 +29,8 @@ except:
 
 class VolumeEditor( QObject ):
     newImageView2DFocus = pyqtSignal()
+    shapeChanged = pyqtSignal()
+
     @property
     def showDebugPatches(self):
         return self._showDebugPatches
@@ -39,19 +41,30 @@ class VolumeEditor( QObject ):
         self._showDebugPatches = show
         
     def lastImageViewFocus(self, axis):
+        print "lastImageViewFocus:", axis
         self._lastImageViewFocus = axis
         self.newImageView2DFocus.emit()
-        
 
-    def __init__( self, shape, layerStackModel, labelsink=None):
+    @property
+    def dataShape(self):
+        return self.posModel.shape5D
+
+    @dataShape.setter
+    def dataShape(self, s):
+        self.posModel.shape5D = s
+        for i, v in enumerate(self.imageViews):
+            v.sliceShape = self.posModel.sliceShape(axis=i)
+        self.view3d.dataShape = s[1:4]
+        self.shapeChanged.emit()
+
+    def __init__( self, layerStackModel, labelsink=None):
         super(VolumeEditor, self).__init__()
-        assert(len(shape) == 5)
 
         ##
         ## properties
         ##
-        self._shape = shape        
         self._showDebugPatches = False
+        self._lastImageViewFocus = None
 
         ##
         ## base components
@@ -65,7 +78,7 @@ class VolumeEditor( QObject ):
         
         self.imagepumps = self._initImagePumps()
 
-        self.posModel = PositionModel(self._shape)
+        self.posModel = PositionModel()
         self.brushingModel = BrushingModel()
 
         self.view3d = self._initView3d() if useVTK else QWidget()
@@ -84,13 +97,13 @@ class VolumeEditor( QObject ):
         # navigation control
         v3d = self.view3d if useVTK else None
         syncedSliceSources = [self.imagepumps[i].syncedSliceSources for i in [0,1,2]]
-        self.navCtrl      = NavigationControler(self.imageViews, syncedSliceSources, self.posModel, self.brushingModel, view3d=v3d)
+        self.navCtrl      = NavigationControler(self.imageViews, syncedSliceSources, self.posModel, view3d=v3d)
         self.navInterpret = NavigationInterpreter(self.navCtrl)
 
         # brushing control
         #self.crosshairControler = CrosshairControler() 
-        self.brushingInterpreter = BrushingInterpreter(self.navInterpret, self.navCtrl)
         self.brushingControler = BrushingControler(self.brushingModel, self.posModel, labelsink)        
+        self.brushingInterpreter = BrushingInterpreter(self.navCtrl, self.brushingControler)
 
         # initial interaction mode
         self.eventSwitch.interpreter = self.navInterpret
@@ -98,8 +111,6 @@ class VolumeEditor( QObject ):
         ##
         ## connect
         ##
-        for i, v in enumerate(self.imageViews):
-            v.sliceShape = self.posModel.sliceShape(axis=i)
         self.posModel.channelChanged.connect(self.navCtrl.changeChannel)
         self.posModel.timeChanged.connect(self.navCtrl.changeTime)
         self.posModel.slicingPositionChanged.connect(self.navCtrl.moveSlicingPosition)
@@ -158,7 +169,7 @@ class VolumeEditor( QObject ):
         return imagepumps
 
     def _initView3d( self ):
-        view3d = OverviewScene(shape=self._shape[1:4])
+        view3d = OverviewScene()
         def onSliceDragged(num, pos):
             newPos = copy.deepcopy(self.posModel.slicingPos)
             newPos[pos] = num

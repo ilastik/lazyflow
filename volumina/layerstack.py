@@ -47,7 +47,11 @@ class LayerStackModel(QAbstractListModel):
     
     def append(self, data):
         self.insert(0, data)
-    
+   
+    def clear(self):
+        if len(self) > 0:
+            self.removeRows(0,len(self))
+
     def insert(self, index, data):
         self.insertRow(index)
         self.setData(self.index(index), data)
@@ -118,7 +122,6 @@ class LayerStackModel(QAbstractListModel):
             beginRow += 1
         
         self.endRemoveRows()
-        assert self.rowCount() == oldRowCount-1
         return True
     
     def flags(self, index):
@@ -131,7 +134,7 @@ class LayerStackModel(QAbstractListModel):
     def supportedDropActions(self):
         return Qt.MoveAction
     
-    def data(self, index, role):
+    def data(self, index, role = Qt.DisplayRole):
         if not index.isValid():
             return None
         if index.row() > len(self._layerStack):

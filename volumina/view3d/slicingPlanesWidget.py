@@ -18,7 +18,7 @@ class SlicingPlanesWidget(vtkPropAssembly):
         for i in range(props.GetNumberOfItems()):
             props.GetNextProp().SetPickable(pickable)
     
-    def __init__(self, dataShape):
+    def __init__(self, dataShape, interactor):
         self.dataShape = dataShape
         self.planes = []
         self.coordinate = [0,0,0]
@@ -64,6 +64,7 @@ class SlicingPlanesWidget(vtkPropAssembly):
             
             pw = vtkImplicitPlaneWidget2()
             pw.SetRepresentation(p)
+            pw.SetInteractor(interactor)
             pw.AddObserver("InteractionEvent", self.__PlanePositionCallback)
             
             self.planes.append(pw)
@@ -101,9 +102,8 @@ class SlicingPlanesWidget(vtkPropAssembly):
         show = not self.planes[axis].GetEnabled()
         self.planes[axis].SetEnabled(show)
     
-    def SetInteractor(self, interactor):
+    def togglePlanesOn(self):
         for i in range(3):
-            self.planes[i].SetInteractor(interactor)
             self.planes[i].On()
     
     def GetCoordinate(self):

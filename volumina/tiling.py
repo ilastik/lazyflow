@@ -82,7 +82,7 @@ class ImageTile(object):
 
 class Tiling(object):
     # base tile size: blockSize x blockSize
-    blockSize = 48
+    blockSize = 256
     #
     # overlap between tiles 
     # positive number prevents rendering artifacts between tiles for certain zoom levels

@@ -21,7 +21,9 @@ class StackedImageSources( QObject ):
     def __init__( self, layerStackModel ):
         super(StackedImageSources, self).__init__()
         self._layerStackModel = layerStackModel
-        
+        #we need to store partial functions to which we connect
+        #for later disconnection
+        self._curryRegistry = {'I':{}, "O":{}, "V":{}}
         #each layer has a single image source, which has been set-up according
         #to the layer's specification
         self._layerToIms = {} #look up layer -> corresponding image source
@@ -50,19 +52,25 @@ class StackedImageSources( QObject ):
         self._layerToIms[layer] = imageSource
         self._imsToLayer[imageSource] = layer
         
-        imageSource.isDirty.connect( partial(self._onImageSourceDirty, imageSource) )
-        layer.opacityChanged.connect( partial(self._onOpacityChanged, layer) )
-        layer.visibleChanged.connect( partial(self._onVisibleChanged, layer) )
+        self._curryRegistry['I'][imageSource] = partial(self._onImageSourceDirty, imageSource)
+        self._curryRegistry['O'][layer] = partial(self._onOpacityChanged, layer)
+        self._curryRegistry['V'][layer] = partial(self._onVisibleChanged, layer)
+
+        imageSource.isDirty.connect( self._curryRegistry['I'][imageSource] ) 
+        layer.opacityChanged.connect( self._curryRegistry['O'][layer] )
+        layer.visibleChanged.connect( self._curryRegistry['V'][layer] )
 
         self.stackChanged.emit()
 
     def deregister( self, layer ):
         assert layer in self._layerToIms, "layer %s is not registered; can't be deregistered" % str(layer)
         ims = self._layerToIms[layer]
-        ims.isDirty.disconnect( self.isDirty )
-        layer.opacityChanged.disconnect( self._curryRegistry[layer] )
-        layer.visibleChanged.disconnect( self._onVisibleChanged )
-        del self._curryRegistry[layer]
+        ims.isDirty.disconnect( self._curryRegistry['I'][ims] )
+        layer.opacityChanged.disconnect( self._curryRegistry['O'][layer] )
+        layer.visibleChanged.disconnect( self._curryRegistry['V'][layer] )
+        del self._curryRegistry['I'][ims]
+        del self._curryRegistry['V'][layer]
+        del self._curryRegistry['O'][layer]
         del self._layerToIms[layer]
         del self._imsToLayer[ims]
         self.stackChanged.emit()
