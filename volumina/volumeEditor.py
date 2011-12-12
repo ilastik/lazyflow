@@ -165,9 +165,9 @@ class VolumeEditor( QObject ):
         alongTZC = SliceProjection( abscissa = 1, ordinate = 2, along = [0,3,4] )
 
         imagepumps = []
-        imagepumps.append(pixelpipeline.imagepump.ImagePump( self.layerStack, alongTXC ))
-        imagepumps.append(pixelpipeline.imagepump.ImagePump( self.layerStack, alongTYC ))
-        imagepumps.append(pixelpipeline.imagepump.ImagePump( self.layerStack, alongTZC ))
+        imagepumps.append(volumina.pixelpipeline.imagepump.ImagePump( self.layerStack, alongTXC ))
+        imagepumps.append(volumina.pixelpipeline.imagepump.ImagePump( self.layerStack, alongTYC ))
+        imagepumps.append(volumina.pixelpipeline.imagepump.ImagePump( self.layerStack, alongTZC ))
         return imagepumps
 
     def _initView3d( self ):
