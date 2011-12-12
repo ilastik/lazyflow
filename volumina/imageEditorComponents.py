@@ -31,6 +31,7 @@ from PyQt4.QtCore import Qt, QPointF, QSize, pyqtSignal, QEvent, QObject, QTimer
 from PyQt4.QtGui import QLabel, QPen, QPainter, QPixmap, QHBoxLayout, \
                         QFont, QPainterPath, QBrush, QSpinBox, QAbstractSpinBox, \
                         QSizePolicy, QWidget, QVBoxLayout, QColor
+from eventswitch import InterpreterABC
 
 class ImageView2DDockWidget(QWidget):
     def __init__(self, graphicsView):
@@ -248,7 +249,7 @@ class   NavigationInterpreter(QObject):
     def start( self ):
         self._navCtrl.drawingEnabled = False
 
-    def finalize( self ):
+    def stop( self ):
         pass
 
     def eventFilter( self, watched, event ):
@@ -325,6 +326,7 @@ class   NavigationInterpreter(QObject):
             newGrviewCenter = grviewCenter + offset
             imageview.centerOn(newGrviewCenter)
             self.onMouseMoveEvent( imageview, event)
+assert issubclass(NavigationInterpreter, InterpreterABC)    
 
 #*******************************************************************************
 # N a v i g a t i o n C o n t r o l e r                                        *
