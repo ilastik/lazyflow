@@ -240,7 +240,7 @@ class ImageView2D(QGraphicsView):
     def focusInEvent(self, event):
         if self._hud is not None:
             self._hud.changeOpacity(1)
-            self.focusChanged.emit()
+        self.focusChanged.emit()
         
     def focusOutEvent(self, event):
         if self._hud is not None:
