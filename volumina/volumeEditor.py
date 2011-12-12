@@ -3,7 +3,9 @@ import copy
 from PyQt4.QtCore import Qt, pyqtSignal, QObject
 from PyQt4.QtGui import QApplication, QWidget, QBrush, QPen, QColor, QTransform
 
-import pixelpipeline.imagepump
+import volumina
+import volumina.pixelpipeline
+import volumina.pixelpipeline.imagepump
 from eventswitch import EventSwitch
 from imageScene2D import ImageScene2D
 from imageView2D import ImageView2D
