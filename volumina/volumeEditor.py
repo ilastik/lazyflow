@@ -1,6 +1,6 @@
 import copy
 
-from PyQt4.QtCore import Qt, pyqtSignal, QObject
+from PyQt4.QtCore import Qt, pyqtSignal, QObject, QTimer
 from PyQt4.QtGui import QApplication, QWidget, QBrush, QPen, QColor, QTransform
 
 import volumina
@@ -124,7 +124,12 @@ class VolumeEditor( QObject ):
         self.imageViews[0].setTransform(QTransform(1,0,0,0,1,0,0,0,1))
         self.imageViews[1].setTransform(QTransform(0,1,1,0,0,0))
         self.imageViews[2].setTransform(QTransform(0,1,1,0,0,0))
-        
+
+        #make sure that exactly one of the three slice views has focus
+        #when the program starts up
+        def initialFocus():
+            self.imageViews[0].setFocus(Qt.MouseFocusReason);
+        QTimer.singleShot(0,initialFocus)
 
     def scheduleSlicesRedraw(self):
         for s in self.imageScenes:
