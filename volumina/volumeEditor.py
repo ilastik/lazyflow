@@ -43,7 +43,6 @@ class VolumeEditor( QObject ):
         self._showDebugPatches = show
         
     def lastImageViewFocus(self, axis):
-        print "lastImageViewFocus:", axis
         self._lastImageViewFocus = axis
         self.newImageView2DFocus.emit()
 
