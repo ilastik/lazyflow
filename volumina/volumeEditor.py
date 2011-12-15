@@ -141,13 +141,11 @@ class VolumeEditor( QObject ):
 
     def cleanUp(self):
         QApplication.processEvents()
-        print "VolumeEditor: cleaning up "
         for scene in self._imageViews:
             scene.close()
             scene.deleteLater()
         self._imageViews = []
         QApplication.processEvents()
-        print "finished saving thread"
     
     def closeEvent(self, event):
         event.accept()
