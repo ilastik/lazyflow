@@ -221,14 +221,16 @@ class Viewer(QMainWindow):
         if display == 'grayscale':
             if interpretChannelsAs == None:
                 source = Source(a)
-                layer = GrayscaleLayer(source)
+                type_info = numpy.iinfo(a.dtype)
+                if type_info.min < 0:
+                    print "WARNING: datatype is not bound to semi-positive values"
+                layer = GrayscaleLayer(source, range=(0, type_info.max))
             elif interpretChannelsAs == "RGB":
                 if aSlices is not None:
                     layer = RGBALayer(LazyflowSource(aSlices[0]), LazyflowSource(aSlices[1]), LazyflowSource(aSlices[2])) 
                 else:
                     assert len(a.shape) == 3
                     layer = RGBALayer(Source(a[:,:,0]), Source(a[:,:,1]), Source(a[:,:,2]))
-        
         elif display == 'randomcolors':
             if a.dtype != numpy.uint8:
                 print "layer '%s': implicit conversion from %s to uint8" \

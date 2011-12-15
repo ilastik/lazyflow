@@ -63,6 +63,7 @@ class GrayscaleImageSource( ImageSource ):
         self._layer = layer
         
         self._arraySource2D.isDirty.connect(self.setDirty)
+        self._layer.normalizeChanged.connect(lambda: self.setDirty((slice(None,None), slice(None,None))))
 
     def request( self, qrect ):
         if volumina.verboseRequests:
@@ -75,7 +76,7 @@ class GrayscaleImageSource( ImageSource ):
         assert isinstance(qrect, QRect)
         s = rect2slicing(qrect)
         req = self._arraySource2D.request(s)
-        return GrayscaleImageRequest( req, self._layer.thresholding )
+        return GrayscaleImageRequest( req, self._layer.normalize[0] )
 assert issubclass(GrayscaleImageSource, SourceABC)
 
 class GrayscaleImageRequest( object ):
@@ -92,13 +93,7 @@ class GrayscaleImageRequest( object ):
         
     def toImage( self ):
         a = self._arrayreq.getResult().squeeze()
-        if self._normalize is not None:
-            a = a.astype(np.float32)
-            a = (a - self._normalize[0])*255.0 / (self._normalize[1]-self._normalize[0])
-            a[a > 255] = 255
-            a[a < 0]   = 0
-            a = a.astype(np.uint8)
-        img = gray2qimage(a)
+        img = gray2qimage(a, self._normalize)
         return img.convertToFormat(QImage.Format_ARGB32_Premultiplied)
             
     def notify( self, callback, **kwargs ):
