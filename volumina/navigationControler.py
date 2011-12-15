@@ -219,7 +219,7 @@ class NavigationControler(QObject):
         self._indicateSliceIntersection = show
         for v in self._views:
             v._sliceIntersectionMarker.setVisibility(show)
-       
+     
     @property
     def enableNavigation(self):
         return self._navigationEnabled
