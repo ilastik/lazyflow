@@ -142,10 +142,11 @@ class PositionStatusBar2D(QHBoxLayout):
         self.xSpinBox.setStyleSheet("QSpinBox { color: " + str(yforegroundColor.name()) + "; font: bold; background-color: " + str(ybackgroundColor.name()) + "; border:0;}")
         self.addWidget(self.xSpinBox)
         self.addStretch()
+    
+    def updateCoordLabels(self, pos):
+        self.xSpinBox.setValue(pos[0])
+        self.ySpinBox.setValue(pos[1])
             
-    def setMouseCoords(self, x, y):
-        self.xSpinBox.setValue(x)
-        self.ySpinBox.setValue(y)
 
 #*******************************************************************************
 # P o s i t i o n M o d e l                                                    *
@@ -237,9 +238,6 @@ class   NavigationInterpreterImage(QObject):
             return True
         elif etype == QEvent.MouseButtonRelease:
             self.onMouseReleaseEvent( watched, event )
-            return True
-        elif etype == QEvent.MouseButtonDblClick:
-            self.onMouseDblClickEvent( watched, event )
             return True
         else:
             return False

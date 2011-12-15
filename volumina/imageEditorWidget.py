@@ -28,12 +28,15 @@
 #    or implied, of their employers.
 
 from PyQt4.QtCore import Qt
-from PyQt4.QtGui import QApplication, QWidget, QSplitter, QHBoxLayout, QColor,\
-                        QSizePolicy
+from PyQt4.QtGui import QApplication, QWidget, QSplitter, QColor,\
+                        QSizePolicy, QGridLayout
 from imageEditorComponents import ImageViewWidget, PositionStatusBar2D
 from pixelpipeline.datasources import ArraySource
 from imageEditor import ImageEditor
-
+from volumina.layer import GrayscaleLayer
+from volumina.layerstack import LayerStackModel
+from testing import TwoDtestVolume
+import numpy
 
 
 #*******************************************************************************
@@ -53,67 +56,110 @@ class ImageEditorWidget(QWidget):
     def init(self, imageEditor):
 
         self._ie = imageEditor
-
-        self.layout = QHBoxLayout()
-        self.layout.setContentsMargins(0, 0, 0, 0)        
-        self.setLayout(self.layout)
         
-       
-        self.imageViewWigdet = ImageViewWidget(self, self._ie.imageView[0])
-        self.positionStatusbar2D = PositionStatusBar2D()
-        self.positionStatusbar2D.create(\
+        self.grid = QGridLayout()
+        self.setLayout(self.grid)
+        self.updateGeometry()
+        self.update()
+        
+    
+    def addImageEditor(self,editor,position=(0,0)):
+        
+        imageViewWigdet = ImageViewWidget(self, editor.imageView[0])
+        positionStatusbar2D = PositionStatusBar2D()
+        positionStatusbar2D.create(\
             QColor("green"), QColor("white"), \
             QColor("blue"), QColor("white"),  \
             QColor("gray"), QColor("white") \
         )
-        self.imageViewWigdet.addStatusBar(self.positionStatusbar2D)
-        self.layout.addWidget(self.imageViewWigdet)
-
-        self._ie.posModel.cursorPositionChanged.connect(self._updateInfoLabels)
+        editor.posModel.cursorPositionChanged.connect(positionStatusbar2D.updateCoordLabels)
+        imageViewWigdet.addStatusBar(positionStatusbar2D)
         
-        self.updateGeometry()
-        self.update()
-        self.imageViewWigdet.update()        
+        self.checkPosition(position)
+        self.grid.addWidget(imageViewWigdet,position[0],position[1])
+    
+    def checkPosition(self,position):
+        
+        widget = self.grid.itemAtPosition(position[0], position[1])
+        if widget:
+            self.grid.removeItem(widget)
+            freePos = self.getFreePosition()
+            self.grid.addItem(widget, freePos[0], freePos[1])
+    
+    def getFreePosition(self):
+        
+        i=0
+        j=0
+        while self.grid.itemAtPosition(i,j):
+            while i >= j:
+                if self.grid.itemAtPosition(i,j):
+                    break
+                j=j+1
+            i=i+1
+            
+        return (i,j)
 
-    def _updateInfoLabels(self, pos):
-        self.positionStatusbar2D.setMouseCoords(*pos)
-             
 #*******************************************************************************
 # i f   _ _ n a m e _ _   = =   " _ _ m a i n _ _ "                            *
 #*******************************************************************************
+
+class testWidget(object):
+    
+    def __init__(self):
+        
+        app = QApplication(sys.argv)
+    
+        s = QSplitter()
+   
+        editor = self.generateImageEditor(100)
+        editor2 = self.generateImageEditor(100)
+        editor3 = self.generateImageEditor(100)
+    
+        widget = ImageEditorWidget(parent=None, editor=editor)
+        
+        widget.addImageEditor(editor)
+        widget.addImageEditor(editor2,(0,1))
+        widget.addImageEditor(editor3,(0,1))
+        
+        s.addWidget(widget)
+        s.show()
+
+        app.exec_()
+
+
+    def generateImageEditor(self,dimension=200):
+        
+        twoDtestVolume1 = TwoDtestVolume(dimension)
+        twoDtestVolume2 = TwoDtestVolume(200)
+        lower = numpy.floor(1.0*dimension/4.0)
+        middel = numpy.floor((1.0*dimension/2.0))
+        upper  = numpy.floor((3.0*dimension/4.0))
+        a=numpy.random.randint(lower,middel)
+        b=numpy.random.randint(middel,upper)
+        twoDtestVolume2[a:b,a:b]=120
+        source1 = ArraySource(twoDtestVolume1)
+        source2 = ArraySource(twoDtestVolume2)
+        layerstack = LayerStackModel()
+        layerstack.append(GrayscaleLayer(source1))
+        layerstack.append(GrayscaleLayer(source2))
+        shape = source1._array.shape
+        editor = ImageEditor(layerstack)
+        editor.dataShape = shape
+        return editor
+    
+        
 
 if __name__ == "__main__":
     #make the program quit on Ctrl+C
     import sys
     import signal   
-    
     signal.signal(signal.SIGINT, signal.SIG_DFL)
-   
-    from volumina.layer import GrayscaleLayer
-    from volumina.layerstack import LayerStackModel
-    from testing import TwoDtestVolume
+        
+     
     
-    app = QApplication(sys.argv)
+    testies = testWidget()
     
-    s = QSplitter()
-    
-    twoDtestVolume1 = TwoDtestVolume(200)
-    twoDtestVolume2 = TwoDtestVolume(200)
-    twoDtestVolume2[75:125,75:125]=0
-    source1 = ArraySource(twoDtestVolume1)
-    source2 = ArraySource(twoDtestVolume2)
-    layerstack = LayerStackModel()
-    layerstack.append(GrayscaleLayer(source1))
-    layerstack.append(GrayscaleLayer(source2))
-    shape = source1._array.shape
-    editor = ImageEditor(layerstack)
-    editor.dataShape = twoDtestVolume2.shape
-    
-    
-    widget = ImageEditorWidget(parent=None, editor=editor)
+        
 
 
-    s.addWidget(widget)
-    s.show()
-
-    app.exec_()
+        
