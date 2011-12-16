@@ -91,8 +91,7 @@ class VolumeEditorWidget(QWidget):
         self.quadview.statusBar.timeSpinBox.setRange(0,self.editor.posModel.shape5D[0] - 1)
         
         for i in range(3):
-            #FIXME: do not depend on order in imageViews here
-            self.editor.imageViews[2-i].hud.setMaximum(self.editor.posModel.volumeExtent(i)-1)
+            self.editor.imageViews[i].hud.setMaximum(self.editor.posModel.volumeExtent(i)-1)
     
     def init(self, volumina):
         self.editor = volumina
