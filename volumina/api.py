@@ -390,7 +390,7 @@ if __name__ == '__main__':
 
     lenaFile = os.path.split(volumina._testing.__file__)[0]+"/lena.png"
 
-    lenaRGB = vigra.impex.readImage(lenaFile).view(numpy.ndarray).swapaxes(0,1)
+    lenaRGB = vigra.impex.readImage(lenaFile).view(numpy.ndarray).swapaxes(0,1).astype(numpy.uint8)
 
 
     if haveLazyflow:
@@ -450,11 +450,11 @@ if __name__ == '__main__':
 
     #test adding and removing layers
     oldLen = len(v.layerstack)
-    l = v.addLayer(numpy.zeros((1000,800,50)))
+    l = v.addLayer(numpy.zeros((1000,800,50), dtype=numpy.uint8))
     assert len(v.layerstack) == oldLen+1
     v.removeLayer(l)
     assert len(v.layerstack) == oldLen
-    l = v.addLayer(numpy.zeros((1000,800,50)), name="xxx")
+    l = v.addLayer(numpy.zeros((1000,800,50), dtype=numpy.uint8), name="xxx")
     assert len(v.layerstack) == oldLen+1
     v.removeLayer("xxx")
     assert len(v.layerstack) == oldLen
