@@ -225,7 +225,7 @@ class RGBALayer( NormalizableLayer ):
                 dlg.showAlphaThresholds(False)
              
             def dbgPrint(layerIdx, a, b):
-                self.set_normalize(self.channelName[layerIdx], (a, b))
+                self.set_normalize(layerIdx, (a, b))
                 print "normalization changed for channel=%d to [%d, %d]" % (layerIdx, a,b)
             dlg.redChannelThresholdingWidget.rangeChanged.connect(  partial(dbgPrint, 0))
             dlg.greenChannelThresholdingWidget.rangeChanged.connect(partial(dbgPrint, 1))
