@@ -135,9 +135,9 @@ class GrayscaleLayer( NormalizableLayer ):
             def dbgPrint(a, b):
                 self.set_normalize(0, (a,b))
                 print "normalization changed to [%d, %d]" % (a,b)
-            dlg.grayChannelThresholdingWidget.valueChanged.connect(dbgPrint)
             dlg.grayChannelThresholdingWidget.setRange(self.range[0][0], self.range[0][1])
             dlg.grayChannelThresholdingWidget.setValue(self.normalize[0][0], self.normalize[0][1])
+            dlg.grayChannelThresholdingWidget.valueChanged.connect(dbgPrint)
             dlg.show()
 
 #*******************************************************************************
