@@ -1,6 +1,9 @@
 from PyQt4.QtCore import QObject, pyqtSignal
 from PyQt4.QtGui import QColor
 from functools import partial
+from widgets.layerDialog import GrayscaleLayerDialog
+from widgets.layerDialog import RGBALayerDialog
+
 
 #*******************************************************************************
 # L a y e r                                                                    *
@@ -112,7 +115,6 @@ class GrayscaleLayer( NormalizableLayer ):
         self._range = [range] 
     
     def contextMenu(self, parent, pos):
-        from widgets.layerDialog import GrayscaleLayerDialog
         from PyQt4.QtGui import QMenu, QAction
          
         menu = QMenu("Menu", parent)
@@ -197,7 +199,6 @@ class RGBALayer( NormalizableLayer ):
         self._range = 4*[(0,255)]
     
     def contextMenu(self, parent, pos):
-        from widgets.layerDialog import RGBALayerDialog
         from PyQt4.QtGui import QMenu, QAction
          
         menu = QMenu("Menu", parent)

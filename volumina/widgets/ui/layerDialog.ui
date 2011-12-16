@@ -253,7 +253,7 @@
   <customwidget>
    <class>ThresholdingWidget</class>
    <extends>QWidget</extends>
-   <header>thresholdingWidget</header>
+   <header>volumina.widgets.thresholdingWidget</header>
   </customwidget>
  </customwidgets>
  <resources/>
