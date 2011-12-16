@@ -95,8 +95,12 @@ class VolumeEditorWidget(QWidget):
             self.editor.imageViews[2-i].hud.setMaximum(self.editor.posModel.volumeExtent(i)-1)
     
     def init(self, volumina):
-        self._ve = volumina
         self.editor = volumina
+
+        def onViewFocused():
+            axis = self.editor._lastImageViewFocus;
+            self.toggleSelectedHUD.setChecked( self.editor.imageViews[axis]._hud.isVisible() )
+        self.editor.newImageView2DFocus.connect(onViewFocused)
 
         self.layout = QHBoxLayout()
         self.layout.setContentsMargins(0, 0, 0, 0)
@@ -106,43 +110,43 @@ class VolumeEditorWidget(QWidget):
         # setup quadview
         axisLabels = ["X", "Y", "Z"]
         axisColors = [QColor("#dc143c"), QColor("green"), QColor("blue")]
-        for i, v in enumerate(self._ve.imageViews):
+        for i, v in enumerate(self.editor.imageViews):
             v.hud = ImageView2DHud()
             #connect interpreter
             v.hud.createImageView2DHud(axisLabels[i], 0, axisColors[i], QColor("white"))
-            v.hud.sliceSelector.valueChanged.connect(partial(self._ve.navCtrl.changeSliceAbsolute, axis=i))
+            v.hud.sliceSelector.valueChanged.connect(partial(self.editor.navCtrl.changeSliceAbsolute, axis=i))
 
-        self.quadview = QuadView(self, self._ve.imageViews[2], self._ve.imageViews[0], self._ve.imageViews[1], self._ve.view3d)
+        self.quadview = QuadView(self, self.editor.imageViews[2], self.editor.imageViews[0], self.editor.imageViews[1], self.editor.view3d)
         self.quadViewStatusBar = QuadStatusBar()
         self.quadViewStatusBar.createQuadViewStatusBar(QColor("#dc143c"), QColor("white"), QColor("green"), QColor("white"), QColor("blue"), QColor("white"), QColor("gray"), QColor("white"))
         self.quadview.addStatusBar(self.quadViewStatusBar)
         self.layout.addWidget(self.quadview)
 
         def setChannel(c):
-            print "set channel = %d, posModel has channel = %d" % (c, self._ve.posModel.channel)
-            if c == self._ve.posModel.channel:
+            print "set channel = %d, posModel has channel = %d" % (c, self.editor.posModel.channel)
+            if c == self.editor.posModel.channel:
                 return
-            self._ve.posModel.channel = c
+            self.editor.posModel.channel = c
         self.quadview.statusBar.channelSpinBox.valueChanged.connect(setChannel)
         def getChannel(newC):
             self.quadview.statusBar.channelSpinBox.setValue(newC)
-        self._ve.posModel.channelChanged.connect(getChannel)
+        self.editor.posModel.channelChanged.connect(getChannel)
         def setTime(t):
-            print "set channel = %d, posModel has time = %d" % (t, self._ve.posModel.time)
-            if t == self._ve.posModel.time:
+            print "set channel = %d, posModel has time = %d" % (t, self.editor.posModel.time)
+            if t == self.editor.posModel.time:
                 return
-            self._ve.posModel.time = t
+            self.editor.posModel.time = t
         self.quadview.statusBar.timeSpinBox.valueChanged.connect(setTime)
         def getTime(newT):
             self.quadview.statusBar.timeSpinBox.setValue(newT)
-        self._ve.posModel.timeChanged.connect(getTime) 
+        self.editor.posModel.timeChanged.connect(getTime) 
 
 
         def toggleSliceIntersection(state):
-            self._ve.navCtrl.indicateSliceIntersection = (state == Qt.Checked)
+            self.editor.navCtrl.indicateSliceIntersection = (state == Qt.Checked)
         self.quadview.statusBar.positionCheckBox.stateChanged.connect(toggleSliceIntersection)
 
-        self._ve.posModel.cursorPositionChanged.connect(self._updateInfoLabels)
+        self.editor.posModel.cursorPositionChanged.connect(self._updateInfoLabels)
 
         # shortcuts
         self._initShortcuts()
@@ -209,9 +213,9 @@ class VolumeEditorWidget(QWidget):
 
     def _initShortcuts(self):
         self.shortcuts = []
-        #self.shortcuts.append(self._shortcutHelper("Ctrl+Z", "Labeling", "History undo", self, self._ve.historyUndo, Qt.ApplicationShortcut, True))
-        #self.shortcuts.append(self._shortcutHelper("Ctrl+Shift+Z", "Labeling", "History redo", self, self._ve.historyRedo, Qt.ApplicationShortcut, True))
-        #self.shortcuts.append(self._shortcutHelper("Ctrl+Y", "Labeling", "History redo", self, self._ve.historyRedo, Qt.ApplicationShortcut, True))
+        #self.shortcuts.append(self._shortcutHelper("Ctrl+Z", "Labeling", "History undo", self, self.editor.historyUndo, Qt.ApplicationShortcut, True))
+        #self.shortcuts.append(self._shortcutHelper("Ctrl+Shift+Z", "Labeling", "History redo", self, self.editor.historyRedo, Qt.ApplicationShortcut, True))
+        #self.shortcuts.append(self._shortcutHelper("Ctrl+Y", "Labeling", "History redo", self, self.editor.historyRedo, Qt.ApplicationShortcut, True))
         
         def fullscreenView(axis):
             m = not self.quadview.maximized
@@ -220,26 +224,26 @@ class VolumeEditorWidget(QWidget):
         
         maximizeShortcuts = ['x', 'y', 'z']
         maximizeViews     = [1,   2,     0]
-        for i, v in enumerate(self._ve.imageViews):
+        for i, v in enumerate(self.editor.imageViews):
             self.shortcuts.append(self._shortcutHelper(maximizeShortcuts[i], "Navigation", \
                                   "Enlarge slice view %s to full size" % maximizeShortcuts[i], \
                                   self, partial(fullscreenView, maximizeViews[i]), Qt.WidgetShortcut))
             
-            #self.shortcuts.append(self._shortcutHelper("n", "Labeling", "Increase brush size", v,self._ve._drawManager.brushSmaller, Qt.WidgetShortcut))
-            #self.shortcuts.append(self._shortcutHelper("m", "Labeling", "Decrease brush size", v, self._ve._drawManager.brushBigger, Qt.WidgetShortcut))
+            #self.shortcuts.append(self._shortcutHelper("n", "Labeling", "Increase brush size", v,self.editor._drawManager.brushSmaller, Qt.WidgetShortcut))
+            #self.shortcuts.append(self._shortcutHelper("m", "Labeling", "Decrease brush size", v, self.editor._drawManager.brushBigger, Qt.WidgetShortcut))
             self.shortcuts.append(self._shortcutHelper("+", "Navigation", "Zoom in", v,  v.zoomIn, Qt.WidgetShortcut))
             self.shortcuts.append(self._shortcutHelper("-", "Navigation", "Zoom out", v, v.zoomOut, Qt.WidgetShortcut))
             
             self.shortcuts.append(self._shortcutHelper("c", "Navigation", "Center image", v,  v.centerImage, Qt.WidgetShortcut))
             self.shortcuts.append(self._shortcutHelper("h", "Navigation", "Toggle hud", v,  v.toggleHud, Qt.WidgetShortcut))
             
-            self.shortcuts.append(self._shortcutHelper("q", "Navigation", "Switch to next channel",     v, self._ve.nextChannel,     Qt.WidgetShortcut))
-            self.shortcuts.append(self._shortcutHelper("a", "Navigation", "Switch to previous channel", v, self._ve.previousChannel, Qt.WidgetShortcut))
+            self.shortcuts.append(self._shortcutHelper("q", "Navigation", "Switch to next channel",     v, self.editor.nextChannel,     Qt.WidgetShortcut))
+            self.shortcuts.append(self._shortcutHelper("a", "Navigation", "Switch to previous channel", v, self.editor.previousChannel, Qt.WidgetShortcut))
             
             def sliceDelta(axis, delta):
-                newPos = copy.copy(self._ve.posModel.slicingPos)
+                newPos = copy.copy(self.editor.posModel.slicingPos)
                 newPos[axis] += delta
-                self._ve.posModel.slicingPos = newPos
+                self.editor.posModel.slicingPos = newPos
             self.shortcuts.append(self._shortcutHelper("p", "Navigation", "Slice up",   v, partial(sliceDelta, i, 1),  Qt.WidgetShortcut))
             self.shortcuts.append(self._shortcutHelper("o", "Navigation", "Slice down", v, partial(sliceDelta, i, -1), Qt.WidgetShortcut))
             

@@ -25,6 +25,7 @@ import vigra
 haveLazyflow = True
 try:
     from volumina.io import Op5ifyer
+    from lazyflow.operators.generic import OpMultiArraySlicer
 except ImportError:
     haveLazyflow = False
 from volumina.io import Array5d
@@ -115,9 +116,8 @@ class Viewer(QMainWindow):
         name.
         """
 
-        if hasattr(a, 'axistags') and not hasattr(a, '_metaParent'):
-            #vigra array with axistags
-            a = a.withAxes('t', 'x', 'y', 'z', 'c').view(numpy.ndarray)
+        aSlices = None #in case a needs to be split by a lazyflow operator
+
 
         if len(a.shape) not in [2,3,5]:
             raise RuntimeError("Cannot interpret array with: shape=%r" \
@@ -128,50 +128,106 @@ class Viewer(QMainWindow):
             volumeImage = False
         if len(a.shape) == 3 and a.shape[2] == 3 and interpretChannelsAs == 'RGB':
             volumeImage = False
+        viewerType = "volume 5D"
+        if not volumeImage: viewerType = "image 2D"
+        print "  treating as %s" % viewerType
 
-        Source = ArraySource
+        aType = None
         if hasattr(a, '_metaParent'):
-            #this is a lazyflow OutputSlot object
-            Source = LazyflowSource
-            if len(a.shape) == 3:
-                print "lazyflow input has shape %r" % (a.shape,)
-                o = Op5ifyer(a.operator.graph)
-                o.inputs['Input'].connect(a)
-                a = o.outputs['Output']
-                print "  -> new shape: %r" % (a.shape,)
-        elif len(a.shape) != 5 and isinstance(a, numpy.ndarray) and volumeImage:
-            a = a[numpy.newaxis, ..., numpy.newaxis]
+            aType = 'lazyflow'
+        elif hasattr(a, 'axistags'):
+            aType = 'vigra'
+        elif isinstance(a, numpy.ndarray):
+            aType = 'numpy'
+        else:
+            aType = 'generic'
 
-        elif not isinstance(a, numpy.ndarray): 
+        #
+        # construct a canonical form for arrays:
+        #
+        # 2D: x,y,c (to be viewed with image viewer)
+        # 5D: t,x,y,z,c (to be viewed with volume viewer)
+        #
+
+        #convert from LAZYFLOW
+        if aType == 'lazyflow':
+            Source = LazyflowSource
+            if volumeImage:
+                if len(a.shape) < 5:
+                    o = Op5ifyer(a.operator.graph)
+                    o.inputs['Input'].connect(a)
+                    a = o.outputs['Output']
+            elif not volumeImage:
+                o = OpMultiArraySlicer(a.operator.graph)
+                o.inputs['Input'].connect(a)
+                o.inputs['AxisFlag'].setValue('c')
+                aSlices = o.outputs['Slices']
+                class A:
+                    pass
+                a = A(); a.shape = aSlices[0].shape
+
+        #convert from VIGRANUMPY ARRAY
+        elif aType == 'vigra':
+            if volumeImage:
+                #vigra array with axistags
+                a = a.withAxes('t', 'x', 'y', 'z', 'c').view(numpy.ndarray)
+            else:
+                a = a.withAxes('x', 'y', 'c').view(numpy.ndarray)
+            Source = ArraySource
+
+        #convert from NUMPY ARRAY
+        elif aType == 'numpy':
+            if volumeImage:
+                if len(a.shape) == 3:
+                    a = a[numpy.newaxis, ..., numpy.newaxis]
+                elif len(a.shape) != 5:
+                    raise RuntimeError("Cannot interpret numpy array with shape %r as 5D volume" % (a.shape,))
+            Source = ArraySource
+
+        #convert from GENERIC ARRAY
+        elif aType == 'generic': 
             # not a numpy array. Maybe h5py or something else. Embed it.
             if(hasattr(a, 'dtype')):
                 a = Array5d(a, dtype=a.dtype)
             else:
-                a = Array5d(a, dtype=np.uint8)                
+                a = Array5d(a, dtype=np.uint8)
+            Source = ArraySource
 
-        if volumeImage and (self.editor is None or self.editor.dataShape != a.shape):
+        #
+        # initialize the proper viewer (2D or 5D)
+        #
+
+        if not volumeImage:
+            init = self._initImageViewing
+            shape = a.shape[0:2] #2D
+            instance = ImageEditor
+        else:
+            init = self._initVolumeViewing
+            shape = a.shape #5D
+            instance = VolumeEditor
+
+        if self.editor is None or self.editor.dataShape != shape:
             if self.editor:
-                print "  new volume layer '%s', shape %r is not compatible with existing shape %r" % (name, a.shape, self.editor.dataShape)
-            self.layerstack.clear()
-            if isinstance(self.editor, ImageEditor) or self.editor is None:
-                self._initVolumeViewing()
-            self.editor.dataShape = a.shape
+                print "  new %s layer '%s', shape %r is not compatible with existing shape %r" % (viewerType, name, shape, self.editor.dataShape)
+            if not isinstance(self.editor, instance) or self.editor is None:
+                init()
+            self.editor.dataShape = shape
             print "  --> resetting viewer to shape=%r and zero layers" % (self.editor.dataShape,) 
-        elif not volumeImage and (self.editor is None or self.editor.dataShape != a.shape[0:2]):
-            if self.editor:
-                print "  new image layer '%s', shape %r is not compatible with existing shape %r" % (name, a.shape[0:2], self.editor.dataShape)
-            self.layerstack.clear()
-            if isinstance(self.editor, VolumeEditor) or self.editor is None:
-                self._initImageViewing()
-            self.editor.dataShape = a.shape[0:2]
-            print "  --> resetting viewer to shape=%r and zero layers" % (self.editor.dataShape,) 
+
+        #
+        # create layer
+        #
 
         if display == 'grayscale':
             if interpretChannelsAs == None:
                 source = Source(a)
                 layer = GrayscaleLayer(source)
             elif interpretChannelsAs == "RGB":
-                layer = RGBALayer(Source(a[:,:,0]), Source(a[:,:,1]), Source(a[:,:,2]))
+                if aSlices is not None:
+                    layer = RGBALayer(LazyflowSource(aSlices[0]), LazyflowSource(aSlices[1]), LazyflowSource(aSlices[2])) 
+                else:
+                    assert len(a.shape) == 3
+                    layer = RGBALayer(Source(a[:,:,0]), Source(a[:,:,1]), Source(a[:,:,2]))
         
         elif display == 'randomcolors':
             if a.dtype != numpy.uint8:
@@ -185,6 +241,7 @@ class Viewer(QMainWindow):
             layer = ColortableLayer(source, self._randomColors())
         else:
             raise RuntimeError("unhandled type of overlay")
+
         layer.name = name
         layer.opacity = opacity
         layer.visible = visible
@@ -328,10 +385,16 @@ class Viewer(QMainWindow):
 if __name__ == '__main__':
     from scipy import lena
     from volumina import _testing
-    lenaRGB = vigra.impex.readImage(os.path.split(volumina._testing.__file__)[0]+"/lena.png").view(numpy.ndarray).swapaxes(0,1)
+
+    lenaFile = os.path.split(volumina._testing.__file__)[0]+"/lena.png"
+
+    lenaRGB = vigra.impex.readImage(lenaFile).view(numpy.ndarray).swapaxes(0,1)
+
 
     if haveLazyflow:
+        from lazyflow.operators import OpImageReader
         from lazyflow.graph import Operator, OutputSlot, InputSlot
+        from lazyflow.graph import Graph
 
         class OpOnDemand(Operator):
             """This simple operator draws (upon any request)
@@ -354,6 +417,10 @@ if __name__ == '__main__':
             def getOutSlot(self, slot, key, result):
                 result[:] = numpy.random.randint(0, 255)
 
+        g = Graph()
+        lenaLazyflow = OpImageReader(g)
+        lenaLazyflow.inputs["Filename"].setValue(lenaFile)
+
     #make the program quit on Ctrl+C
     import signal
     signal.signal(signal.SIGINT, signal.SIG_DFL)
@@ -365,6 +432,9 @@ if __name__ == '__main__':
 
     v.addLayer(lena(), name='lena gray')
     v.addLayer(lenaRGB, name='lena RGB', interpretChannelsAs='RGB')
+
+    if haveLazyflow:
+        v.addLayer(lenaLazyflow.outputs['Image'], name='lena lazyflow', interpretChannelsAs='RGB')
 
     d = (numpy.random.random((1000, 800, 50)) * 255).astype(numpy.uint8)
     assert d.ndim == 3

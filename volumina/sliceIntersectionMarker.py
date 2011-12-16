@@ -40,9 +40,7 @@ class SliceIntersectionMarker(QGraphicsItem) :
     """
     
     def boundingRect(self):
-        # w, h = self._width, self._height
-        w,h = 1000, 1000
-        return QRectF() #return QRectF(0,0, w, h)
+        return QRectF(0,0, self._width, self._height);
     
     def __init__(self):
         QGraphicsItem.__init__(self)
@@ -59,7 +57,7 @@ class SliceIntersectionMarker(QGraphicsItem) :
         self.x = 0
         self.y = 0
         
-        self.isVisible = False
+        self.isVisible = True
 
     #be careful: QGraphicsItem has a shape() method, which
     #we cannot override, therefore we choose this name
