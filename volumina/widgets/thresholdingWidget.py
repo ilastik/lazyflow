@@ -5,7 +5,7 @@ from PyQt4.QtGui import QWidget
 from os import path
 
 class ThresholdingWidget(QWidget):
-    rangeChanged = pyqtSignal(int, int)
+    valueChanged = pyqtSignal(int, int)
     
     def __init__(self, parent=None):
         QWidget.__init__(self, parent)
@@ -24,7 +24,7 @@ class ThresholdingWidget(QWidget):
                 self._maxSlider.setValue(v+1)
             else:
                 self._minSlider.setValue(v-1)
-        self.rangeChanged.emit(self._minSlider.value(), self._maxSlider.value())
+        self.valueChanged.emit(self._minSlider.value(), self._maxSlider.value())
     
     def _onMaxSliderMoved(self, v):
         if v <= self._minSlider.value():
@@ -32,7 +32,7 @@ class ThresholdingWidget(QWidget):
                 self._minSlider.setValue(v-1)
             else:
                 self._maxSlider.setValue(self._minSlider.minimum()+1)
-        self.rangeChanged.emit(self._minSlider.value(), self._maxSlider.value())
+        self.valueChanged.emit(self._minSlider.value(), self._maxSlider.value())
     
     def setLayername(self, n):
         self._layerLabel.setText("Layer <b>%s</b>" % n)
@@ -48,3 +48,10 @@ class ThresholdingWidget(QWidget):
         self._maxSlider.setValue(maximum)
         self._minSpin.setValue(minimum)
         self._maxSpin.setValue(maximum)
+
+    def setValue(self, minimum, maximum):
+        self._minSlider.setValue(minimum)
+        self._maxSlider.setValue(maximum)
+        self._minSpin.setValue(minimum)
+        self._maxSpin.setValue(maximum)
+        

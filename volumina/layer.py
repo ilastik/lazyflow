@@ -135,8 +135,9 @@ class GrayscaleLayer( NormalizableLayer ):
             def dbgPrint(a, b):
                 self.set_normalize(0, (a,b))
                 print "normalization changed to [%d, %d]" % (a,b)
-            dlg.grayChannelThresholdingWidget.rangeChanged.connect(dbgPrint)
-            dlg.grayChannelThresholdingWidget.setRange(self.range[0], self.range[1])
+            dlg.grayChannelThresholdingWidget.valueChanged.connect(dbgPrint)
+            dlg.grayChannelThresholdingWidget.setRange(self.range[0][0], self.range[0][1])
+            dlg.grayChannelThresholdingWidget.setValue(self.normalize[0][0], self.normalize[0][1])
             dlg.show()
 
 #*******************************************************************************
@@ -228,15 +229,20 @@ class RGBALayer( NormalizableLayer ):
             def dbgPrint(layerIdx, a, b):
                 self.set_normalize(layerIdx, (a, b))
                 print "normalization changed for channel=%d to [%d, %d]" % (layerIdx, a,b)
-            dlg.redChannelThresholdingWidget.rangeChanged.connect(  partial(dbgPrint, 0))
-            dlg.greenChannelThresholdingWidget.rangeChanged.connect(partial(dbgPrint, 1))
-            dlg.blueChannelThresholdingWidget.rangeChanged.connect( partial(dbgPrint, 2))
-            dlg.alphaChannelThresholdingWidget.rangeChanged.connect(partial(dbgPrint, 3))
-            
             dlg.redChannelThresholdingWidget.setRange(self.range[0][0], self.range[0][1])
             dlg.greenChannelThresholdingWidget.setRange(self.range[1][0], self.range[1][1])
             dlg.blueChannelThresholdingWidget.setRange(self.range[2][0], self.range[2][1])
             dlg.alphaChannelThresholdingWidget.setRange(self.range[3][0], self.range[3][1])
+
+            dlg.redChannelThresholdingWidget.setValue(self.normalize[0][0], self.normalize[0][1])
+            dlg.greenChannelThresholdingWidget.setValue(self.normalize[1][0], self.normalize[1][1])
+            dlg.blueChannelThresholdingWidget.setValue(self.normalize[2][0], self.normalize[2][1])
+            dlg.alphaChannelThresholdingWidget.setValue(self.normalize[3][0], self.normalize[3][1])
+
+            dlg.redChannelThresholdingWidget.valueChanged.connect(  partial(dbgPrint, 0))
+            dlg.greenChannelThresholdingWidget.valueChanged.connect(partial(dbgPrint, 1))
+            dlg.blueChannelThresholdingWidget.valueChanged.connect( partial(dbgPrint, 2))
+            dlg.alphaChannelThresholdingWidget.valueChanged.connect(partial(dbgPrint, 3))
             
             dlg.resize(dlg.minimumSize())
             dlg.show()
