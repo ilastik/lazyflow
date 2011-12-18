@@ -73,7 +73,10 @@ class ImageEditorWidget(QWidget):
             QColor("gray"), QColor("white") \
         )
         editor.posModel.cursorPositionChanged.connect(positionStatusbar2D.updateCoordLabels)
+        editor.posModel.cursorPositionChanged.connect(editor.navCtrl._updateSliceIntersection)
+        
         imageViewWigdet.addStatusBar(positionStatusbar2D)
+        
         
         self.checkPosition(position)
         self.grid.addWidget(imageViewWigdet,position[0],position[1])
@@ -98,7 +101,11 @@ class ImageEditorWidget(QWidget):
             i=i+1
             
         return (i,j)
-
+    
+    def linkImageEditors(self,editor1,editor2):
+        editor1.posModel.cursorPositionChanged.connect(lambda x: editor2.navCtrl._updateSliceIntersection(x))
+        editor2.posModel.cursorPositionChanged.connect(lambda x: editor1.navCtrl._updateSliceIntersection(x))
+        
 #*******************************************************************************
 # i f   _ _ n a m e _ _   = =   " _ _ m a i n _ _ "                            *
 #*******************************************************************************
@@ -111,15 +118,19 @@ class testWidget(object):
     
         s = QSplitter()
    
-        editor = self.generateImageEditor(100)
-        editor2 = self.generateImageEditor(100)
-        editor3 = self.generateImageEditor(100)
+        editor1 = self.generateImageEditor(150)
+        editor2 = self.generateImageEditor(150)
+        editor3 = self.generateImageEditor(150)
     
-        widget = ImageEditorWidget(parent=None, editor=editor)
+        widget = ImageEditorWidget(parent=None, editor=editor1)
         
-        widget.addImageEditor(editor)
+        widget.linkImageEditors(editor1, editor2)
+        
+        widget.addImageEditor(editor1)
         widget.addImageEditor(editor2,(0,1))
         widget.addImageEditor(editor3,(0,1))
+        
+        
         
         s.addWidget(widget)
         s.show()

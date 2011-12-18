@@ -239,9 +239,12 @@ class   NavigationInterpreterImage(QObject):
         elif etype == QEvent.MouseButtonRelease:
             self.onMouseReleaseEvent( watched, event )
             return True
+        elif etype == QEvent.MouseButtonDblClick:
+            self.onMouseButtonDblClickEvent( watched, event )
+            return True
         else:
             return False
-        
+    
 
     def onMouseMoveEvent( self, imageview, event ):
         if imageview._dragMode == True:
@@ -347,6 +350,13 @@ class NavigationControlerImage(QObject):
         y,x = self._model.cursorPos
         self._view._crossHairCursor.showXYPosition(x,y)
         self._view._crossHairCursor.setVisible(True)
+    
+    def _updateSliceIntersection(self,pos=None):
+        y,x = self._model.cursorPos
+        if pos is not None:
+            y,x = pos
+        self._view._sliceIntersectionMarker.setPosition(x,y)
+        
     
     def _positionValid(self, pos):
         if self._model.shape is None:
