@@ -51,12 +51,6 @@ class ImageEditorWidget(QWidget):
         super(ImageEditorWidget, self).__init__(parent=parent)
         
         self._imageEditor = editor
-        
-        if self._imageEditor is None:
-            testHelper = testWidget()
-            self._imageEditor = testHelper.generateImageEditor()
-            
-            
         self.layout = QVBoxLayout()
         self.setLayout(self.layout)
         self.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Minimum)
@@ -88,12 +82,16 @@ class ImageEditorWidget(QWidget):
         
         self.layout.addWidget(imageViewWigdet)
         
-class testWidget(object):
+class TestWidget(object):
     
     def __init__(self):
         
-        super(testWidget,self).__init__()
+        super(TestWidget,self).__init__()
         
+    def makeWidget(self):
+        editor = self.generateImageEditor()
+        widget = ImageEditorWidget(parent=None,editor=editor)
+        return widget
         
     def generateImageEditor(self,dimension=200):
         
@@ -125,15 +123,9 @@ if __name__ == "__main__":
 
     import signal   
     signal.signal(signal.SIGINT, signal.SIG_DFL)
-        
-     
-    
+
     app = QApplication(sys.argv)
-    widget = ImageEditorWidget(parent=None)
+    test = TestWidget()
+    widget = test.makeWidget()
     widget.show()
     app.exec_()
-
-        
-
-
-        

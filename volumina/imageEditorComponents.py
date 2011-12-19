@@ -370,13 +370,3 @@ class NavigationControlerImage(QObject):
                 return False
         return True
     
-class ImageEditorInterface(QObject):
-
-    def __init__(self,*editors):
-        
-        self._editors = editors
-        self._navCtrls = []
-        
-        for editor in self._editors:
-            self._navCtrls.append(editor.navCtrl)
-       

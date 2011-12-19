@@ -2,14 +2,13 @@ from PyQt4.QtGui import QWidget,QGridLayout, QSizePolicy
 from PyQt4.QtCore import Qt
 from imageEditorComponents import PositionModelImage
 
-class synchronizedEditors(QWidget):
+class SynchronizedEditors(QWidget):
     
     def __init__(self):
         
-        super(synchronizedEditors,self).__init__()
+        super(SynchronizedEditors,self).__init__()
         
         self._layout = QGridLayout()
-        self._saveShape = None
         
         @property
         def layout(self):
@@ -56,17 +55,18 @@ class synchronizedEditors(QWidget):
         self._saveShape = iEWidget1._imageEditor.posModel.shape
     
     def unlink(self,iEWidget1,iEWidget2):
+        shape = iEWidget1._imageEditor.posModel.shape
         iEWidget1._imageEditor.posModel = PositionModelImage()
         iEWidget2._imageEditor.posModel = PositionModelImage()
-        iEWidget1._imageEditor.posModel.shape = self._saveShape
-        iEWidget2._imageEditor.posModel.shape = self._saveShape
+        iEWidget1._imageEditor.posModel.shape = shape
+        iEWidget2._imageEditor.posModel.shape = shape
         
 if __name__ == "__main__":
     #make the program quit on Ctrl+C
     import sys
     import signal   
     from PyQt4.QtGui import QApplication, QPushButton, QVBoxLayout
-    from imageEditorWidget import ImageEditorWidget
+    from imageEditorWidget import TestWidget
     signal.signal(signal.SIGINT, signal.SIG_DFL)
     
     
@@ -76,13 +76,14 @@ if __name__ == "__main__":
     layout = QVBoxLayout()
     wrapper.setLayout(layout)
 
-    synEditors = synchronizedEditors()
+    synEditors = SynchronizedEditors()
     
     layout.addWidget(synEditors)
     
-    iEWidget1 = ImageEditorWidget()
-    iEWidget2 = ImageEditorWidget()
-    iEWidget3 = ImageEditorWidget()
+    test = TestWidget()
+    iEWidget1 = test.makeWidget()
+    iEWidget2 = test.makeWidget()
+    iEWidget3 = test.makeWidget()
     
     button = QPushButton('Link')
     button.setCheckable(True)
@@ -106,4 +107,3 @@ if __name__ == "__main__":
     wrapper.show()
     
     app.exec_()
-        

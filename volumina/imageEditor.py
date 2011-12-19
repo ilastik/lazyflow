@@ -56,10 +56,10 @@ class ImageEditor( QObject ):
         # initial interaction mode
         self.eventSwitch.interpreter = self.navInterpret
 
-        ##
-        ## connect
-        ##  
         self.posModel = posModel
+        
+        #this is necessary to connect the positionModel which is set in the 
+        #constructor
         def onInit():
             self.posModelChanged.emit(None,self.posModel)
         QTimer.singleShot(0,onInit)
