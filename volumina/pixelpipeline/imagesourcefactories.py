@@ -21,7 +21,6 @@ def createImageSource( layer, datasources2d ):
     src = GrayscaleImageSource( datasources2d[0], layer )
     src.setObjectName(layer.name)
     layer.nameChanged.connect(lambda x: src.setObjectName(str(x)))
-    layer.thresholdingChanged.connect(lambda: src.setDirty((slice(None,None), slice(None,None))))
     return src
 
 @multimethod(ColortableLayer, list)
@@ -44,5 +43,5 @@ def createImageSource( layer, datasources2d ):
     src = RGBAImageSource( ds[0], ds[1], ds[2], ds[3], layer )
     src.setObjectName(layer.name)
     layer.nameChanged.connect(lambda x: src.setObjectName(str(x)))
-    layer.thresholdingChanged.connect(lambda: src.setDirty((slice(None,None), slice(None,None))))
+    layer.normalizeChanged.connect(lambda: src.setDirty((slice(None,None), slice(None,None))))
     return src

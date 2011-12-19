@@ -188,7 +188,6 @@ class PositionModel(QObject):
         self._slicingPos = pos
         
         if self._slicingSettled:
-            print "unsettle"
             self._slicingSettled = False
             self.slicingPositionSettled.emit(False)
         self._scrollTimer.start()
@@ -196,6 +195,5 @@ class PositionModel(QObject):
         self.slicingPositionChanged.emit(self.slicingPos, oldPos)
         
     def _onScrollTimer(self):
-        print "settled"
         self._slicingSettled = True
         self.slicingPositionSettled.emit(True)

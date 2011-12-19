@@ -528,9 +528,8 @@ if __name__ == "__main__":
     
     app = QApplication(sys.argv)
     widget = QDialog()
-    ex1 = ImageView2DHud()
+    ex1 = ImageView2DHud(widget)
     ex1.createImageView2DHud("X", 12, QColor("red"), QColor("white"))
-    widget.setLayout(ex1)
     widget.show()
     widget.raise_()
     app.exec_()

@@ -54,7 +54,6 @@ class NavigationInterpreter(QObject):
         if self._current_state == self.DEFAULT_MODE:
             ### default mode -> drag mode
             if etype == QEvent.MouseButtonPress and event.button() == Qt.MidButton:
-                print "default->drag"
                 # self.onExit_default(): call it here, if needed
                 self._current_state = self.DRAG_MODE
                 self.onEntry_drag( watched, event )
@@ -76,7 +75,6 @@ class NavigationInterpreter(QObject):
         elif self._current_state == self.DRAG_MODE:
             ### drag mode -> default mode
             if etype == QEvent.MouseButtonRelease and event.button() == Qt.MidButton:
-                print "drag->default"
                 self.onExit_drag( watched, event)
                 self._current_state = self.DEFAULT_MODE
                 self.onEntry_default( watched, event )
@@ -149,7 +147,6 @@ class NavigationInterpreter(QObject):
         
     def onMouseDoubleClick_default( self, imageview, event ):
         dataMousePos = imageview.mapScene2Data(imageview.mapToScene(event.pos()))
-        imageview.mousePos = dataMousePos # FIXME: remove, when guaranteed, that no longer needed inside imageview
         self._navCtrl.positionSlice(dataMousePos.x(), dataMousePos.y(), self._navCtrl._views.index(imageview))
 
     ###
@@ -222,7 +219,7 @@ class NavigationControler(QObject):
         self._indicateSliceIntersection = show
         for v in self._views:
             v._sliceIntersectionMarker.setVisibility(show)
-       
+     
     @property
     def enableNavigation(self):
         return self._navigationEnabled

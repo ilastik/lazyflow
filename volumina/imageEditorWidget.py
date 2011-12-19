@@ -30,7 +30,8 @@
 from PyQt4.QtCore import Qt
 from PyQt4.QtGui import QApplication, QWidget, QSplitter, QColor,\
                         QSizePolicy, QGridLayout
-from imageEditorComponents import ImageViewWidget, PositionStatusBar2D
+from imageEditorComponents import ImageViewWidget, PositionStatusBar2D,\
+                                  ImageEditorInterface
 from pixelpipeline.datasources import ArraySource
 from imageEditor import ImageEditor
 from volumina.layer import GrayscaleLayer
@@ -125,6 +126,9 @@ class testWidget(object):
         widget = ImageEditorWidget(parent=None, editor=editor1)
         
         widget.linkImageEditors(editor1, editor2)
+        
+        interface = ImageEditorInterface(editor1,editor2)
+        
         
         widget.addImageEditor(editor1)
         widget.addImageEditor(editor2,(0,1))

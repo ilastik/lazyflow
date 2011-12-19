@@ -365,3 +365,17 @@ class NavigationControlerImage(QObject):
             if pos[i] < 0 or pos[i] >= self._model.shape[i]:
                 return False
         return True
+    
+class ImageEditorInterface(QObject):
+
+    def __init__(self,*editors):
+        
+        self._editors = editors
+        self._navCtrls = []
+        
+        for editor in self._editors:
+            self._navCtrls.append(editor.navCtrl)
+       
+    
+    def linkMarkers(self):    
+        pass
