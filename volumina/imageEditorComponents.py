@@ -315,6 +315,16 @@ class NavigationControlerImage(QObject):
     accordingly.
     """
     
+    
+    @property
+    def posModel(self):
+        return self._model
+
+    @posModel.setter
+    def posModel(self, posM):
+        self._model = posM
+
+    
     def __init__(self, imageView2D, sliceSources, positionModel, brushingModel):
         QObject.__init__(self)
         
@@ -351,12 +361,6 @@ class NavigationControlerImage(QObject):
         self._view._crossHairCursor.showXYPosition(x,y)
         self._view._crossHairCursor.setVisible(True)
     
-    def _updateSliceIntersection(self,pos=None):
-        y,x = self._model.cursorPos
-        if pos is not None:
-            y,x = pos
-        self._view._sliceIntersectionMarker.setPosition(x,y)
-        
     
     def _positionValid(self, pos):
         if self._model.shape is None:
@@ -376,6 +380,3 @@ class ImageEditorInterface(QObject):
         for editor in self._editors:
             self._navCtrls.append(editor.navCtrl)
        
-    
-    def linkMarkers(self):    
-        pass

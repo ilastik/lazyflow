@@ -29,15 +29,17 @@
 
 from PyQt4.QtCore import Qt
 from PyQt4.QtGui import QApplication, QWidget, QSplitter, QColor,\
-                        QSizePolicy, QGridLayout
+                        QSizePolicy, QGridLayout, QPushButton
 from imageEditorComponents import ImageViewWidget, PositionStatusBar2D,\
-                                  ImageEditorInterface
+                                  PositionModelImage
 from pixelpipeline.datasources import ArraySource
 from imageEditor import ImageEditor
 from volumina.layer import GrayscaleLayer
 from volumina.layerstack import LayerStackModel
 from testing import TwoDtestVolume
 import numpy
+from functools import partial
+
 
 
 #*******************************************************************************
@@ -66,6 +68,7 @@ class ImageEditorWidget(QWidget):
     
     def addImageEditor(self,editor,position=(0,0)):
         
+        
         imageViewWigdet = ImageViewWidget(self, editor.imageView[0])
         positionStatusbar2D = PositionStatusBar2D()
         positionStatusbar2D.create(\
@@ -73,9 +76,14 @@ class ImageEditorWidget(QWidget):
             QColor("blue"), QColor("white"),  \
             QColor("gray"), QColor("white") \
         )
-        editor.posModel.cursorPositionChanged.connect(positionStatusbar2D.updateCoordLabels)
-        editor.posModel.cursorPositionChanged.connect(editor.navCtrl._updateSliceIntersection)
         
+        def onPosModelChanged(positionStatusBar2D, oldPosModel, newPosModel):
+            if oldPosModel:
+                oldPosModel.cursorPositionChanged.disconnect(positionStatusbar2D.updateCoordLabels)
+            editor.posModel.cursorPositionChanged.connect(positionStatusbar2D.updateCoordLabels)
+            print 'onPosModelChanged'
+        
+        editor.posModelChanged.connect(partial(onPosModelChanged, positionStatusbar2D))
         imageViewWigdet.addStatusBar(positionStatusbar2D)
         
         
@@ -103,10 +111,6 @@ class ImageEditorWidget(QWidget):
             
         return (i,j)
     
-    def linkImageEditors(self,editor1,editor2):
-        editor1.posModel.cursorPositionChanged.connect(lambda x: editor2.navCtrl._updateSliceIntersection(x))
-        editor2.posModel.cursorPositionChanged.connect(lambda x: editor1.navCtrl._updateSliceIntersection(x))
-        
 #*******************************************************************************
 # i f   _ _ n a m e _ _   = =   " _ _ m a i n _ _ "                            *
 #*******************************************************************************
@@ -124,12 +128,7 @@ class testWidget(object):
         editor3 = self.generateImageEditor(150)
     
         widget = ImageEditorWidget(parent=None, editor=editor1)
-        
-        widget.linkImageEditors(editor1, editor2)
-        
-        interface = ImageEditorInterface(editor1,editor2)
-        
-        
+                
         widget.addImageEditor(editor1)
         widget.addImageEditor(editor2,(0,1))
         widget.addImageEditor(editor3,(0,1))
@@ -137,7 +136,28 @@ class testWidget(object):
         
         
         s.addWidget(widget)
+        button = QPushButton('Link')
+        button.setCheckable(True)
+        button.setChecked(False)
+        
+        def onLinkToggled(checked):
+            if checked:
+                editor2.posModel=editor1.posModel
+                editor3.posModel=editor1.posModel
+            else:
+                editor2.posModel=PositionModelImage()
+                editor3.posModel=PositionModelImage()
+                editor2.posModel.shape=editor1.posModel.shape
+                editor3.posModel.shape=editor1.posModel.shape
+                
+        button.toggled.connect(onLinkToggled)
+        
+        
+        s.addWidget(button)
         s.show()
+        
+        
+        
 
         app.exec_()
 

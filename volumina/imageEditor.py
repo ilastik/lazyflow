@@ -1,4 +1,4 @@
-from PyQt4.QtCore import QObject    
+from PyQt4.QtCore import QObject, pyqtSignal, QTimer    
 from imageScene2D import ImageScene2D
 from imageEditorComponents import  PositionModelImage, \
     NavigationControlerImage, NavigationInterpreterImage
@@ -14,13 +14,29 @@ from imageView2D import ImageView2D
 
 class ImageEditor( QObject ):
 
+    posModelChanged = pyqtSignal(object, object)
+    
+    @property
+    def posModel(self):
+        return self._posModel
+
+    @posModel.setter
+    def posModel(self, posM):
+        oldPosModel = self._posModel
+        self._posModel = posM
+        self.navCtrl.posModel=posM
+        self._posModel.cursorPositionChanged.connect(self.navCtrl.moveCrosshair)
+        self.posModelChanged.emit(oldPosModel, posM)
+        
     def __init__( self, layerStackModel = None):
         super(ImageEditor, self).__init__()
         
+        self._posModel = None
+        self.navCtrl = None
         self._shape = None        
         self._layerStack = layerStackModel  
         self.imageScene = ImageScene2D()
-        self.posModel = PositionModelImage()
+        posModel = PositionModelImage()
         self.imagepump = self._initImagePump()
         self.imageScene.stackedImageSources = self.imagepump.stackedImageSources
         self.imageView = [ImageView2D(self.imageScene)]
@@ -34,7 +50,7 @@ class ImageEditor( QObject ):
 
         # navigation control
         syncedSliceSources = self.imagepump.syncedSliceSources 
-        self.navCtrl      = NavigationControlerImage(self.imageView[0], syncedSliceSources, self.posModel, self.brushingModel)
+        self.navCtrl      = NavigationControlerImage(self.imageView[0], syncedSliceSources, posModel, self.brushingModel)
         self.navInterpret = NavigationInterpreterImage(self.navCtrl)
 
         # initial interaction mode
@@ -43,8 +59,11 @@ class ImageEditor( QObject ):
         ##
         ## connect
         ##  
-        self.posModel.cursorPositionChanged.connect(self.navCtrl.moveCrosshair)
-   
+        self.posModel = posModel
+        def onInit():
+            self.posModelChanged.emit(None,self.posModel)
+        QTimer.singleShot(0,onInit)
+        
     @property
     def dataShape(self):
         return self.posModel._shape2D
