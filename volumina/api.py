@@ -24,11 +24,11 @@ import vigra
 
 haveLazyflow = True
 try:
-    from volumina.io import Op5ifyer
+    from volumina.adaptors import Op5ifyer
     from lazyflow.operators.generic import OpMultiArraySlicer
 except ImportError:
     haveLazyflow = False
-from volumina.io import Array5d
+from volumina.adaptors import Array5d
 
 #******************************************************************************
 # V i e w e r                                                                 *
