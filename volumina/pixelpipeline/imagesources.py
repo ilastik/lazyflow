@@ -10,6 +10,7 @@ from PyQt4.QtGui import QImage
 from qimage2ndarray import gray2qimage, array2qimage, alpha_view, rgb_view
 from asyncabcs import SourceABC, RequestABC
 from volumina.slicingtools import is_bounded, slicing2rect, rect2slicing, slicing2shape, is_pure_slicing
+from volumina.config import cfg
 import numpy as np
 
 #*******************************************************************************
@@ -66,7 +67,7 @@ class GrayscaleImageSource( ImageSource ):
         self._layer.normalizeChanged.connect(lambda: self.setDirty((slice(None,None), slice(None,None))))
 
     def request( self, qrect ):
-        if volumina.verboseRequests:
+        if cfg.getboolean('pixelpipeline', 'verbose'):
             volumina.printLock.acquire()
             print Fore.RED + "  GrayscaleImageSource '%s' requests (x=%d, y=%d, w=%d, h=%d)" \
             % (self.objectName(), qrect.x(), qrect.y(), qrect.width(), qrect.height()) \
@@ -135,7 +136,7 @@ class AlphaModulatedImageSource( ImageSource ):
         self._arraySource2D.isDirty.connect(self.setDirty)
 
     def request( self, qrect ):
-        if volumina.verboseRequests:
+        if cfg.getboolean('pixelpipeline', 'verbose'):
             volumina.printLock.acquire()
             print Fore.RED + "  AlphaModulatedImageSource '%s' requests (x=%d, y=%d, w=%d, h=%d)" \
             % (self.objectName(), qrect.x(), qrect.y(), qrect.width(), qrect.height()) \
@@ -213,7 +214,7 @@ class ColortableImageSource( ImageSource ):
         self._colorTable = colorTable
         
     def request( self, qrect ):
-        if volumina.verboseRequests:
+        if cfg.getboolean('pixelpipeline', 'verbose'):
             volumina.printLock.acquire()
             print Fore.RED + "  ColortableImageSource '%s' requests (x=%d, y=%d, w=%d, h=%d)" \
             % (self.objectName(), qrect.x(), qrect.y(), qrect.width(), qrect.height()) \
@@ -297,7 +298,7 @@ class RGBAImageSource( ImageSource ):
             arraySource.isDirty.connect(self.setDirty)
 
     def request( self, qrect ):
-        if volumina.verboseRequests:
+        if cfg.getboolean('pixelpipeline', 'verbose'):
             volumina.printLock.acquire()
             print Fore.RED + "  RGBAImageSource '%s' requests (x=%d, y=%d, w=%d, h=%d)" \
             % (self.objectName(), qrect.x(), qrect.y(), qrect.width(), qrect.height()) \

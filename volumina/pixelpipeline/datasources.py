@@ -2,6 +2,7 @@ from PyQt4.QtCore import QObject, pyqtSignal
 from asyncabcs import RequestABC, SourceABC
 import volumina
 from volumina.slicingtools import is_pure_slicing, slicing2shape, is_bounded, index2slice
+from volumina.config import cfg
 import numpy as np
 
 #*******************************************************************************
@@ -105,7 +106,7 @@ class LazyflowSource( QObject ):
         self._outslot.registerDirtyCallback(self.setDirty)
 
     def request( self, slicing ):
-        if volumina.verboseRequests:
+        if cfg.getboolean('pixelpipeline', 'verbose'):
             volumina.printLock.acquire()
             print "  LazyflowSource '%s' requests %s" % (self.objectName(), volumina.strSlicing(slicing))
             volumina.printLock.release()
@@ -130,7 +131,7 @@ class LazyflowSinkSource( LazyflowSource ):
         self._outputSlot.registerDirtyCallback(self.setDirty)
 
     def request( self, slicing ):
-        if volumina.verboseRequests:
+        if cfg.getboolean('pixelpipeline', 'verbose'):
             volumina.printLock.acquire()
             print "  LazyflowSinkSource '%s' requests %s" % (self.objectName(), volumina.strSlicing(slicing))
             volumina.printLock.release()
