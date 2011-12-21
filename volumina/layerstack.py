@@ -19,7 +19,7 @@ class LayerStackModel(QAbstractListModel):
         QAbstractListModel.__init__(self, parent)
         self._layerStack = []
         self.selectionModel = QItemSelectionModel(self)
-        self.selectionModel.selectionChanged.connect(self.onSelectionChanged)
+        self.selectionModel.selectionChanged.connect(self.updateGUI)
         QTimer.singleShot(0, self.updateGUI)
     
     def __len__(self):
@@ -80,13 +80,6 @@ class LayerStackModel(QAbstractListModel):
             return self.index(self.selectedRow())
         else:
             return QModelIndex()
-    
-    def onSelectionChanged(self, selected, deselected):
-        if len(deselected) > 0:
-            self._layerStack[deselected[0].indexes()[0].row()].mode = 'ReadOnly'
-        if len(selected) > 0:
-            self._layerStack[selected[0].indexes()[0].row()].mode = 'Expanded'
-        self.updateGUI()
     
     def rowCount(self, parent = QModelIndex()):
         if not parent.isValid():

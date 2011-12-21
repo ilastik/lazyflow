@@ -63,7 +63,6 @@ class Layer( QObject ):
     def __init__( self ):
         super(Layer, self).__init__()
         self._name = "Unnamed Layer"
-        self.mode = "ReadOnly"
         self._visible = True
         self._opacity = 1.0
         self._datasources = []
