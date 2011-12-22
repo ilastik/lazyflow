@@ -55,8 +55,7 @@ class ImageEditorWidget(QWidget):
         self.setLayout(self.layout)
         self.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Minimum)
         self.setFocusPolicy(Qt.StrongFocus)
-        self.setStyleSheet("QWidget { background-color: rgb(0, 255,\
-255); }")
+
         if self._imageEditor != None:
             self.init(self._imageEditor)
     
