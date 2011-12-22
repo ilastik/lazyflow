@@ -379,3 +379,31 @@ class RGBAImageRequest( object ):
             kwargs = package[2]
             callback( img, **kwargs )
 assert issubclass(RGBAImageRequest, RequestABC)
+
+
+
+class RandomImageSource( ImageSource ):
+    '''Random noise image for testing and debugging.'''
+    def request( self, qrect ):
+        assert isinstance(qrect, QRect)
+        s = rect2slicing(qrect)
+        shape = slicing2shape( s )
+        return RandomImageRequest( shape )
+assert issubclass(RandomImageSource, SourceABC)
+
+class RandomImageRequest( object ):
+    def __init__( self, shape ):
+        self.shape = shape
+
+    def wait(self):
+        d = (np.random.random(self.shape) * 255).astype(np.uint8)        
+        img = gray2qimage(d)
+        return img.convertToFormat(QImage.Format_ARGB32_Premultiplied)
+            
+    def notify( self, callback, **kwargs ):
+        img = self.wait()
+        callback( img, **kwargs )
+
+    def cancel( self ):
+        raise NotImplementedError
+assert issubclass(RandomImageRequest, RequestABC)
