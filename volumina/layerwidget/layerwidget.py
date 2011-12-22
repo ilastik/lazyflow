@@ -34,13 +34,13 @@ class LayerPainter( object ):
         self.alphaTextWidth = self.fm.boundingRect(u"\u03B1=100.0%").width()
         
 
-    def sizeHint(self):
-        if self.layer.mode == 'ReadOnly':
-            return QSize(1,self.fm.height()+5)
-        elif self.layer.mode == 'Expanded' or self.layer.mode == 'Editable':
-            return QSize(1,self.progressYOffset+self.progressHeight+5)
-        else:
-            raise RuntimeError("Unknown mode")   
+    def sizeHint(self, mode):
+       if mode == 'ReadOnly':
+           return QSize(1,self.fm.height()+5)
+       elif mode == 'Expanded' or mode == 'Editable':
+           return QSize(1,self.progressYOffset+self.progressHeight+5)
+       else:
+           raise RuntimeError("Unknown mode")   
 
     def overEyeIcon(self, x, y):
         return QPoint(x,y) in QRect(self.iconXOffset,0,self.iconSize,self.iconSize)
@@ -122,9 +122,10 @@ class LayerPainter( object ):
 #*******************************************************************************
 
 class LayerDelegate(QStyledItemDelegate):
-    def __init__(self, parent = None):
+    def __init__(self, layersView, parent = None):
         QStyledItemDelegate.__init__(self, parent)
         self.currentIndex = -1
+        self._view = layersView
         self._layerPainter = LayerPainter()
     
     def updateEditorGeometry(self, editor, option, index):
@@ -153,7 +154,8 @@ class LayerDelegate(QStyledItemDelegate):
         layer = index.data().toPyObject()
         if isinstance(layer, Layer):
             self._layerPainter.layer = layer
-            return self._layerPainter.sizeHint()
+            mode = "Expanded" if self._view.currentIndex() == index else 'ReadOnly'
+            return self._layerPainter.sizeHint( mode )
         else:
             return QStyledItemDelegate.sizeHint(self, option, index)
     
@@ -259,7 +261,7 @@ class LayerWidget(QListView):
 
     def init(self, listModel):
         self.setModel(listModel)
-        self.setItemDelegate(LayerDelegate())
+        self.setItemDelegate(LayerDelegate( self ))
         self.setSelectionModel(listModel.selectionModel)
         #self.setDragDropMode(self.InternalMove)
         self.installEventFilter(self)
