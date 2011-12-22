@@ -8,6 +8,7 @@ class SynchronizedEditors(QWidget):
         
         super(SynchronizedEditors,self).__init__()
         
+
         self._layout = QGridLayout()
         
         @property
@@ -26,10 +27,14 @@ class SynchronizedEditors(QWidget):
         self.setLayout(self._layout)
         self.show()
         
+        
     def addEditorWidget(self,imageEditorWidget,position=(0,0)):
         
         self.checkPosition(position)
         self._layout.addWidget(imageEditorWidget,position[0],position[1])
+        
+        
+
         
     def checkPosition(self,position):
         
@@ -60,6 +65,8 @@ class SynchronizedEditors(QWidget):
         iEWidget2._imageEditor.posModel = PositionModelImage()
         iEWidget1._imageEditor.posModel.shape = shape
         iEWidget2._imageEditor.posModel.shape = shape
+    
+    
         
 if __name__ == "__main__":
     #make the program quit on Ctrl+C
@@ -105,5 +112,4 @@ if __name__ == "__main__":
     synEditors.addEditorWidget(iEWidget2)
 
     wrapper.show()
-    
     app.exec_()

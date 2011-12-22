@@ -55,7 +55,8 @@ class ImageEditorWidget(QWidget):
         self.setLayout(self.layout)
         self.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Minimum)
         self.setFocusPolicy(Qt.StrongFocus)
-        
+        self.setStyleSheet("QWidget { background-color: rgb(0, 255,\
+255); }")
         if self._imageEditor != None:
             self.init(self._imageEditor)
     
@@ -79,6 +80,7 @@ class ImageEditorWidget(QWidget):
         
         self._imageEditor.posModelChanged.connect(partial(onPosModelChanged, positionStatusbar2D))
         imageViewWigdet.addStatusBar(positionStatusbar2D)
+        
         
         self.layout.addWidget(imageViewWigdet)
         
