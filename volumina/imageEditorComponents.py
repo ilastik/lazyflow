@@ -239,9 +239,12 @@ class   NavigationInterpreterImage(QObject):
         elif etype == QEvent.MouseButtonRelease:
             self.onMouseReleaseEvent( watched, event )
             return True
+        elif etype == QEvent.MouseButtonDblClick:
+            self.onMouseButtonDblClickEvent( watched, event )
+            return True
         else:
             return False
-        
+    
 
     def onMouseMoveEvent( self, imageview, event ):
         if imageview._dragMode == True:
@@ -312,6 +315,16 @@ class NavigationControlerImage(QObject):
     accordingly.
     """
     
+    
+    @property
+    def posModel(self):
+        return self._model
+
+    @posModel.setter
+    def posModel(self, posM):
+        self._model = posM
+
+    
     def __init__(self, imageView2D, sliceSources, positionModel, brushingModel):
         QObject.__init__(self)
         
@@ -348,6 +361,7 @@ class NavigationControlerImage(QObject):
         self._view._crossHairCursor.showXYPosition(x,y)
         self._view._crossHairCursor.setVisible(True)
     
+    
     def _positionValid(self, pos):
         if self._model.shape is None:
             return False
@@ -355,3 +369,4 @@ class NavigationControlerImage(QObject):
             if pos[i] < 0 or pos[i] >= self._model.shape[i]:
                 return False
         return True
+    

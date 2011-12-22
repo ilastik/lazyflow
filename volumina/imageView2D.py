@@ -104,6 +104,7 @@ class ImageView2D(QGraphicsView):
         self.scene().addItem(self._sliceIntersectionMarker)
         #FIXME: Use a QAction here so that we do not have to synchronize
         #between this initial state and the toggle button's initial state
+        self._sliceIntersectionMarker.setVisibility(False)
         if self._hud is not None:
             self._sliceIntersectionMarker.setVisibility(True)
  

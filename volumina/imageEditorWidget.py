@@ -29,14 +29,17 @@
 
 from PyQt4.QtCore import Qt
 from PyQt4.QtGui import QApplication, QWidget, QSplitter, QColor,\
-                        QSizePolicy, QGridLayout
-from imageEditorComponents import ImageViewWidget, PositionStatusBar2D
+                        QSizePolicy, QVBoxLayout
+from imageEditorComponents import ImageViewWidget, PositionStatusBar2D,\
+                                  PositionModelImage
 from pixelpipeline.datasources import ArraySource
 from imageEditor import ImageEditor
 from volumina.layer import GrayscaleLayer
 from volumina.layerstack import LayerStackModel
 from testing import TwoDtestVolume
-import numpy
+import numpy,sys
+from functools import partial
+
 
 
 #*******************************************************************************
@@ -47,86 +50,51 @@ class ImageEditorWidget(QWidget):
     def __init__( self, parent=None, editor=None ):
         super(ImageEditorWidget, self).__init__(parent=parent)
         
+        self._imageEditor = editor
+        self.layout = QVBoxLayout()
+        self.setLayout(self.layout)
         self.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Minimum)
         self.setFocusPolicy(Qt.StrongFocus)
-        
-        if editor!=None:
-            self.init(editor)
+        self.setStyleSheet("QWidget { background-color: rgb(0, 255,\
+255); }")
+        if self._imageEditor != None:
+            self.init(self._imageEditor)
     
     def init(self, imageEditor):
 
-        self._ie = imageEditor
+        self._imageEditor = imageEditor
         
-        self.grid = QGridLayout()
-        self.setLayout(self.grid)
-        self.updateGeometry()
-        self.update()
+        imageViewWigdet = ImageViewWidget(self, imageEditor.imageView[0])
         
-    
-    def addImageEditor(self,editor,position=(0,0)):
-        
-        imageViewWigdet = ImageViewWidget(self, editor.imageView[0])
         positionStatusbar2D = PositionStatusBar2D()
         positionStatusbar2D.create(\
             QColor("green"), QColor("white"), \
-            QColor("blue"), QColor("white"),  \
+            QColor("blue"), QColor("white"), \
             QColor("gray"), QColor("white") \
         )
-        editor.posModel.cursorPositionChanged.connect(positionStatusbar2D.updateCoordLabels)
+        
+        def onPosModelChanged(positionStatusBar2D, oldPosModel, newPosModel):
+            if oldPosModel:
+                oldPosModel.cursorPositionChanged.disconnect(positionStatusbar2D.updateCoordLabels)
+            self._imageEditor.posModel.cursorPositionChanged.connect(positionStatusbar2D.updateCoordLabels)
+        
+        self._imageEditor.posModelChanged.connect(partial(onPosModelChanged, positionStatusbar2D))
         imageViewWigdet.addStatusBar(positionStatusbar2D)
         
-        self.checkPosition(position)
-        self.grid.addWidget(imageViewWigdet,position[0],position[1])
-    
-    def checkPosition(self,position):
         
-        widget = self.grid.itemAtPosition(position[0], position[1])
-        if widget:
-            self.grid.removeItem(widget)
-            freePos = self.getFreePosition()
-            self.grid.addItem(widget, freePos[0], freePos[1])
-    
-    def getFreePosition(self):
+        self.layout.addWidget(imageViewWigdet)
         
-        i=0
-        j=0
-        while self.grid.itemAtPosition(i,j):
-            while i >= j:
-                if self.grid.itemAtPosition(i,j):
-                    break
-                j=j+1
-            i=i+1
-            
-        return (i,j)
-
-#*******************************************************************************
-# i f   _ _ n a m e _ _   = =   " _ _ m a i n _ _ "                            *
-#*******************************************************************************
-
-class testWidget(object):
+class TestWidget(object):
     
     def __init__(self):
         
-        app = QApplication(sys.argv)
-    
-        s = QSplitter()
-   
-        editor = self.generateImageEditor(100)
-        editor2 = self.generateImageEditor(100)
-        editor3 = self.generateImageEditor(100)
-    
-        widget = ImageEditorWidget(parent=None, editor=editor)
+        super(TestWidget,self).__init__()
         
-        widget.addImageEditor(editor)
-        widget.addImageEditor(editor2,(0,1))
-        widget.addImageEditor(editor3,(0,1))
+    def makeWidget(self):
+        editor = self.generateImageEditor()
+        widget = ImageEditorWidget(parent=None,editor=editor)
+        return widget
         
-        s.addWidget(widget)
-        s.show()
-
-        app.exec_()
-
-
     def generateImageEditor(self,dimension=200):
         
         twoDtestVolume1 = TwoDtestVolume(dimension)
@@ -146,20 +114,20 @@ class testWidget(object):
         editor = ImageEditor(layerstack)
         editor.dataShape = shape
         return editor
+
     
-        
+#*******************************************************************************
+# i f   _ _ n a m e _ _   = =   " _ _ m a i n _ _ "                            *
+#*******************************************************************************
 
 if __name__ == "__main__":
     #make the program quit on Ctrl+C
-    import sys
+
     import signal   
     signal.signal(signal.SIGINT, signal.SIG_DFL)
-        
-     
-    
-    testies = testWidget()
-    
-        
 
-
-        
+    app = QApplication(sys.argv)
+    test = TestWidget()
+    widget = test.makeWidget()
+    widget.show()
+    app.exec_()
