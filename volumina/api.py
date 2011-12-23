@@ -1,6 +1,7 @@
 """High-level API.
 
 """
+from pixelpipeline.imagepump import ImagePump
 from volumina.pixelpipeline.datasources import *
 from volumina.layer import *
 from volumina.layerstack import LayerStackModel
