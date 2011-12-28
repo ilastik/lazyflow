@@ -103,7 +103,7 @@ class NormalizableLayer( Layer ):
 #*******************************************************************************
 
 class GrayscaleLayer( NormalizableLayer ):
-    def __init__( self, datasource, thresholding = None, range = (0,255), normalize = (0,255) ):
+    def __init__( self, datasource, range = (0,255), normalize = (0,255) ):
         super(GrayscaleLayer, self).__init__()
         self._datasources = [datasource]
         self._normalize = [normalize]
@@ -160,10 +160,11 @@ class RGBALayer( NormalizableLayer ):
 
     def __init__( self, red = None, green = None, blue = None, alpha = None, \
                   color_missing_value = 0, alpha_missing_value = 255,
+                  range = 4*[0,255],
                   normalizeR=(0,255), normalizeG=(0,255), normalizeB=(0,255), normalizeA=(0,255)):
         super(RGBALayer, self).__init__()
         self._datasources = [red,green,blue,alpha]
         self._normalize   = [normalizeR, normalizeG, normalizeB, normalizeA]
         self._color_missing_value = color_missing_value
         self._alpha_missing_value = alpha_missing_value
-        self._range = 4*[(0,255)]
+        self._range = range
