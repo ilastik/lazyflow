@@ -1,5 +1,5 @@
 import copy
-from volumina.pixelpipeline.multimethods import multimethod
+from volumina.multimethods import multimethod
 from volumina.layer import GrayscaleLayer, RGBALayer, ColortableLayer, \
                                AlphaModulatedLayer
 from imagesources import GrayscaleImageSource, ColortableImageSource, \
