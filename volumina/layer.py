@@ -160,7 +160,7 @@ class RGBALayer( NormalizableLayer ):
 
     def __init__( self, red = None, green = None, blue = None, alpha = None, \
                   color_missing_value = 0, alpha_missing_value = 255,
-                  range = 4*[0,255],
+                  range = 4*[(0,255)],
                   normalizeR=(0,255), normalizeG=(0,255), normalizeB=(0,255), normalizeA=(0,255)):
         super(RGBALayer, self).__init__()
         self._datasources = [red,green,blue,alpha]
