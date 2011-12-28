@@ -6,6 +6,7 @@ from PyQt4.QtCore import pyqtSignal, Qt, QEvent, QRect, QSize, QTimer, \
                          QPoint 
                          
 from volumina.layer import Layer
+from layercontextmenu import layercontextmenu
 
 from os import path
 import volumina.resources.icons
@@ -280,7 +281,7 @@ class LayerWidget(QListView):
         layer = self.model()[idx.row()]
         print "Context menu for layer '%s'" % layer.name
         
-        layer.contextMenu(self, self.mapToGlobal(pos))
+        layercontextmenu( layer, self.mapToGlobal(pos), self )
             
     def selectFirstEntry(self):
         #self.setEditTriggers(QAbstractItemView.DoubleClicked)

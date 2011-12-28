@@ -1,6 +1,5 @@
 from PyQt4.QtCore import QObject, pyqtSignal
 from PyQt4.QtGui import QColor
-from functools import partial
 from widgets.layerDialog import GrayscaleLayerDialog
 from widgets.layerDialog import RGBALayerDialog
 
@@ -57,9 +56,6 @@ class Layer( QObject ):
     def datasources( self ):
         return self._datasources
 
-    def contextMenu(self, parent, pos):
-        print "no context menu implemented"
-
     def __init__( self ):
         super(Layer, self).__init__()
         self._name = "Unnamed Layer"
@@ -112,32 +108,6 @@ class GrayscaleLayer( NormalizableLayer ):
         self._datasources = [datasource]
         self._normalize = [normalize]
         self._range = [range] 
-    
-    def contextMenu(self, parent, pos):
-        from PyQt4.QtGui import QMenu, QAction
-         
-        menu = QMenu("Menu", parent)
-        
-        title = QAction("%s" % self.name, menu)
-        title.setEnabled(False)
-        menu.addAction(title)
-        menu.addSeparator()
-        
-        adjThresholdAction = QAction("Adjust thresholds", menu)
-        menu.addAction(adjThresholdAction)
-
-        ret = menu.exec_(pos)
-        if ret == adjThresholdAction:
-            
-            dlg = GrayscaleLayerDialog(parent)
-            dlg.setLayername(self.name)
-            def dbgPrint(a, b):
-                self.set_normalize(0, (a,b))
-                print "normalization changed to [%d, %d]" % (a,b)
-            dlg.grayChannelThresholdingWidget.setRange(self.range[0][0], self.range[0][1])
-            dlg.grayChannelThresholdingWidget.setValue(self.normalize[0][0], self.normalize[0][1])
-            dlg.grayChannelThresholdingWidget.valueChanged.connect(dbgPrint)
-            dlg.show()
 
 #*******************************************************************************
 # A l p h a M o d u l a t e d L a y e r                                        *
@@ -197,51 +167,3 @@ class RGBALayer( NormalizableLayer ):
         self._color_missing_value = color_missing_value
         self._alpha_missing_value = alpha_missing_value
         self._range = 4*[(0,255)]
-    
-    def contextMenu(self, parent, pos):
-        from PyQt4.QtGui import QMenu, QAction
-         
-        menu = QMenu("Menu", parent)
-        
-        title = QAction("%s" % self.name, menu)
-        title.setEnabled(False)
-        menu.addAction(title)
-        menu.addSeparator()
-        
-        adjThresholdAction = QAction("Adjust thresholds", menu)
-        menu.addAction(adjThresholdAction)
-
-        ret = menu.exec_(pos)
-        if ret == adjThresholdAction:
-            
-            dlg = RGBALayerDialog(parent)
-            dlg.setLayername(self.name)
-            if self._datasources[0] == None:
-                dlg.showRedThresholds(False)
-            if self._datasources[1] == None:
-                dlg.showGreenThresholds(False)
-            if self._datasources[2] == None:
-                dlg.showBlueThresholds(False)
-            if self._datasources[3] == None:
-                dlg.showAlphaThresholds(False)
-             
-            def dbgPrint(layerIdx, a, b):
-                self.set_normalize(layerIdx, (a, b))
-                print "normalization changed for channel=%d to [%d, %d]" % (layerIdx, a,b)
-            dlg.redChannelThresholdingWidget.setRange(self.range[0][0], self.range[0][1])
-            dlg.greenChannelThresholdingWidget.setRange(self.range[1][0], self.range[1][1])
-            dlg.blueChannelThresholdingWidget.setRange(self.range[2][0], self.range[2][1])
-            dlg.alphaChannelThresholdingWidget.setRange(self.range[3][0], self.range[3][1])
-
-            dlg.redChannelThresholdingWidget.setValue(self.normalize[0][0], self.normalize[0][1])
-            dlg.greenChannelThresholdingWidget.setValue(self.normalize[1][0], self.normalize[1][1])
-            dlg.blueChannelThresholdingWidget.setValue(self.normalize[2][0], self.normalize[2][1])
-            dlg.alphaChannelThresholdingWidget.setValue(self.normalize[3][0], self.normalize[3][1])
-
-            dlg.redChannelThresholdingWidget.valueChanged.connect(  partial(dbgPrint, 0))
-            dlg.greenChannelThresholdingWidget.valueChanged.connect(partial(dbgPrint, 1))
-            dlg.blueChannelThresholdingWidget.valueChanged.connect( partial(dbgPrint, 2))
-            dlg.alphaChannelThresholdingWidget.valueChanged.connect(partial(dbgPrint, 3))
-            
-            dlg.resize(dlg.minimumSize())
-            dlg.show()
