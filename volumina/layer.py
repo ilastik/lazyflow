@@ -17,10 +17,14 @@ class Layer( QObject ):
     name -- string
 
     '''
-    changed        = pyqtSignal()
-    visibleChanged = pyqtSignal(bool)
-    opacityChanged = pyqtSignal(float)
-    nameChanged    = pyqtSignal(object)
+
+    '''changed is emitted whenever one of the more specialized
+    somethingChanged signals is emitted.'''
+    changed = pyqtSignal()
+
+    visibleChanged = pyqtSignal(bool) 
+    opacityChanged = pyqtSignal(float) 
+    nameChanged = pyqtSignal(object)
 
     @property
     def visible( self ):
@@ -30,7 +34,6 @@ class Layer( QObject ):
         if value != self._visible:
             self._visible = value
             self.visibleChanged.emit( value )
-            self.changed.emit()
 
     @property
     def opacity( self ):
@@ -40,7 +43,6 @@ class Layer( QObject ):
         if value != self._opacity:
             self._opacity = value
             self.opacityChanged.emit( value )
-            self.changed.emit()
             
     @property
     def name( self ):
@@ -50,7 +52,6 @@ class Layer( QObject ):
         if self._name != n:
             self._name = n
             self.nameChanged.emit(n)
-            self.changed.emit()
 
     @property
     def datasources( self ):
@@ -63,15 +64,26 @@ class Layer( QObject ):
         self._opacity = 1.0
         self._datasources = []
 
+        self.visibleChanged.connect(self.changed)
+        self.opacityChanged.connect(self.changed)
+        self.nameChanged.connect(self.changed)
+
 
 
 class NormalizableLayer( Layer ):
-    """
+    '''
     int -- datasource index
     int -- lower threshold
     int -- upper threshold
-    """
+    '''
     normalizeChanged = pyqtSignal(int, int, int)
+
+    '''
+    int -- datasource index
+    int -- minimum
+    int -- maximum
+    '''
+    rangeChanged = pyqtSignal(int, int, int)
 
     @property
     def range( self ):
@@ -80,7 +92,9 @@ class NormalizableLayer( Layer ):
         '''
         value -- (rmin, rmax)
         '''
-        self._range[datasourceIdx] = value 
+        self._range[datasourceIdx] = value
+        self.rangeChanged.emit(datasourceIdx, value[0], value[1])
+
     
     @property
     def normalize( self ):
@@ -97,6 +111,8 @@ class NormalizableLayer( Layer ):
         self._normalize = []
         self._range = []
 
+        self.rangeChanged.connect(self.changed)
+        self.normalizeChanged.connect(self.changed)
 
 #*******************************************************************************
 # G r a y s c a l e L a y e r                                                  *
@@ -114,6 +130,8 @@ class GrayscaleLayer( NormalizableLayer ):
 #*******************************************************************************
 
 class AlphaModulatedLayer( NormalizableLayer ):
+    tintColorChanged = pyqtSignal()
+
     @property
     def tintColor(self):
         return self._tintColor
@@ -129,7 +147,8 @@ class AlphaModulatedLayer( NormalizableLayer ):
         self._normalize = [normalize]
         self._range = [range]
         self._tintColor = tintColor
-
+        self.tintColorChanged.connect(self.changed)
+        
 
 
 #*******************************************************************************
