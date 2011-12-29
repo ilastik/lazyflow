@@ -146,11 +146,11 @@ class AlphaModulatedImageSource( ImageSource ):
         assert isinstance(qrect, QRect)
         s = rect2slicing(qrect)
         req = self._arraySource2D.request(s)
-        return AlphaModulatedImageRequest( req, self._layer.tintColor, self._layer._normalize )
+        return AlphaModulatedImageRequest( req, self._layer.tintColor, self._layer.normalize[0] )
 assert issubclass(AlphaModulatedImageSource, SourceABC)
 
 class AlphaModulatedImageRequest( object ):
-    def __init__( self, arrayrequest, tintColor, normalize=None ):
+    def __init__( self, arrayrequest, tintColor, normalize=(0,255)):
         self._mutex = QMutex()
         self._canceled = False
         self._arrayreq = arrayrequest
@@ -163,16 +163,13 @@ class AlphaModulatedImageRequest( object ):
 
     def toImage( self ):
         a = self._arrayreq.getResult().squeeze()
-        if self._normalize is not None:
-            a = (a - self._normalize[0])*255 / (self._normalize[1]-self._normalize[0])
-        
         shape = a.shape + (4,)
         d = np.empty(shape, dtype=np.uint8)
         d[:,:,0] = a[:,:]*self._tintColor.redF()
         d[:,:,1] = a[:,:]*self._tintColor.greenF()
         d[:,:,2] = a[:,:]*self._tintColor.blueF()
         d[:,:,3] = a[:,:]
-        img = array2qimage(d)
+        img = array2qimage(d, self._normalize)
         return img.convertToFormat(QImage.Format_ARGB32_Premultiplied)        
             
     def notify( self, callback, **kwargs ):
