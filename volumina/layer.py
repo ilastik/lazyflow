@@ -156,10 +156,16 @@ class AlphaModulatedLayer( NormalizableLayer ):
 #*******************************************************************************
 
 class ColortableLayer( Layer ):
+    @property
+    def colorTable:
+        return self._colorTable
+
     def __init__( self, datasource , colorTable):
         super(ColortableLayer, self).__init__()
         self._datasources = [datasource]
-        self.colorTable = colorTable
+        self._colorTable = colorTable
+
+
 
 #*******************************************************************************
 # R G B A L a y e r                                                            *
