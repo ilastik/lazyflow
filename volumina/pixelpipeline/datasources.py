@@ -49,6 +49,7 @@ class ArraySource( QObject ):
         if not is_pure_slicing(slicing):
             raise Exception('dirty region: slicing is not pure')
         self.isDirty.emit( slicing )
+
 assert issubclass(ArraySource, SourceABC)
 
 #*******************************************************************************
@@ -112,7 +113,10 @@ class LazyflowSource( QObject ):
             volumina.printLock.release()
         if not is_pure_slicing(slicing):
             raise Exception('LazyflowSource: slicing is not pure')
-        reqobj = self._outslot[slicing].allocate(priority = self._priority)        
+        if self._outslot.shape is not None:
+            reqobj = self._outslot[slicing].allocate(priority = self._priority)        
+        else:
+            reqobj = ArrayRequest( np.zeros(slicing2shape(slicing), dtype=np.uint8 ) )
         return LazyflowRequest( reqobj )
 
     def setDirty( self, slicing ):
