@@ -40,9 +40,10 @@ class PyVolumeEditorWidgetPlugin(QPyDesignerCustomWidgetPlugin):
 
         layerstack.append( GrayscaleLayer( source ) )
 
-        editor = VolumeEditor(shape, layerstack, labelsink=None)  
+        editor = VolumeEditor(layerstack, labelsink=None)  
         widget = VolumeEditorWidget(parent=parent)
         widget.init(editor)
+        editor.dataShape = shape
         return widget
     
     def name(self):
