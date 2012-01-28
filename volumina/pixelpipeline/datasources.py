@@ -69,6 +69,40 @@ class ArraySinkSource( ArraySource ):
         self.setDirty(pure)
 
 #*******************************************************************************
+# R e l a b e l i n g A r r a y S o u r c e                                    * 
+#*******************************************************************************
+
+class RelabelingArraySource( QObject ):
+    """Applies a relabeling to each request before passing it on
+       Currently, it casts everything to uint8, so be careful."""
+    isDirty = pyqtSignal( object )
+    def __init__( self, array ):
+        super(RelabelingArraySource, self).__init__()
+        self._array = array
+        self._relabeling = None
+        
+    def setRelabeling( self, relabeling ):
+        self._relabeling = relabeling
+        self.setDirty(5*(slice(None),))
+
+    def request( self, slicing ):
+        if not is_pure_slicing(slicing):
+            raise Exception('ArraySource: slicing is not pure')
+        assert(len(slicing) == len(self._array.shape)), \
+            "slicing into an array of shape=%r requested, but the slicing object is %r" % (slicing, self._array.shape)
+        a = self._array[slicing]
+        if self._relabeling is not None:
+            a = self._relabeling[a].astype(np.uint8)
+        else:
+            a = a.astype(numpy.uint8) #FIXME  
+        return ArrayRequest(a)
+        
+    def setDirty( self, slicing ):
+        if not is_pure_slicing(slicing):
+            raise Exception('dirty region: slicing is not pure')
+        self.isDirty.emit( slicing )
+        
+#*******************************************************************************
 # L a z y f l o w R e q u e s t                                                *
 #*******************************************************************************
 
