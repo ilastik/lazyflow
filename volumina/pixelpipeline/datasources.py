@@ -94,7 +94,7 @@ class RelabelingArraySource( QObject ):
         if self._relabeling is not None:
             a = self._relabeling[a].astype(np.uint8)
         else:
-            a = a.astype(numpy.uint8) #FIXME  
+            a = a.astype(np.uint8) #FIXME  
         return ArrayRequest(a)
         
     def setDirty( self, slicing ):
