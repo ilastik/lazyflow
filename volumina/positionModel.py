@@ -185,7 +185,7 @@ class PositionModel(QObject):
             return
         oldPos = self._slicingPos
         
-        self._slicingPos = pos
+        self._slicingPos = list(pos)
         
         if self._slicingSettled:
             self._slicingSettled = False

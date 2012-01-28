@@ -30,12 +30,14 @@ if _has_lazyflow:
                 outShape = (1,) + shape + (1,1,)
             else:
                 outShape = (1,) + shape + (1,)
+            assert len(outShape) == 5
             self.ndim = len(shape)
             self.outputs["Output"]._shape = outShape
             self.outputs["Output"]._dtype = self.inputs["Input"].dtype
             self.outputs["Output"]._axistags = self.inputs["Input"].axistags
 
         def getOutSlot(self, slot, key, resultArea):
+            assert len(key) == 5
             assert key[0] == slice(0,1,None)
             assert key[-1] == slice(0,1,None)
             if self.ndim == 3:

@@ -94,6 +94,7 @@ class GrayscaleImageRequest( object ):
         
     def toImage( self ):
         a = self._arrayreq.getResult()
+        assert a.ndim == 2, "GrayscaleImageRequest.toImage(): result has shape %r, which is not 2-D" % (a.shape,)
         img = gray2qimage(a, self._normalize)
         return img.convertToFormat(QImage.Format_ARGB32_Premultiplied)
             
@@ -237,6 +238,7 @@ class ColortableImageRequest( object ):
         
     def toImage( self ):
         a = self._arrayreq.getResult()
+        assert a.ndim == 2
         img = gray2qimage(a)
         img.setColorTable(self._colorTable)# = img.convertToFormat(QImage.Format_ARGB32_Premultiplied, self._colorTable)
         img = img.convertToFormat(QImage.Format_ARGB32_Premultiplied)
@@ -391,6 +393,7 @@ class RandomImageRequest( object ):
 
     def wait(self):
         d = (np.random.random(self.shape) * 255).astype(np.uint8)        
+        assert a.ndim == 2
         img = gray2qimage(d)
         return img.convertToFormat(QImage.Format_ARGB32_Premultiplied)
             

@@ -183,8 +183,8 @@ class SliceProjection( object ):
     def __call__( self, domainArray ):
         """Projects the n-d slicing 'domainArray' to 2 dimensions"""
 
-        assert domainArray.ndim == self.domainDim, "ndim %d != %d" % (domainArray.ndim, self.domainDim)
-        slicing = 5*[0]
+        assert domainArray.ndim == self.domainDim, "ndim %d != %d (domainArray.shape=%r, domainDim=%r)" % (domainArray.ndim, self.domainDim, domainArray.shape, self.domainDim)
+        slicing = self.domainDim*[0]
         slicing[self._abscissa], slicing[self._ordinate] = slice(None,None), slice(None,None)
         
         projectedArray = domainArray[slicing]

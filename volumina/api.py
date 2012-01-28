@@ -214,6 +214,7 @@ class Viewer(QMainWindow):
                 init()
             self.editor.dataShape = shape
             print "  --> resetting viewer to shape=%r and zero layers" % (self.editor.dataShape,) 
+            self.layerstack.clear()
 
         #
         # create layer
@@ -386,7 +387,7 @@ class Viewer(QMainWindow):
 #******************************************************************************
 
 if __name__ == '__main__':
-    from scipy import lena
+    from scipy.misc import lena
     from volumina import _testing
 
     lenaFile = os.path.split(volumina._testing.__file__)[0]+"/lena.png"

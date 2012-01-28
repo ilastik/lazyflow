@@ -81,7 +81,6 @@ class LazyflowRequest( object ):
         
     def getResult(self):
         return self._lazyflow_request.getResult()
-        
 
     def adjustPriority(self,delta):
         self._lazyflow_request.adjustPriority(delta)

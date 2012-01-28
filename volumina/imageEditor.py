@@ -15,6 +15,7 @@ from imageView2D import ImageView2D
 class ImageEditor( QObject ):
 
     posModelChanged = pyqtSignal(object, object)
+    shapeChanged = pyqtSignal()
     
     @property
     def posModel(self):
@@ -72,6 +73,7 @@ class ImageEditor( QObject ):
         assert len(s) == 2, "got a non-2D shape '%r'" % (s,)
         self.posModel.shape = s
         self.imageView[0].sliceShape = s
+        self.shapeChanged.emit()
 
     ##
     ## private
