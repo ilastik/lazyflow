@@ -58,8 +58,8 @@ class VolumeEditor( QObject ):
         self.view3d.dataShape = s[1:4]
         self.shapeChanged.emit()
 
-    def __init__( self, layerStackModel, labelsink=None):
-        super(VolumeEditor, self).__init__()
+    def __init__( self, layerStackModel, labelsink=None, parent=None):
+        super(VolumeEditor, self).__init__(parent=parent)
 
         ##
         ## properties
@@ -127,9 +127,11 @@ class VolumeEditor( QObject ):
 
         #make sure that exactly one of the three slice views has focus
         #when the program starts up
-        def initialFocus():
-            self.imageViews[0].setFocus(Qt.MouseFocusReason);
-        QTimer.singleShot(0,initialFocus)
+        # -- unfortunately, this makes the VolumeEditorWidget crash in
+        #    Qt Designer
+        #def initialFocus():
+        #    self.imageViews[0].setFocus(Qt.MouseFocusReason);
+        #QTimer.singleShot(0,initialFocus)
 
     def scheduleSlicesRedraw(self):
         for s in self.imageScenes:
