@@ -328,7 +328,7 @@ class RGBAImageRequest( object ):
         self._requestsFinished = 4 * [False,]
 
     def wait(self):
-        for req in requests:
+        for req in self._requests:
             req.wait()
         return self.toImage()
 
