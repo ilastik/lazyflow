@@ -1,10 +1,12 @@
 import unittest as ut
+import sys
+sys.path.append("../.")
 
 from PyQt4.QtCore import QRect
 from PyQt4.QtGui import QImage
 
 from volumina.pixelpipeline.imagesources import GrayscaleImageSource, RGBAImageSource
-from volumina.pixelpipeline.datasources import ConstantSource
+from volumina.pixelpipeline.datasources import ConstantSource, ArraySource
 from volumina.layer import GrayscaleLayer, RGBALayer
 
 #*******************************************************************************
@@ -14,7 +16,6 @@ from volumina.layer import GrayscaleLayer, RGBALayer
 class GrayscaleImageSourceTest( ut.TestCase ):
     def setUp( self ):
         from scipy.misc import lena
-        from datasources import ArraySource
         self.raw = lena()
         self.ars = ArraySource(self.raw)
         self.ims = GrayscaleImageSource( self.ars, GrayscaleLayer( self.ars ))
@@ -55,7 +56,6 @@ class RGBAImageSourceTest( ut.TestCase ):
     def setUp( self ):
         import numpy as np
         import os.path
-        from datasources import ArraySource        
         from volumina import _testing
         basedir = os.path.dirname(_testing.__file__)
         self.data = np.load(os.path.join(basedir, 'rgba129x104.npy'))
