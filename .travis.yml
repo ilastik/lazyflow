@@ -5,3 +5,6 @@ before_script:
    - sudo pip install -r requirements/travis-buildserver.txt
 script:
    - nosetests .
+notifications:
+  email:
+    - bernhard.kausler@iwr.uni-heidelberg.de
