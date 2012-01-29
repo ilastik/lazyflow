@@ -1,7 +1,7 @@
 rvm:
    - 1.9.3
 before_script: 
-   - sudo apt-get install python-nose python-qt4-dev
+   - sudo apt-get install python-nose python-qt4-dev python-numpy
    - sudo pip install -r requirements/travis-buildserver.txt
 script:
    - nosetests .
