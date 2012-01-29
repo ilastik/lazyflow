@@ -1,7 +1,7 @@
 from PyQt4.QtDesigner import QPyDesignerCustomWidgetPlugin
 from PyQt4.QtGui import QPixmap, QIcon, QColor
 
-from thresholdingWidget import ThresholdingWidget
+from volumina.widgets.thresholdingWidget import ThresholdingWidget
 
 class PyThresholdingWidgetPlugin(QPyDesignerCustomWidgetPlugin):
 
@@ -45,5 +45,5 @@ class PyThresholdingWidgetPlugin(QPyDesignerCustomWidgetPlugin):
                )
     
     def includeFile(self):
-        return "thresholdingWidget"
+        return "volumina.widgets.thresholdingWidget"
  
