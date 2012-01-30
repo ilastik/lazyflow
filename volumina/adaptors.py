@@ -8,6 +8,7 @@ import os
 import os.path as path
 import numpy as np
 from volumina.slicingtools import sl, slicing2shape
+import vigra
 
 ###
 ### lazyflow input
@@ -24,27 +25,38 @@ if _has_lazyflow:
         inputSlots = [InputSlot("Input")]
         outputSlots = [OutputSlot("Output")]
         def notifyConnectAll(self):
-            shape = self.inputs["Input"].shape
-            assert len(shape) in [2,3], shape
-            if len(shape) == 2:
-                outShape = (1,) + shape + (1,1,)
-            else:
-                outShape = (1,) + shape + (1,)
-            assert len(outShape) == 5
-            self.ndim = len(shape)
+            inputAxistags = self.inputs["Input"].axistags
+            inputShape = self.inputs["Input"].shape
+            outShape = 5*[1,]
+            voluminaOrder = ['t', 'x', 'y', 'z', 'c']
+            inputOrder = []
+            order = []
+            self.slicing = 5*[0]
+            for i, channel in enumerate(inputAxistags):
+                assert channel.key in voluminaOrder
+                order.append(voluminaOrder.index(channel.key))
+                outShape[ voluminaOrder.index(channel.key) ] = inputShape[i] 
+                self.slicing[ voluminaOrder.index(channel.key) ] = slice(None,None)
+                inputOrder.append(channel.key)
+            assert order == sorted(order)
+            self.keyStart = voluminaOrder.index(inputOrder[0])
+            self.keyStop = voluminaOrder.index(inputOrder[-1])
+
+            self.ndim = len(inputShape)
             self.outputs["Output"]._shape = outShape
             self.outputs["Output"]._dtype = self.inputs["Input"].dtype
-            self.outputs["Output"]._axistags = self.inputs["Input"].axistags
+          
+            t = vigra.AxisTags()
+            t.insert(0, vigra.AxisInfo('t', vigra.AxisType.Time))
+            t.insert(1, vigra.AxisInfo('x', vigra.AxisType.Space))
+            t.insert(2, vigra.AxisInfo('y', vigra.AxisType.Space))
+            t.insert(3, vigra.AxisInfo('z', vigra.AxisType.Space))
+            t.insert(4, vigra.AxisInfo('c', vigra.AxisType.Channels))
+
+            self.outputs["Output"]._axistags = t 
 
         def getOutSlot(self, slot, key, resultArea):
-            assert len(key) == 5
-            assert key[0] == slice(0,1,None)
-            assert key[-1] == slice(0,1,None)
-            if self.ndim == 3:
-                req = self.inputs["Input"][key[1:-1]].writeInto(resultArea[0,:,:,:,0])
-            else:
-                assert key[-2] == slice(0,1,None)
-                req = self.inputs["Input"][key[1:-1]].writeInto(resultArea[0,:,:,0,0])
+            req = self.inputs["Input"][key[slice(self.keyStart, self.keyStop+1)]].writeInto(resultArea[self.slicing])
             return req.wait()
 
         def notifyDirty(self,slot,key):
