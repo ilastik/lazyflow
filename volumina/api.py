@@ -49,6 +49,9 @@ class Viewer(QMainWindow):
         if uiDirectory == '':
             uiDirectory = '.'
         loadUi(uiDirectory + '/viewer.ui', self)
+        #the viewer is initialized below again, depending on what kind
+        #of layer we add, therefore we delete it here"
+        self.viewer = None
 
         self._dataShape = None
         self.editor = None
@@ -292,7 +295,6 @@ class Viewer(QMainWindow):
 
         if not isinstance(self.viewer, VolumeEditorWidget):
             splitterSizes = self.splitter.sizes()
-            self.viewer.setParent(None)
             del self.viewer
             self.viewer = VolumeEditorWidget()
             self.splitter.insertWidget(0, self.viewer)
