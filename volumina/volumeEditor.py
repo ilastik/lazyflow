@@ -18,7 +18,7 @@ from pixelpipeline.slicesources import SyncedSliceSources
 
 useVTK = True
 try:
-    import vtk
+    from view3d.view3d import OverviewScene
 except ImportError:
     import traceback
     traceback.print_exc()
