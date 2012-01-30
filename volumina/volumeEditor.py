@@ -16,11 +16,10 @@ from brushingmodel import BrushingModel
 from slicingtools import SliceProjection
 from pixelpipeline.slicesources import SyncedSliceSources
 
-
 useVTK = True
 try:
-    from view3d.view3d import OverviewScene
-except:
+    import vtk
+except ImportError:
     import traceback
     traceback.print_exc()
     useVTK = False

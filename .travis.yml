@@ -1,0 +1,10 @@
+rvm:
+   - 1.9.3
+before_script: 
+   - sudo apt-get install python-nose python-qt4 python-qt4-dev python-numpy python-scipy python-vigra
+   - sudo pip install -r requirements/travis-buildserver.txt
+script:
+   - nosetests .
+notifications:
+  email:
+    - bernhard.kausler@iwr.uni-heidelberg.de
