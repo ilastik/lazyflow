@@ -42,7 +42,7 @@ class ArraySource( QObject ):
         if not is_pure_slicing(slicing):
             raise Exception('ArraySource: slicing is not pure')
         assert(len(slicing) == len(self._array.shape)), \
-        "slicing into an array of shape=%r requested, but the slicing object is %r" % (slicing, self._array.shape)  
+            "slicing into an array of shape=%r requested, but the slicing object is %r" % (slicing, self._array.shape)  
         return ArrayRequest(self._array[slicing])
 
     def setDirty( self, slicing ):
@@ -64,6 +64,8 @@ class ArraySinkSource( ArraySource ):
         wrapped array, but the original values are kept.
 
         '''
+        assert(len(slicing) == len(self._array.shape)), \
+            "slicing into an array of shape=%r requested, but the slicing object is %r" % (slicing, self._array.shape)  
         self._array[slicing] = np.where(subarray!=neutral, subarray, self._array[slicing])
         pure = index2slice(slicing)
         self.setDirty(pure)
@@ -147,6 +149,7 @@ class LazyflowSource( QObject ):
         if not is_pure_slicing(slicing):
             raise Exception('LazyflowSource: slicing is not pure')
         if self._outslot.shape is not None:
+            assert len(self._outslot.shape) == len(slicing), "shape mismatch: outslot of '%s' has shape = %r <--> slicing = %r" % (self._outslot.operator.name, self._outslot.shape, slicing)
             reqobj = self._outslot[slicing].allocate(priority = self._priority)        
         else:
             reqobj = ArrayRequest( np.zeros(slicing2shape(slicing), dtype=np.uint8 ) )

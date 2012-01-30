@@ -79,7 +79,6 @@ class ImageEditor( QObject ):
     ## private
     ##
     def _initImagePump( self ):
-        
         TwoDProjection = SliceProjection(0,1,[])
         imagepump = volumina.pixelpipeline.imagepump.ImagePump( self._layerStack, TwoDProjection )
         return imagepump

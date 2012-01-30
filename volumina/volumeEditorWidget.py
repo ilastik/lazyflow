@@ -26,6 +26,7 @@ class VolumeEditorWidget(QWidget):
         self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         self.setFocusPolicy(Qt.StrongFocus)
         
+        self.editor = None
         if editor!=None:
             self.init(editor)
 

@@ -1,7 +1,9 @@
 from PyQt4.QtCore import QObject, pyqtSignal
 from asyncabcs import SourceABC, RequestABC
 import numpy as np
+import volumina
 from volumina.slicingtools import SliceProjection, is_pure_slicing, intersection, sl
+from colorama import Fore
 
 projectionAlongTXC = SliceProjection( abscissa = 2, ordinate = 3, along = [0,1,4] )
 projectionAlongTYC = SliceProjection( abscissa = 1, ordinate = 3, along = [0,2,4] )
@@ -67,12 +69,15 @@ class SliceSource( QObject ):
         self.through = through
 
     def request( self, slicing2D ):
+        assert len(slicing2D) == 2
         slicing = self.sliceProjection.domain(self.through, slicing2D[0], slicing2D[1])
-        if len(self.sliceProjection.along) <= 1:
-            slicing = slicing2D
+        
+        if volumina.verboseRequests:
+            volumina.printLock.acquire()
+            print Fore.RED + "SliceSource requests '%r' from data source '%s'" % (slicing, self._datasource.name) + Fore.RESET
+            volumina.printLock.release()
         return SliceRequest(self._datasource.request(slicing), self.sliceProjection)
         
-    
     def setDirty( self, slicing ):
         assert isinstance(slicing, tuple)
         if not is_pure_slicing(slicing):

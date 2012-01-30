@@ -49,9 +49,6 @@ class Viewer(QMainWindow):
         if uiDirectory == '':
             uiDirectory = '.'
         loadUi(uiDirectory + '/viewer.ui', self)
-        #the viewer is initialized below again, depending on what kind
-        #of layer we add, therefore we delete it here"
-        self.viewer = None
 
         self._dataShape = None
         self.editor = None
@@ -295,6 +292,7 @@ class Viewer(QMainWindow):
 
         if not isinstance(self.viewer, VolumeEditorWidget):
             splitterSizes = self.splitter.sizes()
+            self.viewer.setParent(None)
             del self.viewer
             self.viewer = VolumeEditorWidget()
             self.splitter.insertWidget(0, self.viewer)
@@ -319,7 +317,6 @@ class Viewer(QMainWindow):
 
         if not isinstance(self.viewer, ImageEditorWidget):
             self.layerstack.clear()
-            print "changing to 2D viewer"
             
             w = self.viewer
             if isinstance(w, VolumeEditor):
@@ -416,9 +413,32 @@ if __name__ == '__main__':
             def notifyConnectAll(self):
                 print "notifyConnectAll"
                 oslot = self.outputs['output']
-                oslot._shape = self.inputs['shape'].value
+                shape = oslot._shape = self.inputs['shape'].value
                 oslot._dtype = numpy.uint8
-                oslot._axistags = vigra.defaultAxistags(len(oslot._shape))
+                t = vigra.AxisTags()
+
+                if len(shape) == 5:
+                    t.insert(0, vigra.AxisInfo('t', vigra.AxisType.Time))
+                    t.insert(1, vigra.AxisInfo('x', vigra.AxisType.Space))
+                    t.insert(2, vigra.AxisInfo('y', vigra.AxisType.Space))
+                    t.insert(3, vigra.AxisInfo('z', vigra.AxisType.Space))
+                    t.insert(4, vigra.AxisInfo('c', vigra.AxisType.Channels))
+                elif len(shape) == 4:
+                    t.insert(0, vigra.AxisInfo('x', vigra.AxisType.Space))
+                    t.insert(1, vigra.AxisInfo('y', vigra.AxisType.Space))
+                    t.insert(2, vigra.AxisInfo('z', vigra.AxisType.Space))
+                    t.insert(3, vigra.AxisInfo('c', vigra.AxisType.Channels))
+                elif len(shape) == 3:
+                    t.insert(0, vigra.AxisInfo('x', vigra.AxisType.Space))
+                    t.insert(1, vigra.AxisInfo('y', vigra.AxisType.Space))
+                    t.insert(2, vigra.AxisInfo('z', vigra.AxisType.Space))
+                elif len(shape) == 2:
+                    t.insert(0, vigra.AxisInfo('x', vigra.AxisType.Space))
+                    t.insert(1, vigra.AxisInfo('y', vigra.AxisType.Space))
+                else:
+                    RuntimeError("Unhandled shape")
+
+                oslot._axistags = t 
 
             def getOutSlot(self, slot, key, result):
                 result[:] = numpy.random.randint(0, 255)
@@ -468,9 +488,9 @@ if __name__ == '__main__':
         g = Graph()
         op = OpOnDemand(g)
         op.inputs['shape'].setValue(d.shape)
-        v.addLayer(op.outputs['output'], name='lazyflow 3D', visible=False)
+        v.addLayer(op.outputs['output'], name='lazyflow 3D', visible=True)
         op2 = OpOnDemand(g)
         op2.inputs['shape'].setValue((1,) + d.shape + (1,))
-        v.addLayer(op2.outputs['output'], name='lazyflow 5D', visible=False)
+        v.addLayer(op2.outputs['output'], name='lazyflow 5D', visible=True)
 
     app.exec_()

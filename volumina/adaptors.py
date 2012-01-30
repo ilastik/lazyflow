@@ -27,6 +27,7 @@ if _has_lazyflow:
         def notifyConnectAll(self):
             inputAxistags = self.inputs["Input"].axistags
             inputShape = self.inputs["Input"].shape
+            assert len(inputShape) == len(inputAxistags), "Op5ifyer: my input coming from operator '%s' has inconsistent shape and axistags information" % (self.inputs["Input"].partner.operator.name)
             outShape = 5*[1,]
             voluminaOrder = ['t', 'x', 'y', 'z', 'c']
             inputOrder = []
@@ -55,9 +56,14 @@ if _has_lazyflow:
 
             self.outputs["Output"]._axistags = t 
 
-        def getOutSlot(self, slot, key, resultArea):
-            req = self.inputs["Input"][key[slice(self.keyStart, self.keyStop+1)]].writeInto(resultArea[self.slicing])
-            return req.wait()
+        def execute(self, slot, key, resultArea):
+            key = key.toSlice()
+            assert resultArea.ndim == 5
+            inputSlicing = key[slice(self.keyStart, self.keyStop+1)]
+            assert len(inputSlicing) == len(self.inputs["Input"]._shape), "inputSlicing = %r, input shape = %r" % (inputSlicing, self.inputs["Input"]._shape)
+            req = self.inputs["Input"][inputSlicing].writeInto(resultArea[self.slicing])
+            req.wait()
+            return resultArea 
 
         def notifyDirty(self,slot,key):
             self.outputs["Output"].setDirty(key)
