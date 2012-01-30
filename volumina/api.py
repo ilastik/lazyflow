@@ -290,7 +290,7 @@ class Viewer(QMainWindow):
 
         self.editor = VolumeEditor(self.layerstack, labelsink=None)
 
-        if not isinstance(self.viewer, VolumeEditorWidget):
+        if not isinstance(self.viewer, VolumeEditorWidget) or self.viewer.editor is None:
             splitterSizes = self.splitter.sizes()
             self.viewer.setParent(None)
             del self.viewer
@@ -319,7 +319,7 @@ class Viewer(QMainWindow):
             self.layerstack.clear()
             
             w = self.viewer
-            if isinstance(w, VolumeEditor):
+            if isinstance(w, VolumeEditor) and w.editor is not None:
                 self.menuView.removeAction(w.allZoomToFit)
                 self.menuView.removeAction(w.allToggleHUD)
                 self.menuView.removeAction(w.allCenter)
