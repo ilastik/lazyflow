@@ -163,7 +163,6 @@ class VolumeEditorWidget(QWidget):
             v.setHudVisible(checked)
             
     def _toggleSelectedHud(self, checked):
-        print self.editor._lastImageViewFocus
         if self.editor._lastImageViewFocus is not None:
             self.editor.imageViews[self.editor._lastImageViewFocus].setHudVisible(checked)
             
@@ -338,7 +337,6 @@ if __name__ == "__main__":
                     sys.exit(1)
                 f = h5py.File(fname, 'r')
                 d = f["volume/data"]
-                print d.shape, d.dtype
                 source = ArraySource(d)
                 layerstack.append( GrayscaleLayer( source ) )
                 
