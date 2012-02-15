@@ -7,5 +7,8 @@ script:
    - nosetests .
 notifications:
   email:
-    - bernhard.kausler@iwr.uni-heidelberg.de
-    - ilastik-devel@hci.iwr.uni-heidelberg.de
+    recipients:
+	- bernhard.kausler@iwr.uni-heidelberg.de
+    	- ilastik-devel@hci.iwr.uni-heidelberg.de
+    on_success: never
+    on_failure: always
