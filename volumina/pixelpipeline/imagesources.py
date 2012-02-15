@@ -393,7 +393,7 @@ class RandomImageRequest( object ):
 
     def wait(self):
         d = (np.random.random(self.shape) * 255).astype(np.uint8)        
-        assert a.ndim == 2
+        assert d.ndim == 2
         img = gray2qimage(d)
         return img.convertToFormat(QImage.Format_ARGB32_Premultiplied)
             
