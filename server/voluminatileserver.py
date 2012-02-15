@@ -24,6 +24,11 @@ class TileHandler(tornado.web.RequestHandler):
 		
 		# parse the arguments
 		#z=self.get_argument('z')
+        # the usable parameters posted are:
+        # x, y, dx : tileWidth, dy : tileHeight,
+        # scale : scale, // defined as 1/2**zoomlevel
+        # z : z
+        # everything in bitmap pixel coordinates
 		
 		# create an example PNG
 		w,h=256,256
