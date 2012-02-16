@@ -25,22 +25,31 @@ def qimage2str( qimg, format = 'PNG' ):
 # This handler serves tiles from e.g. volumina
 class TileHandler(tornado.web.RequestHandler):
 	
-	def initialize(self, stackedImageSources):
-            self._stackedIms = stackedImageSources
+	def initialize(self, imageSource):
+            self._ims = imageSource
 		
 	def get(self):
 		print "the get request", self.request
 		
 		# parse the arguments
-		#z=self.get_argument('z')
-        # the usable parameters posted are:
-        # x, y, dx : tileWidth, dy : tileHeight,
-        # scale : scale, // defined as 1/2**zoomlevel
-        # z : z
-        # everything in bitmap pixel coordinates
+		# the usable parameters posted are:
+		# x, y, dx : tileWidth, dy : tileHeight,
+		# scale : scale, // defined as 1/2**zoomlevel
+		# z : z
+		# everything in bitmap pixel coordinates
+		x=int(self.get_argument('x', default = '0'))
+		y=int(self.get_argument('y', default = '0'))
+		z=int(self.get_argument('z', default = '0'))
+
+		dx=int(self.get_argument('dx', default = '256'))
+		dy=int(self.get_argument('dy', default = '256'))
 		
-		# create an example PNG
-		qimg = self._stackedIms.getImageSource(0).request(QRect(0,0,255,255)).wait()
+		scale = float(self.get_argument('scale', default='1'))
+
+		qimg = self._ims.request(QRect(x,y, dx, dy)).wait()
+		zoomed_width = int(dx * scale)
+		qimg = qimg.scaledToWidth(zoomed_width)
+
 		self.set_header('Content-Type', 'image/png') 
 		self.write(qimage2str(qimg))
 		self.flush()
@@ -66,15 +75,17 @@ if __name__ == "__main__":
     from pixelpipeline.datasources import ArraySource
     from volumina.layer import GrayscaleLayer
     from volumina.stackEditor import StackEditor
+    from scipy.misc import lena
     data = np.random.random_integers(0,255, size= (512,512,128))
-    data = data[np.newaxis, ..., np.newaxis]
+    data = lena()
+    data = data[np.newaxis, ..., np.newaxis, np.newaxis]
     ds = ArraySource(data)
     
     se = StackEditor()
     se.layerStackModel.append(GrayscaleLayer(ds))
 
     VoluminaTileServer = tornado.web.Application([
-		    (r"/", TileHandler, {'stackedImageSources': se.imagePump.stackedImageSources}),
+		    (r"/", TileHandler, {'imageSource': se.imagePump.stackedImageSources.getImageSource(0)}),
 		    (r"/labelupload", LabelUploader),
 		    ])
 
