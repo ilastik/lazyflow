@@ -6,18 +6,27 @@
 # Requirements:
 # sudo pip install tornado
 
+from PyQt4.QtCore import QRect, QIODevice, QBuffer
+
 import tornado.ioloop
 import tornado.web
-
-import Image
-import cStringIO 
 import numpy as np
+
+def qimage2str( qimg, format = 'PNG' ):
+    buffer = QBuffer()
+    buffer.open(QIODevice.ReadWrite)
+    qimg.save(buffer, format)
+    data = buffer.data() # type(data) == QByteArray
+    buffer.close()    
+    # extracts Python str from QByteArray    
+    return data.data()
+
 
 # This handler serves tiles from e.g. volumina
 class TileHandler(tornado.web.RequestHandler):
 	
-	def initialize(self, database):
-		self.database = database
+	def initialize(self, stackedImageSources):
+            self._stackedIms = stackedImageSources
 		
 	def get(self):
 		print "the get request", self.request
@@ -31,18 +40,9 @@ class TileHandler(tornado.web.RequestHandler):
         # everything in bitmap pixel coordinates
 		
 		# create an example PNG
-		w,h=256,256
-		img = np.empty((w,h),np.uint32)
-		img.shape=h,w
-		img[0,0]=0x800000FF
-		img[:100,:100]=0xFFFF0000
-		pilImage = Image.frombuffer('RGBA',(w,h),img,'raw','RGBA',0,1)
-		imgbuff = cStringIO.StringIO() 
-		pilImage.save(imgbuff, format='PNG') 
-		imgbuff.seek(0)
+		qimg = self._stackedIms.getImageSource(0).request(QRect(0,0,255,255)).wait()
 		self.set_header('Content-Type', 'image/png') 
-		self.write(imgbuff.read()) 
-		imgbuff.close()
+		self.write(qimage2str(qimg))
 		self.flush()
         
 	def post(self):
@@ -60,11 +60,24 @@ class LabelUploader(tornado.web.RequestHandler):
 		self.write("success")
 	
 
-VoluminaTileServer = tornado.web.Application([
-    (r"/", TileHandler, dict(database="123")),
-    (r"/labelupload", LabelUploader),
-])
 
 if __name__ == "__main__":
+    import numpy as np
+    from pixelpipeline.datasources import ArraySource
+    from volumina.layer import GrayscaleLayer
+    from volumina.stackEditor import StackEditor
+    data = np.random.random_integers(0,255, size= (512,512,128))
+    data = data[np.newaxis, ..., np.newaxis]
+    ds = ArraySource(data)
+    
+    se = StackEditor()
+    se.layerStackModel.append(GrayscaleLayer(ds))
+
+    VoluminaTileServer = tornado.web.Application([
+		    (r"/", TileHandler, {'stackedImageSources': se.imagePump.stackedImageSources}),
+		    (r"/labelupload", LabelUploader),
+		    ])
+
+
     VoluminaTileServer.listen(8888)
     tornado.ioloop.IOLoop.instance().start()

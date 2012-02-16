@@ -12,3 +12,13 @@ class StackEditor( object ):
         self.layerStackModel = layerStackModel
         self.imagePump = ImagePump( layerStackModel, sliceProjection )
         self.positionModel = StackPositionModel()
+
+if __name__ == "__main__":
+    import numpy as np
+    from pixelpipeline.datasources import ArraySource
+    from volumina.layer import GrayscaleLayer
+    data = np.random.random_integers(0,255, size= (512,512,128))
+    ds = ArraySource(data)
+    
+    se = StackEditor()
+    se.layerStackModel.append(GrayscaleLayer(ds))
