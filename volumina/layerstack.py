@@ -2,7 +2,7 @@ from PyQt4.QtCore import QAbstractListModel, pyqtSignal, QModelIndex, Qt, \
                          QTimer, pyqtSignature, QString
 from PyQt4.QtGui import QItemSelectionModel
 
-from layer import Layer
+from volumina.layer import Layer
 
 #*******************************************************************************
 # L a y e r S t a c k M o d e l                                                *
