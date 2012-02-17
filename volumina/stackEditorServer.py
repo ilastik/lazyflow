@@ -11,6 +11,7 @@ from PyQt4.QtCore import QRect, QIODevice, QBuffer
 import tornado.ioloop
 import tornado.web
 import numpy as np
+import tornado.escape
 
 def qimage2str( qimg, format = 'PNG' ):
     buffer = QBuffer()
@@ -68,7 +69,64 @@ class LabelUploader(tornado.web.RequestHandler):
 		output.close()
 		self.write("success")
 	
-
+class MetadataHandler(tornado.web.RequestHandler):
+    
+    def get(self):
+        # need to parse project_id and stack_id from CATMAID ?
+        result={
+            'sid': 1,
+            'pid': 1,
+            'ptitle': 'Project Title',
+            'stitle': 'Stack Title',
+            'min_zoom_level': -1,
+            'file_extension': 'png',
+            'editable': 1, # TODO: needs fix
+            'translation': {
+                'x': 0.0,
+                'y': 0.0,
+                'z': 0.0
+            }, # TODO: use project_stack
+            'resolution': {
+                'x': 1.0,
+                'y': 1.0,
+                'z': 1.0
+            },
+            'dimension': {
+                'x': 5120,
+                'y': 5120,
+                'z': 10
+            },
+            'tile_height': 256,
+            'tile_width': 256,
+            'tile_source_type': 2,
+            'broken_slices': {},
+            'trakem2_project': 0,
+            'overlay': {
+            '0': {
+                    'title': 'Segmentation result',
+                    # would map to url where corresponding tiles are served
+                    'image_base': 'http://localhost:8888/',
+                    'default_opacity': 50,
+                    'file_extension': 'png'
+                }
+            }, # the overlays define layers
+            
+            # number of scale levels
+            # additional fields special for tileserver
+            'image_base': 'http://localhost:8888/', # tile source base url
+            'labelupload_url': 'http://localhost:8888/labelupload'
+        }
+        self.write(tornado.escape.json_encode(result))
+        
+        
+class C5ifyer(object):
+    def __init__(self, array3d):
+        self.a = array3d
+        self.shape = (1,) + array3d.shape + (1,)
+            
+    def __getitem__( self, arg ):
+        req = self.a[arg[1:4]]
+        return req[np.newaxis, ..., np.newaxis]
 
 if __name__ == "__main__":
     import numpy as np
@@ -76,9 +134,12 @@ if __name__ == "__main__":
     from volumina.layer import GrayscaleLayer
     from volumina.stackEditor import StackEditor
     from scipy.misc import lena
-    data = np.random.random_integers(0,255, size= (512,512,128))
-    data = lena()
-    data = data[np.newaxis, ..., np.newaxis, np.newaxis]
+    import h5py
+    f = h5py.File("/home/stephan/dev/CATMAID/django/hdf5/fibdata.hdf", 'r')
+    data = C5ifyer(f['data'])
+    #data = np.random.random_integers(0,255, size= (512,512,128))
+    #data = lena()
+    #data = data[np.newaxis, ..., np.newaxis, np.newaxis]
     ds = ArraySource(data)
     
     se = StackEditor()
@@ -87,6 +148,7 @@ if __name__ == "__main__":
     VoluminaTileServer = tornado.web.Application([
 		    (r"/", TileHandler, {'imageSource': se.imagePump.stackedImageSources.getImageSource(0)}),
 		    (r"/labelupload", LabelUploader),
+            (r"/metadata", MetadataHandler),
 		    ])
 
 
