@@ -117,9 +117,23 @@ class MetadataHandler(tornado.web.RequestHandler):
             'trakem2_project': 0,
             'overlay': {
             '0': {
-                    'title': 'Segmentation result',
+                    'title': 'Overlay 0',
                     # would map to url where corresponding tiles are served
-                    'image_base': 'http://localhost:%d/' % self.server.port,
+                    'image_base': 'http://localhost:%d/overlay0' % self.server.port,
+                    'default_opacity': 100,
+                    'file_extension': 'png'
+                },
+            '1': {
+                    'title': 'Overlay 1',
+                    # would map to url where corresponding tiles are served
+                    'image_base': 'http://localhost:%d/overlay1' % self.server.port,
+                    'default_opacity': 100,
+                    'file_extension': 'png'
+                },
+            '2': {
+                    'title': 'Overlay 2',
+                    # would map to url where corresponding tiles are served
+                    'image_base': 'http://localhost:%d/overlay2' % self.server.port,
                     'default_opacity': 100,
                     'file_extension': 'png'
                 }
@@ -138,7 +152,10 @@ class CatmaidServer( object ):
         self.port = port
         self.shape = shape
         self._app = tornado.web.Application([
-                (r"/", TileHandler, {'imageSource': ims, 'sliceSource': sls, 'posModel': posModel, 'shape': shape}),
+                (r"/", TileHandler, {'imageSource': ims[3], 'sliceSource': sls, 'posModel': posModel, 'shape': shape}),
+                (r"/overlay0", TileHandler, {'imageSource': ims[1], 'sliceSource': sls, 'posModel': posModel, 'shape': shape}),
+                (r"/overlay1", TileHandler, {'imageSource': ims[2], 'sliceSource': sls, 'posModel': posModel, 'shape': shape}),
+                (r"/overlay2", TileHandler, {'imageSource': ims[0], 'sliceSource': sls, 'posModel': posModel, 'shape': shape}),
                 (r"/metadata", MetadataHandler, {'server': self}),
                 ])
     
@@ -165,6 +182,6 @@ if __name__ == "__main__":
     se.layerStackModel.append(GrayscaleLayer(ds))
 
     ims = se.imagePump.stackedImageSources.getImageSource(0)
-    tileServer = CatmaidServer( ims, se.imagePump.syncedSliceSources, None, data.shape, port=8080)
+    tileServer = CatmaidServer( [ims, ims], se.imagePump.syncedSliceSources, None, data.shape, port=8080)
     tileServer.start()
 
