@@ -25,9 +25,10 @@ def qimage2str( qimg, format = 'PNG' ):
 
 
 class TileHandler(tornado.web.RequestHandler):
-	def initialize(self, imageSource, sliceSource, shape):
+	def initialize(self, imageSource, sliceSource, posModel, shape):
             self.ims = imageSource
             self.sls = sliceSource
+            self.posModel = posModel
             self.shape = shape
 		
 	def get(self):
@@ -46,8 +47,13 @@ class TileHandler(tornado.web.RequestHandler):
             row_axis = axistag_map[self.get_argument('row', default = 'y')]
             col_axis = axistag_map[self.get_argument('col', default = 'x')]
 
-            width=int(self.get_argument('width', default = (self.shape[col_axis] - pos[col_axis])))
-            height=int(self.get_argument('height', default = (self.shape[row_axis] - pos[row_axis])))
+            max_width = self.shape[col_axis] - pos[col_axis]
+            max_height = self.shape[row_axis] - pos[row_axis]
+            width=int(self.get_argument('width', default = max_width))
+            height=int(self.get_argument('height', default = max_height))
+
+            width = width if width <= max_width else max_width
+            height = height if height <= max_height else max_height
 		
             scale = float(self.get_argument('scale', default=1))
 
@@ -59,8 +65,12 @@ class TileHandler(tornado.web.RequestHandler):
             through_axes.remove(col_axis)
             through = [pos[i] for i in through_axes]
             self.sls.through = through
+            #slPos = list(self.posModel.slicingPos)
+            #slPos[2] = pos[3]
+            #self.posModel.slicingPos = slPos
 
-            qimg = self.ims.request(QRect(pos[col_axis], pos[row_axis], width, height)).wait()
+            print "Image Request:",pos[col_axis], pos[row_axis], width, height
+            qimg = self.ims.request(QRect(pos[col_axis], pos[row_axis], height, width)).wait()
             zoomed_width = int(width * scale)
             qimg = qimg.scaledToWidth(zoomed_width)
 
@@ -122,13 +132,13 @@ class MetadataHandler(tornado.web.RequestHandler):
         self.write(tornado.escape.json_encode(result))
 
 class Server( object ):
-    def __init__( self, ims, sls, shape, port=8888 ):
-        assert(len(shape) == 5)
+    def __init__( self, ims, sls, posModel, shape, port=8888 ):
+        assert(len(shape) == 5), shape
         self.port = port
         self._app = tornado.web.Application([
-		    (r"/", TileHandler, {'imageSource': ims, 'sliceSource': sls, 'shape': shape}),
-            (r"/metadata", MetadataHandler),
-		    ])
+                (r"/", TileHandler, {'imageSource': ims, 'sliceSource': sls, 'posModel': posModel, 'shape': shape}),
+                (r"/metadata", MetadataHandler),
+                ])
     
     def start( self ):
         self._app.listen( self.port )
@@ -153,6 +163,6 @@ if __name__ == "__main__":
     se.layerStackModel.append(GrayscaleLayer(ds))
 
     ims = se.imagePump.stackedImageSources.getImageSource(0)
-    tileServer = Server( ims, se.imagePump.syncedSliceSources, data.shape, port=8080)
+    tileServer = Server( ims, se.imagePump.syncedSliceSources, None, data.shape, port=8080)
     tileServer.start()
 
