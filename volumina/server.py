@@ -10,6 +10,7 @@ from PyQt4.QtCore import QRect, QIODevice, QBuffer
 
 import tornado.ioloop
 import tornado.web
+import tornado.escape
 import numpy as np
 
 def qimage2str( qimg, format = 'PNG' ):
@@ -71,12 +72,62 @@ class TileHandler(tornado.web.RequestHandler):
             self.flush()
 
 
+class MetadataHandler(tornado.web.RequestHandler):
+    
+    def get(self):
+        # need to parse project_id and stack_id from CATMAID ?
+        result={
+            'sid': 1,
+            'pid': 1,
+            'ptitle': 'Project Title',
+            'stitle': 'Stack Title',
+            'min_zoom_level': -1,
+            'file_extension': 'png',
+            'editable': 1, # TODO: needs fix
+            'translation': {
+                'x': 0.0,
+                'y': 0.0,
+                'z': 0.0
+            }, # TODO: use project_stack
+            'resolution': {
+                'x': 1.0,
+                'y': 1.0,
+                'z': 1.0
+            },
+            'dimension': {
+                'x': 512,
+                'y': 512,
+                'z': 10
+            },
+            'tile_height': 256,
+            'tile_width': 256,
+            'tile_source_type': 2,
+            'broken_slices': {},
+            'trakem2_project': 0,
+            'overlay': {
+            '0': {
+                    'title': 'Segmentation result',
+                    # would map to url where corresponding tiles are served
+                    'image_base': 'http://localhost:8080/',
+                    'default_opacity': 100,
+                    'file_extension': 'png'
+                }
+            }, # the overlays define layers
+            
+            # number of scale levels
+            # additional fields special for tileserver
+            'image_base': 'http://localhost:8080/', # tile source base url
+            'labelupload_url': 'http://localhost:8080/labelupload'
+        }
+        self.write(tornado.escape.json_encode(result))
+
 class Server( object ):
     def __init__( self, ims, sls, shape, port=8888 ):
         assert(len(shape) == 5)
         self.port = port
         self._app = tornado.web.Application([
 		    (r"/", TileHandler, {'imageSource': ims, 'sliceSource': sls, 'shape': shape}),
+            (r"/metadata", MetadataHandler),
 		    ])
     
     def start( self ):
@@ -92,10 +143,10 @@ if __name__ == "__main__":
     from volumina.stackEditor import StackEditor
     from scipy.misc import lena
     
-    data = np.load("_testing/5d.npy")
-    #data = np.random.random_integers(0,255, size= (2362,994,47))
+    #data = np.load("_testing/5d.npy")
+    data = np.random.random_integers(0,255, size= (512,512,10))
     #data = lena()
-    #data = data[np.newaxis, ..., np.newaxis]
+    data = data[np.newaxis, ..., np.newaxis]
     ds = ArraySource(data)
     
     se = StackEditor()
