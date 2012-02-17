@@ -69,7 +69,6 @@ class TileHandler(tornado.web.RequestHandler):
             #slPos[2] = pos[3]
             #self.posModel.slicingPos = slPos
 
-            print "Image Request:",pos[col_axis], pos[row_axis], width, height
             qimg = self.ims.request(QRect(pos[col_axis], pos[row_axis], height, width)).wait()
             zoomed_width = int(width * scale)
             qimg = qimg.scaledToWidth(zoomed_width)
@@ -83,7 +82,9 @@ class TileHandler(tornado.web.RequestHandler):
 
 
 class MetadataHandler(tornado.web.RequestHandler):
-    
+    def initialize( self, server ):
+        self.server = server
+
     def get(self):
         # need to parse project_id and stack_id from CATMAID ?
         result={
@@ -105,9 +106,9 @@ class MetadataHandler(tornado.web.RequestHandler):
                 'z': 1.0
             },
             'dimension': {
-                'x': 512,
-                'y': 512,
-                'z': 10
+                'x': self.server.shape[1],
+                'y': self.server.shape[2],
+                'z': self.server.shape[3]
             },
             'tile_height': 256,
             'tile_width': 256,
@@ -118,7 +119,7 @@ class MetadataHandler(tornado.web.RequestHandler):
             '0': {
                     'title': 'Segmentation result',
                     # would map to url where corresponding tiles are served
-                    'image_base': 'http://localhost:8080/',
+                    'image_base': 'http://localhost:%d/' % self.server.port,
                     'default_opacity': 100,
                     'file_extension': 'png'
                 }
@@ -126,18 +127,19 @@ class MetadataHandler(tornado.web.RequestHandler):
             
             # number of scale levels
             # additional fields special for tileserver
-            'image_base': 'http://localhost:8080/', # tile source base url
-            'labelupload_url': 'http://localhost:8080/labelupload'
+            'image_base': 'http://localhost:%d/' % self.server.port, # tile source base url
+            'labelupload_url': 'http://localhost:%d/labelupload' % self.server.port
         }
         self.write(tornado.escape.json_encode(result))
 
-class Server( object ):
+class CatmaidServer( object ):
     def __init__( self, ims, sls, posModel, shape, port=8888 ):
         assert(len(shape) == 5), shape
         self.port = port
+        self.shape = shape
         self._app = tornado.web.Application([
                 (r"/", TileHandler, {'imageSource': ims, 'sliceSource': sls, 'posModel': posModel, 'shape': shape}),
-                (r"/metadata", MetadataHandler),
+                (r"/metadata", MetadataHandler, {'server': self}),
                 ])
     
     def start( self ):
@@ -153,16 +155,16 @@ if __name__ == "__main__":
     from volumina.stackEditor import StackEditor
     from scipy.misc import lena
     
-    #data = np.load("_testing/5d.npy")
-    data = np.random.random_integers(0,255, size= (512,512,10))
+    data = np.load("_testing/5d.npy")
+    #data = np.random.random_integers(0,255, size= (512,512,10))
     #data = lena()
-    data = data[np.newaxis, ..., np.newaxis]
+    #data = data[np.newaxis, ..., np.newaxis]
     ds = ArraySource(data)
     
     se = StackEditor()
     se.layerStackModel.append(GrayscaleLayer(ds))
 
     ims = se.imagePump.stackedImageSources.getImageSource(0)
-    tileServer = Server( ims, se.imagePump.syncedSliceSources, None, data.shape, port=8080)
+    tileServer = CatmaidServer( ims, se.imagePump.syncedSliceSources, None, data.shape, port=8080)
     tileServer.start()
 
