@@ -6,8 +6,13 @@
 # Requirements:
 # sudo pip install tornado
 
-from PyQt4.QtCore import QRect, QIODevice, QBuffer
+from PyQt4.QtCore import *
+from PyQt4.QtGui import *
+from qimage2ndarray import *
 
+
+import base64
+import re
 import tornado.ioloop
 import tornado.web
 import tornado.escape
@@ -72,6 +77,12 @@ class TileHandler(tornado.web.RequestHandler):
             qimg = self.ims.request(QRect(pos[col_axis], pos[row_axis], height, width)).wait()
             zoomed_width = int(width * scale)
             qimg = qimg.scaledToWidth(zoomed_width)
+            
+            #HACK to fix rotation
+            transform = QTransform()
+            transform.rotate(90)
+            qimg = qimg.transformed(transform)
+            qimg = qimg.mirrored(True, False)
 
             #
             # send tile
@@ -146,17 +157,79 @@ class MetadataHandler(tornado.web.RequestHandler):
         }
         self.write(tornado.escape.json_encode(result))
 
+class LabeluploadHandler(tornado.web.RequestHandler):
+    def initialize( self, server ):
+        self.server = server
+
+    def get(self):
+        print "GGGEEETTT"
+
+    def post(self):
+        print "POST", self.request.arguments
+        # extract rgba label image
+        qimg = self._extract_label_image()
+
+        # generate label arrays
+        label5d = np.zeros((1,213,202,1,1), dtype=np.uint8)
+        for i in [1,2]:
+            color = self.parse_color(self.get_argument('metadata[%d][color]'%i))
+            label_qimg = qimg.createMaskFromColor(color)
+            label_arr = raw_view(label_qimg.convertToFormat(QImage.Format_Indexed8))
+            print label_arr.shape
+            print label_arr.min(), label_arr.max()
+            prepare_label5d = np.zeros((1,213,202,1,1), dtype=np.uint8)
+            x_shift=0 # to the left
+            dx = 213 - x_shift
+            y_shift=0 # to top
+            dy = 202 - y_shift
+            prepare_label5d[0,:dx,:dy,0,0] = label_arr.swapaxes(0,1)[x_shift:,y_shift:]
+            label5d[prepare_label5d==1] = i
+        self.server.labelsink.put((slice(0,1),slice(0,213),slice(0,202),slice(0,1),slice(0,1)),label5d)            
+
+        # write labels into labelsink
+
+        
+    def _extract_label_image( self ):
+        buff = QBuffer()
+        buff.setData(base64.b64decode(self.get_argument("image")))
+        qimg = QImage()
+        buff.open(QIODevice.ReadOnly)
+        qimg.load(buff, 'PNG')
+        buff.close()
+        return qimg
+
+    @staticmethod
+    def parse_color( color_string ):
+        rgba_rexp = 'rgba\(([^,]+),([^,]+),([^,]+),([^,]+)\)'
+        rgb_rexp = 'rgb\(([^,]+),([^,]+),([^,]+)\)'
+        
+        m = re.match(rgba_rexp, color_string) or re.match(rgb_rexp, color_string)
+        if m:
+            gr = m.groups()
+            if len(gr) == 3:
+                r,g,b = gr
+                a = 255
+            else:
+                r,g,b,a = gr
+                a = int(float(a) * 255)
+            return QColor(int(r),int(g),int(b),a).rgba()
+        else:
+            raise Exception("parse_color: invalid color string " + str(color_string))
+        
+
 class CatmaidServer( object ):
-    def __init__( self, ims, sls, posModel, shape, port=8888 ):
+    def __init__( self, ims, sls, posModel, labelsink, shape, port=8888 ):
         assert(len(shape) == 5), shape
         self.port = port
         self.shape = shape
+        self.labelsink = labelsink
         self._app = tornado.web.Application([
                 (r"/", TileHandler, {'imageSource': ims[3], 'sliceSource': sls, 'posModel': posModel, 'shape': shape}),
                 (r"/overlay0", TileHandler, {'imageSource': ims[1], 'sliceSource': sls, 'posModel': posModel, 'shape': shape}),
                 (r"/overlay1", TileHandler, {'imageSource': ims[2], 'sliceSource': sls, 'posModel': posModel, 'shape': shape}),
                 (r"/overlay2", TileHandler, {'imageSource': ims[0], 'sliceSource': sls, 'posModel': posModel, 'shape': shape}),
                 (r"/metadata", MetadataHandler, {'server': self}),
+                (r"/labelupload", LabeluploadHandler, {'server': self}),
                 ])
     
     def start( self ):
