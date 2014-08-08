@@ -68,8 +68,9 @@ class ParallelVigraRfLazyflowClassifier(LazyflowVectorwiseClassifierABC):
         # Note that oobs may not be in the same order as the forests.
         self._oobs = oobs
     
-    def predict_probabilities(self, X):
+    def predict_probabilities(self, X, with_variance=False):
         logger.debug( "Predicting with parallel vigra RF" )
+        assert not with_variance, "there is no such thing as a random forest variance in this place"
         X = numpy.asarray(X, dtype=numpy.float32)
 
         # Create a request for each forest        

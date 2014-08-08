@@ -18,7 +18,7 @@ class GaussianProcessClassifierFactory(LazyflowVectorwiseClassifierFactoryABC):
     
     def create_and_train(self, X, y):
         logger.debug( 'training single-threaded GaussianProcessClassifier' )
-
+        
         # Save for future reference
         known_labels = numpy.unique(y)
         
@@ -34,7 +34,7 @@ class GaussianProcessClassifierFactory(LazyflowVectorwiseClassifierFactoryABC):
         classifier = GPy.models.SparseGPClassification(X,
                                                        y,
                                                         **self._kwargs)
-
+        print "y",y
         classifier.update_likelihood_approximation()
 
         return GaussianProcessClassifier( classifier, known_labels )
@@ -53,14 +53,15 @@ class GaussianProcessClassifier(LazyflowVectorwiseClassifierABC):
         self._known_labels = known_labels
         self._gpc = gpc
     
-    def predict_probabilities(self, X):
+    def predict_probabilities(self, X, with_variance = False):
         logger.debug( 'predicting single-threaded vigra RF' )
-        #TODO: get Variance here
-        probs = self._gpc.predict(numpy.asarray(X, dtype=numpy.float32) )[0]
         
+        probs,var,_,_ = self._gpc.predict(numpy.asarray(X, dtype=numpy.float32) )
         #we get the probability p for label 1 here,
         #so we complete the table by adding the probability for label 0, which is 1-p
-       
+        print var
+        if with_variance:
+            return numpy.concatenate((1-probs,probs),axis = 1),var
         return  numpy.concatenate((1-probs,probs),axis = 1)
     
     @property
