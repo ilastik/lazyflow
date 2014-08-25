@@ -1,7 +1,7 @@
 import os
 import tempfile
 import cPickle as pickle
-
+from GPy import kern
 import numpy
 import h5py
 
@@ -26,17 +26,25 @@ class GaussianProcessClassifierFactory(LazyflowVectorwiseClassifierFactoryABC):
         y = numpy.asarray(y, numpy.uint32)
         if y.ndim == 1:
             y = y[:, numpy.newaxis]
-
+        
         y-=1 #TODO: Don't do this.
         assert X.ndim == 2
         assert len(X) == len(y)
         assert all(i in (0,1) for i in numpy.unique(y))
+        
+        # get control of default parameters
+        if not "kernel" in self._kwargs:
+            self._kwargs["kernel"]=kern.rbf(X.shape[1])
+        if not "num_inducing" in self._kwargs:
+            self._kwargs["num_inducing"]=50
         classifier = GPy.models.SparseGPClassification(X,
                                                        y,
                                                         **self._kwargs)
         print "y",y
+        classifier.tie_params('.*len')
+        #print classifier
         classifier.update_likelihood_approximation()
-
+        classifier.optimize(max_iters=100)
         return GaussianProcessClassifier( classifier, known_labels )
 
     @property
