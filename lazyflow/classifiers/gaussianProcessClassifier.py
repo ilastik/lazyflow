@@ -40,10 +40,10 @@ class GaussianProcessClassifierFactory(LazyflowVectorwiseClassifierFactoryABC):
         classifier = GPy.models.SparseGPClassification(X,
                                                        y,
                                                         **self._kwargs)
-        print "y",y
         classifier.tie_params('.*len')
         #print classifier
         classifier.update_likelihood_approximation()
+        classifier.ensure_default_constraints()
         classifier.optimize(max_iters=100)
         return GaussianProcessClassifier( classifier, known_labels )
 
@@ -64,24 +64,34 @@ class GaussianProcessClassifier(LazyflowVectorwiseClassifierABC):
     def predict_probabilities(self, X, with_variance = False):
         logger.debug( 'predicting single-threaded vigra RF' )
         
+        X = numpy.asarray(X, dtype=numpy.float32)
+        Xnew = (X.copy() - self._gpc._Xoffset) / self._gpc._Xscale
+        mu, _var = self._gpc._raw_predict(Xnew)
+        
         probs,var,_,_ = self._gpc.predict(numpy.asarray(X, dtype=numpy.float32) )
+        
+        #here, mu == inverse_sigmoid(probs) == GPy.util.univariate_Gaussian.inv_std_norm_cdf(probs)*numpy.sqrt(1+_var)
+        
         #we get the probability p for label 1 here,
         #so we complete the table by adding the probability for label 0, which is 1-p
-        print var
         if with_variance:
-            return numpy.concatenate((1-probs,probs),axis = 1),var
+            return numpy.concatenate((1-probs,probs),axis = 1),_var
         return  numpy.concatenate((1-probs,probs),axis = 1)
     
     @property
     def known_classes(self):
         return self._known_labels
     
-    def serialize_hdf5(self):
-        print "should not get here"
-        pass
-    
-    def deserialize_hdf5(self):
-        print "should not get here"
-        pass
+    def serialize_hdf5(self,h5py_group):
+        pickled = self._gpc.pickles()
+        pickled = pickled.replace("\x00","!super-awkward replacement hack!")
+        h5py_group.create_dataset("GPCpickle",data=pickled)
+        
+    def deserialize_hdf5(self,h5py_group):
+        assert "GPCpickle" in h5py_group
+        s = h5py_group["GPCpickle"]
+        s = s.replace("!super-awkward replacement hack!","\x00")
+        classifier = pickle.loads(s)
+        return classifier
 
 assert issubclass( GaussianProcessClassifier, LazyflowVectorwiseClassifierABC )
