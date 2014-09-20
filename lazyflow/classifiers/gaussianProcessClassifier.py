@@ -61,6 +61,9 @@ class GaussianProcessClassifier(LazyflowVectorwiseClassifierABC):
         self._known_labels = known_labels
         self._gpc = gpc
     
+    def __str__(self):
+        return self._gpc.__str__()
+    
     def predict_probabilities(self, X, with_variance = False):
         logger.debug( 'predicting single-threaded vigra RF' )
         
