@@ -92,6 +92,7 @@ class OpStreamingHdf5Reader(Operator):
                 axisorder = 'zyxc'
 
             axistags = vigra.defaultAxistags(axisorder)
+            self.OutputImage.meta.axisorder_was_guessed = True
 
         assert len(axistags) == len( dataset.shape ),\
             "Mismatch between shape {} and axisorder {}".format( dataset.shape, axisorder )

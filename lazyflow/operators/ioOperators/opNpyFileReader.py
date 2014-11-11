@@ -77,6 +77,7 @@ class OpNpyFileReader(Operator):
 
         self.Output.meta.dtype = self._rawVigraArray.dtype.type
         self.Output.meta.axistags = copy.copy(self._rawVigraArray.axistags)
+        self.Output.meta.axisorder_was_guessed = True
         self.Output.meta.shape = self._rawVigraArray.shape
 
     def execute(self, slot, subindex, roi, result):

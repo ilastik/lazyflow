@@ -105,6 +105,7 @@ class OpStackLoader(Operator):
         self.stack.meta.shape = shape
         self.stack.meta.axistags = axistags
         self.stack.meta.dtype = self.info.getDtype()
+        self.stack.meta.axisorder_was_guessed = True
 
     def propagateDirty(self, slot, subindex, roi):
         assert slot == self.globstring

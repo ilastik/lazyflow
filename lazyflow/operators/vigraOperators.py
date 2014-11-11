@@ -1569,6 +1569,7 @@ class OpImageReader(Operator):
             tags_xyc = [tag for tag in info.getAxisTags()]
             tags_zyxc = [z_tag] +  list(reversed(tags_xyc[:-1])) + tags_xyc[-1:]
             self.Image.meta.axistags = vigra.AxisTags( tags_zyxc )
+            self.Image.meta.axisorder_was_guessed = True
 
     def execute(self, slot, subindex, rroi, result):
         filename = self.Filename.value
