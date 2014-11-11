@@ -55,10 +55,10 @@ class OpNpyFileReader(Operator):
         except:
             raise OpNpyFileReader.DatasetReadError( "Unable to open numpy dataset: {}".format( fileName ) )
 
-        axisorders = { 2 : 'xy',
-                       3 : 'xyz',
-                       4 : 'xyzc',
-                       5 : 'txyzc' }
+        axisorders = { 2 : 'yx',
+                       3 : 'zyx',
+                       4 : 'zyxc',
+                       5 : 'tzyxc' }
 
         shape = rawNumpyArray.shape
         ndims = len( shape )
