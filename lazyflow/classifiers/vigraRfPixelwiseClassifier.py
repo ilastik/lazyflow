@@ -80,13 +80,21 @@ class VigraRfPixelwiseClassifier(LazyflowPixelwiseClassifierABC):
     
     def predict_probabilities_pixelwise(self, X, axistags=None):
         logger.debug( 'predicting PIXELWISE vigra RF' )
-        
-        # reshape the image into a 2D feature matrix
-        matrix_shape = (numpy.prod(X.shape[:-1]), X.shape[-1])
-        feature_matrix = numpy.reshape( X, matrix_shape )
 
-        # Run classifier
-        probabilities = self._vigra_rf.predictProbabilities( feature_matrix.view(numpy.ndarray) )
+        probabilities_all_slices = []
+
+        for X_t in X:
+            # reshape the image into a 2D feature matrix
+            matrix_shape = (numpy.prod(X_t.shape[:-1]), X_t.shape[-1])
+            feature_matrix = numpy.reshape( X_t, matrix_shape )
+
+            # Run classifier
+            probabilities_this_slice_matrix = self._vigra_rf.predictProbabilities( feature_matrix.view(numpy.ndarray) )
+            probabilities_this_slice_img = probabilities_this_slice_matrix.reshape(
+                                           (1,) + X_t.shape[:-1] + (probabilities_this_slice_matrix.shape[-1],) )
+            probabilities_all_slices.append( probabilities_this_slice_img )
+
+        probabilities_volume = numpy.concatenate( probabilities_all_slices, axis=0 )
         
         # Reshape into an image.
         # Choose the prediction image shape carefully:
@@ -95,11 +103,11 @@ class VigraRfPixelwiseClassifier(LazyflowPixelwiseClassifierABC):
         # So the number of prediction channels we got is the same as the number of known_classes
         # But if the classifier attempts to "help us out" by including channels for "missing" labels,
         #  then we want to just return the whole thing.
-        num_probability_channels = max( len(self.known_classes), probabilities.shape[-1] )
+        num_probability_channels = max( len(self.known_classes), probabilities_volume.shape[-1] )
 
         prediction_shape = X.shape[:-1] + (num_probability_channels,)
-        return numpy.reshape(probabilities, prediction_shape)
-    
+        return numpy.reshape(probabilities_volume, prediction_shape)
+
     @property
     def known_classes(self):
         return self._known_labels
