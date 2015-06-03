@@ -80,9 +80,7 @@ class VigraRfPixelwiseClassifier(LazyflowPixelwiseClassifierABC):
     
     def predict_probabilities_pixelwise(self, X, axistags=None):
         logger.debug( 'predicting PIXELWISE vigra RF' )
-
         probabilities_all_slices = []
-
         for X_t in X:
             # reshape the image into a 2D feature matrix
             matrix_shape = (numpy.prod(X_t.shape[:-1]), X_t.shape[-1])
