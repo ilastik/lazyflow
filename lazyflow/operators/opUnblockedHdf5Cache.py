@@ -66,11 +66,6 @@ class OpUnblockedHdf5Cache(Operator):
         stop = tuple(map(int, stop))        
         return (start, stop)
 
-    @classmethod
-    def roi_str(cls, start, stop):
-        roi = cls._standardize_roi(start, stop)
-        return str(roi_str)
-
     def setupOutputs(self):
         with self._lock:
             self._h5group = self.H5CacheGroup.value
@@ -130,20 +125,25 @@ class OpUnblockedHdf5Cache(Operator):
                                                       **self._dataset_kwargs )
 
     def propagateDirty(self, slot, subindex, roi):
-        dirty_roi = self._standardize_roi( roi.start, roi.stop )
         maximum_roi = roiFromShape(self.Input.meta.shape)
-        maximum_roi = self._standardize_roi( *maximum_roi )
-        
-        if dirty_roi == maximum_roi:
-            # Optimize the common case:
-            # Everything is dirty, so no need to loop
-            self._clear_blocks()
-        else:
-            # FIXME: This is O(N) for now.
-            #        We should speed this up by maintaining a bookkeeping data structure in execute().
-            for block_roi_str in self._h5group.keys():
-                block_roi = eval(block_roi_str)
-                if getIntersection(block_roi, dirty_roi, assertIntersect=False):
-                    del self._h5group[block_roi_str]
 
-        self.Output.setDirty( roi.start, roi.stop )
+        if slot == self.Input:
+            maximum_roi = self._standardize_roi( *maximum_roi )
+            dirty_roi = self._standardize_roi( roi.start, roi.stop )
+
+            if dirty_roi == maximum_roi:
+                # Optimize the common case:
+                # Everything is dirty, so no need to loop
+                self._clear_blocks()
+            else:
+                # FIXME: This is O(N) for now.
+                #        We should speed this up by maintaining a bookkeeping data structure in execute().
+                for block_roi_str in self._h5group.keys():
+                    block_roi = eval(block_roi_str)
+                    if getIntersection(block_roi, dirty_roi, assertIntersect=False):
+                        del self._h5group[block_roi_str]
+
+            self.Output.setDirty( roi )
+        else:
+            self.Output.setDirty( slice(None) )
+
