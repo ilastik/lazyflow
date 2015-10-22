@@ -66,11 +66,6 @@ class OpUnblockedHdf5Cache(Operator):
         stop = tuple(map(int, stop))        
         return (start, stop)
 
-    @classmethod
-    def roi_str(cls, start, stop):
-        roi = cls._standardize_roi(start, stop)
-        return str(roi_str)
-
     def setupOutputs(self):
         with self._lock:
             self._h5group = self.H5CacheGroup.value
