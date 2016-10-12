@@ -1,4 +1,5 @@
 .project
+docs/_build
 .pydevproject
 #KDevelop project files
 *.kdev4

@@ -131,7 +131,7 @@ class Operator(object):
 
     Operators consist of a class inheriting from this class
     and need to specify their inputs and outputs via
-    thei inputSlot and outputSlot class properties.
+    their inputSlot and outputSlot class properties.
 
     Each instance of an operator obtains individual
     copies of the inputSlots and outputSlots, which are
