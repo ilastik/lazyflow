@@ -600,6 +600,34 @@ class TestRequest(unittest.TestCase):
             thrd.join()
   
         assert l == list(range(100)), "Requests and/or threads finished in the wrong order!"
+
+    def testRequestLockRequestThreadStarvation(self):
+        pool = RequestPool()
+        lock = RequestLock()
+
+        counter = [0]
+        def f():
+            with lock:
+                time.sleep(0.001)
+                counter[0] += 1
+
+        def f2():
+            with lock:
+                time.sleep(0.1)
+                counter[0] += 1
+        
+        POOL_SIZE = 1000
+        for _ in range(POOL_SIZE):
+            pool.add( Request(f) )
+
+        th = threading.Thread(target=f2)
+        pool.submit()
+        
+        th.start()
+        th.join()
+        assert counter[0] < POOL_SIZE
+        
+        pool.wait()
   
     def testRequestLockSemantics(self):
         """
@@ -658,7 +686,6 @@ class TestRequest(unittest.TestCase):
         finally:         
             # Set it back to what it was
             Request.reset_thread_pool(num_workers)
-            print 'done'
 
 class TestRequestExceptions(object):
     """
