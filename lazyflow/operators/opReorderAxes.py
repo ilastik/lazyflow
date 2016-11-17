@@ -156,6 +156,11 @@ class OpReorderAxes(Operator):
         else:
             assert False, "Unknown input slot: {}".format( inputSlot.name )
 
+
+    def setInSlot(self, slot, subindex, roi, value):
+        #TODO #FIXME added here, otherwise always a NotImplementedError
+        pass
+
 # Helper function: Like list.index(), but return -1 for missing elements instead of raising a ValueError
 def _index(tup, element):
     try:
