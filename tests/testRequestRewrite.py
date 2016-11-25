@@ -649,7 +649,7 @@ class TestRequest(unittest.TestCase):
                 time.sleep(0.1)
                 lock.release()
              
-            reqs = map( lambda x: Request( check_for_contention ), range(10) )
+            reqs = [Request( check_for_contention ) for x in range(10)]
             for req in reqs:
                 req.submit()
             for req in reqs:
@@ -658,7 +658,7 @@ class TestRequest(unittest.TestCase):
         finally:         
             # Set it back to what it was
             Request.reset_thread_pool(num_workers)
-            print 'done'
+            print('done')
 
 class TestRequestExceptions(object):
     """

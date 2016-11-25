@@ -29,7 +29,7 @@ class TestOpResize(object):
 
         # Find the max points in the resized image
         local_max = vigra.analysis.extendedLocalMaxima(resized_data)
-        max_coords = zip ( *numpy.nonzero(local_max) )
+        max_coords = list(zip ( *numpy.nonzero(local_max) ))
 
         # Did our two high points remain?
         assert (16, 48) in max_coords

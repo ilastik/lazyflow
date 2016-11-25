@@ -34,7 +34,7 @@ class OpSlic(Operator):
 
         tagged_shape = self.Input.meta.getTaggedShape()
         assert 'c' in tagged_shape, "We assume the image has an explicit channel axis."
-        assert tagged_shape.keys()[-1] == 'c', "This code assumes that channel is the LAST axis."
+        assert list(tagged_shape.keys())[-1] == 'c', "This code assumes that channel is the LAST axis."
         
         # Output will have exactly one channel, regardless of input channels
         tagged_shape['c'] = 1
@@ -132,7 +132,7 @@ if __name__ == "__main__":
     assert slic_output.shape == (20,20,1)
     connected_components = skimage.measure.label( slic_output )
     num_sp = connected_components.max()
-    print "The uncached operator produced {} superpixels".format(num_sp)
+    print("The uncached operator produced {} superpixels".format(num_sp))
     
     # Now try the cached version
     opSlicCached = OpSlicCached(graph=Graph())
@@ -141,7 +141,7 @@ if __name__ == "__main__":
     assert slic_output.shape == (20,20,1)
     connected_components = skimage.measure.label( slic_output )
     num_sp = connected_components.max()
-    print "The CACHED operator produced {} superpixels".format(num_sp)
+    print("The CACHED operator produced {} superpixels".format(num_sp))
 
     # Now let's make it possible for the operator to handle multiple images.
     # The parameters like Compactness, etc. should be shared across all "lanes",
@@ -165,4 +165,4 @@ if __name__ == "__main__":
     
     # OK, we chose silly test data, so the results should be identical, right?
     assert (slic_sp_0 == slic_sp_1).all()
-    print "Both outputs of opMultiImageSlicCached had {} superpixels".format( slic_sp_0.max() )
+    print("Both outputs of opMultiImageSlicCached had {} superpixels".format( slic_sp_0.max() ))

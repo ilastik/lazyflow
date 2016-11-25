@@ -34,8 +34,8 @@ from lazyflow.utility import Timer
 from lazyflow.classifiers import LazyflowVectorwiseClassifierABC, LazyflowVectorwiseClassifierFactoryABC, \
                                  LazyflowPixelwiseClassifierABC, LazyflowPixelwiseClassifierFactoryABC
 
-from opFeatureMatrixCache import OpFeatureMatrixCache
-from opConcatenateFeatureMatrices import OpConcatenateFeatureMatrices
+from .opFeatureMatrixCache import OpFeatureMatrixCache
+from .opConcatenateFeatureMatrices import OpConcatenateFeatureMatrices
 
 logger = logging.getLogger(__name__)
 
@@ -428,7 +428,7 @@ class OpPixelwiseClassifierPredict(Operator):
         if not skip_prediction and self.PredictionMask.ready():
             mask_roi = numpy.array((roi.start, roi.stop))
             mask_roi[:,-1:] = [[0],[1]]
-            start, stop = map(tuple, mask_roi)
+            start, stop = list(map(tuple, mask_roi))
             mask = self.PredictionMask( start, stop ).wait()
             skip_prediction = not numpy.any(mask)
 
@@ -552,7 +552,7 @@ class OpVectorwiseClassifierPredict(Operator):
         if not skip_prediction and self.PredictionMask.ready():
             mask_roi = numpy.array((roi.start, roi.stop))
             mask_roi[:,-1:] = [[0],[1]]
-            start, stop = map(tuple, mask_roi)
+            start, stop = list(map(tuple, mask_roi))
             mask = self.PredictionMask( start, stop ).wait()
             skip_prediction = not numpy.any(mask)
             del mask

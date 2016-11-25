@@ -86,7 +86,7 @@ def blockwise_view( a, blockshape, aslist=False, require_aligned_blocks=True ):
         view = vigra.taggedView(view, view_axistags)
 
     if aslist:
-        return map(view.__getitem__, numpy.ndindex(outershape))
+        return list(map(view.__getitem__, numpy.ndindex(outershape)))
     return view
 
 if __name__ == "__main__":

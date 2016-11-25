@@ -19,7 +19,7 @@
 # This information is also available on the ilastik web site at:
 #		   http://ilastik.org/license/
 ###############################################################################
-from __future__ import division
+
 import copy
 import collections
 
@@ -166,12 +166,12 @@ class OpResize(Operator):
 
         # Reorder the shape for 5D        
         orig_shape = self.ResizedShape.value
-        tagged_shape = collections.OrderedDict( zip( self.Input.meta.getAxisKeys(), orig_shape ) )
+        tagged_shape = collections.OrderedDict( list(zip( self.Input.meta.getAxisKeys(), orig_shape )) )
         for k in 'tzyxc':
             if k not in tagged_shape:
                 tagged_shape[k] = 1
         
-        reordered_shape = map( lambda k: tagged_shape[k], 'tzyxc' )
+        reordered_shape = [tagged_shape[k] for k in 'tzyxc']
         self._opResize5D.ResizedShape.setValue( tuple(reordered_shape) )
     
     def propagateDirty(self, slot, subindex, input_roi):

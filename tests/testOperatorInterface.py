@@ -78,13 +78,13 @@ class OpTesting5ToMulti(graph.Operator):
     name = "OpTesting5ToMulti"
 
     inputSlots = []
-    for i in xrange(5):
+    for i in range(5):
         inputSlots.append(graph.InputSlot("Input%.1d"%(i), optional = True))
     outputSlots = [graph.OutputSlot("Outputs", level=1)]
 
     def setupOutputs(self):
         length = 0
-        for slot in self.inputs.values():
+        for slot in list(self.inputs.values()):
             if slot.connected():
                 length += 1
 

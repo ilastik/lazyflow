@@ -73,7 +73,7 @@ class TestOpBaseVigraFilter(unittest.TestCase):
             testArray = vigra.VigraArray((20,)*len(dim),axistags=vigra.VigraArray.defaultAxistags(dim))
             testArray[(slice(2,5,None),)*len(dim)] = 10
             operator.inputs["Input"].setValue(testArray)
-            for i,j in [(i,j) for i,j in itertools.permutations(range(0,10),2) if i<j]:
+            for i,j in [(i,j) for i,j in itertools.permutations(list(range(0,10)),2) if i<j]:
                 start = [i]*len(dim)
                 stop = [j]*len(dim)
                 operator.outputs["Output"](start,stop).wait()

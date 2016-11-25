@@ -21,7 +21,7 @@
 ###############################################################################
 import logging
 from functools import partial
-import cPickle as pickle
+import pickle as pickle
 import tempfile
 
 
@@ -35,8 +35,8 @@ import numpy as np
 
 import vigra
 
-from opDetectMissingData import *
-from opDetectMissingData import _histogramIntersectionKernel
+from .opDetectMissingData import *
+from .opDetectMissingData import _histogramIntersectionKernel
 
 ############################
 ############################
@@ -110,7 +110,7 @@ class OpInterpMissingData(Operator):
 
         method = self.InterpolationMethod.value
 
-        assert method in self._requiredMargin.keys(), \
+        assert method in list(self._requiredMargin.keys()), \
             "Unknown interpolation method {}".format(method)
 
         z_index = self.InputVolume.meta.axistags.index('z')
@@ -361,7 +361,7 @@ class OpInterpolate(Operator):
 
         method = self.InterpolationMethod.value if method is None else method
         # sanity checks
-        assert method in self._requiredMargin.keys(), \
+        assert method in list(self._requiredMargin.keys()), \
             "Unknown method '{}'".format(method)
 
         assert volume.axistags.index('z') == 0 \

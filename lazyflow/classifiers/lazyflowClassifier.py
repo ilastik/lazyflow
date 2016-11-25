@@ -6,13 +6,12 @@ def _has_attribute( cls, attr ):
 def _has_attributes( cls, attrs ):
     return all(_has_attribute(cls, a) for a in attrs)
 
-class LazyflowVectorwiseClassifierFactoryABC(object):
+class LazyflowVectorwiseClassifierFactoryABC(object, metaclass=abc.ABCMeta):
     """
     Defines an interface for vector-wise classifier 'factory' objects, 
     which lazyflow classifier operators use to construct new vector-wise classifiers.
     A "vector-wise" classifier is trained with a 2D feature matrix and a 1D label vector.
     """
-    __metaclass__ = abc.ABCMeta
 
     def __new__(cls, *args, **kwargs):
         # Force the VERSION class member to be copied to an instance member.
@@ -56,14 +55,13 @@ class LazyflowVectorwiseClassifierFactoryABC(object):
             return is_subclass
         return NotImplemented
 
-class LazyflowVectorwiseClassifierABC(object):
+class LazyflowVectorwiseClassifierABC(object, metaclass=abc.ABCMeta):
     """
     Defines an interface for "vector-wise" classifier objects that can be used by the lazyflow classifier operators.
     A "vector-wise" classifier is trained with a 2D feature matrix and a 1D label vector.
     
     All scikit-learn classifiers already satisfy this interface.
     """
-    __metaclass__ = abc.ABCMeta
 
     @abc.abstractmethod
     def predict_probabilities(self, X):
@@ -117,7 +115,7 @@ class LazyflowVectorwiseClassifierABC(object):
         """
         raise NotImplementedError
     
-class LazyflowPixelwiseClassifierFactoryABC(object):
+class LazyflowPixelwiseClassifierFactoryABC(object, metaclass=abc.ABCMeta):
     """
     Defines an interface for pixel-wise classifier 'factory' objects, 
     which lazyflow classifier operators use to construct new pixel-wise classifiers.
@@ -126,7 +124,6 @@ class LazyflowPixelwiseClassifierFactoryABC(object):
 
     Note: It is assumed here that 'channel' is always the last axis of the image.
     """
-    __metaclass__ = abc.ABCMeta
 
     def __new__(cls, *args, **kwargs):
         # Force the VERSION class member to be copied to an instance member.
@@ -197,7 +194,7 @@ class LazyflowPixelwiseClassifierFactoryABC(object):
     def __ne__(self, other):
         raise NotImplementedError    
 
-class LazyflowPixelwiseClassifierABC(object):
+class LazyflowPixelwiseClassifierABC(object, metaclass=abc.ABCMeta):
     """
     Defines an interface for "pixel-wise" classifier objects that can be used by the lazyflow classifier operators.
     A "pixel-wise" classifier expects its input be given as a list of ND feature images (with M feature channels).
@@ -208,7 +205,6 @@ class LazyflowPixelwiseClassifierABC(object):
     (This interface is typically used with classifiers that must generate their own features internally,
     and thus require the knowledge of the image structure and context around each training/prediction point.)
     """
-    __metaclass__ = abc.ABCMeta
 
     @abc.abstractmethod
     def predict_probabilities_pixelwise(self, feature_image, roi, axistags=None):

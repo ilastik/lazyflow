@@ -23,7 +23,7 @@ import numpy, vigra
 import collections
 import warnings
 
-from roi import roiToSlice
+from .roi import roiToSlice
 from lazyflow.utility.helpers import warn_deprecated
 
 import h5py

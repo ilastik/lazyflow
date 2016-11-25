@@ -20,7 +20,7 @@
 #		   http://ilastik.org/license/
 ###############################################################################
 
-from __future__ import division
+
 
 import os
 import psutil

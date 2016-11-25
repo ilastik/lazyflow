@@ -27,9 +27,7 @@ def _has_attribute( cls, attr ):
 def _has_attributes( cls, attrs ):
     return True if all(_has_attribute(cls, a) for a in attrs) else False    
 
-class DrawableABC:
-    __metaclass__ = ABCMeta
-
+class DrawableABC(metaclass=ABCMeta):
     @abstractmethod
     def size(self):
         return NotImplemented
@@ -47,9 +45,7 @@ class DrawableABC:
             return True if _has_attributes(C, ['size', 'drawAt']) else False
         return NotImplemented
 
-class ConnectableABC:
-    __metaclass__ = ABCMeta
-
+class ConnectableABC(metaclass=ABCMeta):
     @abstractmethod
     def key(self):
         return NotImplemented

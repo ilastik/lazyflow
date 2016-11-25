@@ -19,7 +19,7 @@
 # This information is also available on the ilastik web site at:
 #		   http://ilastik.org/license/
 ###############################################################################
-from __future__ import division
+
 import threading
 from functools import partial
 
@@ -64,7 +64,7 @@ class TestH5Py(object):
         ub = (numpy.random.rand(len(shape))*shape/2).astype(int) + shape//2
     
         # Combine into a slicing we can index with    
-        sl = map(slice, lb, ub)
+        sl = list(map(slice, lb, ub))
     
         sample = h5Group[path][tuple(sl)]
         #print sample.shape

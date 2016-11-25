@@ -25,9 +25,9 @@ import copy
 from lazyflow.graph import Operator, InputSlot, OutputSlot
 from lazyflow.utility import RamMeasurementContext
 
-from opCacheFixer import OpCacheFixer
-from opCache import ManagedBlockedCache
-from opSimpleBlockedArrayCache import OpSimpleBlockedArrayCache
+from .opCacheFixer import OpCacheFixer
+from .opCache import ManagedBlockedCache
+from .opSimpleBlockedArrayCache import OpSimpleBlockedArrayCache
 
 class OpBlockedArrayCache(Operator, ManagedBlockedCache):
     """

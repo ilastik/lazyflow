@@ -21,18 +21,18 @@
 ###############################################################################
 from lazyflow.graph import Operator, InputSlot, OutputSlot
 from lazyflow.operators import OpImageReader, OpBlockedArrayCache, OpMetadataInjector, OpSubRegion
-from opStreamingHdf5Reader import OpStreamingHdf5Reader
-from opNpyFileReader import OpNpyFileReader
-from opRawBinaryFileReader import OpRawBinaryFileReader
-from opTiffReader import OpTiffReader
-from opTiffSequenceReader import OpTiffSequenceReader
+from .opStreamingHdf5Reader import OpStreamingHdf5Reader
+from .opNpyFileReader import OpNpyFileReader
+from .opRawBinaryFileReader import OpRawBinaryFileReader
+from .opTiffReader import OpTiffReader
+from .opTiffSequenceReader import OpTiffSequenceReader
 from lazyflow.operators.ioOperators import OpStackLoader, OpBlockwiseFilesetReader, OpRESTfulBlockwiseFilesetReader, \
     OpCachedTiledVolumeReader, OpKlbReader
 from lazyflow.utility.jsonConfig import JsonConfigParser
 from lazyflow.utility.pathHelpers import isUrl
 
-from opStreamingUfmfReader import OpStreamingUfmfReader
-from opStreamingMmfReader import OpStreamingMmfReader
+from .opStreamingUfmfReader import OpStreamingUfmfReader
+from .opStreamingMmfReader import OpStreamingMmfReader
 
 try:
     from lazyflow.operators.ioOperators import OpDvidVolume, OpDvidRoi
@@ -122,7 +122,7 @@ class OpInputDataReader(Operator):
         TODO: Handle datasets of non-standard (non-5d) dimensions.
         """
         filePath = self.FilePath.value
-        assert isinstance(filePath, (str,unicode)), "Error: filePath is not of type str.  It's of type {}".format(type(filePath))
+        assert isinstance(filePath, str), "Error: filePath is not of type str.  It's of type {}".format(type(filePath))
 
         # Does this look like a relative path?
         useRelativePath = not isUrl(filePath) and not os.path.isabs(filePath)
@@ -166,7 +166,7 @@ class OpInputDataReader(Operator):
         iterFunc = openFuncs.__iter__()
         while not self.internalOperators:
             try:
-                openFunc = iterFunc.next()
+                openFunc = next(iterFunc)
             except StopIteration:
                 break
             self.internalOperators, self.internalOutput = openFunc(filePath)
@@ -430,7 +430,7 @@ class OpInputDataReader(Operator):
             query_string = fields['query_string']
             query_args = {}
             if query_string:
-                query_args = dict( map(lambda s: s.split('='), query_string.split('&')) )
+                query_args = dict( [s.split('=') for s in query_string.split('&')] )
             try:
                 opDvidVolume = OpDvidVolume( fields['hostname'], fields['uuid'], fields['dataname'], query_args,
                                              parent=self )
@@ -534,7 +534,7 @@ class OpInputDataReader(Operator):
         cacheBlockShape = vigraReader.Image.meta.shape
         
         taggedShape = vigraReader.Image.meta.getTaggedShape()
-        if 'z' in taggedShape.keys():
+        if 'z' in list(taggedShape.keys()):
             # 3D: blocksize is one slice.
             taggedShape['z'] = 1
             cacheBlockShape = tuple(taggedShape.values())

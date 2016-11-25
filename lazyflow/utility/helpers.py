@@ -22,6 +22,7 @@
 import os,numpy,itertools,copy
 from lazyflow.roi import TinyVector, roiToSlice
 import warnings
+from functools import reduce
 
 def warn_deprecated(msg, stacklevel=0):
     warnings.warn("DEPRECATION WARNING: " + msg,
@@ -96,7 +97,7 @@ def itersubclasses(cls, _seen=None):
 def detectCPUs():
     # Linux, Unix and MacOS:
     if hasattr(os, "sysconf"):
-        if os.sysconf_names.has_key("SC_NPROCESSORS_ONLN"):
+        if "SC_NPROCESSORS_ONLN" in os.sysconf_names:
             # Linux & Unix:
             ncpus = os.sysconf("SC_NPROCESSORS_ONLN")
             if isinstance(ncpus, int) and ncpus > 0:
@@ -104,7 +105,7 @@ def detectCPUs():
         else: # OSX:
             return int(os.popen2("sysctl -n hw.ncpu")[1].read())
     # Windows:
-    if os.environ.has_key("NUMBER_OF_PROCESSORS"):
+    if "NUMBER_OF_PROCESSORS" in os.environ:
         ncpus = int(os.environ["NUMBER_OF_PROCESSORS"]);
         if ncpus > 0:
             return ncpus
@@ -165,7 +166,7 @@ class newIterator:
         gridStop = [(m+1)*l for m,l in zip(mult,grid)]
         roiStop = roi[1]
         nextStop = [min(a,b) for a,b in zip(gridStop,roiStop)] 
-        if reduce(lambda x,y: x or y, map(lambda x,y: True if x==y else False,roiStop,start),False):
+        if reduce(lambda x,y: x or y, list(map(lambda x,y: True if x==y else False,roiStop,start)),False):
             return None
         else:
             return nextStop
@@ -231,7 +232,7 @@ class newIterator:
         rTsl1 = lambda x,y:slice(x.__int__(),y.__int__())
         if self.hardBind and hardBind:
             res = []
-            zipL = zip(start,stop)
+            zipL = list(zip(start,stop))
             for i in range(len(zipL)):
                 if (zipL[i][1] == zipL[i][0] + 1 or zipL[i][1] == zipL[i][0]) and i in self.hardBind:
                     res.append(int(zipL[i][0]))

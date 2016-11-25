@@ -26,7 +26,7 @@ from abc import abstractmethod, ABCMeta
 from lazyflow.operators.cacheMemoryManager import CacheMemoryManager
 
 
-class Cache(object):
+class Cache(object, metaclass=ABCMeta):
     """
     Interface for objects that act as caches. This is a mixin, use as
 
@@ -50,8 +50,6 @@ class Cache(object):
     __init__, be sure to make all cache API methods threadsafe. A cache
     cleanup could occur while the cache is still under construction!
     """
-
-    __metaclass__ = ABCMeta
 
     def registerWithMemoryManager(self):
         manager = CacheMemoryManager()
@@ -178,7 +176,7 @@ class ManagedBlockedCache(ManagedCache):
 
         The default method is to use the maximum of the block timestamps.
         """
-        t = map(lambda x: x[1], self.getBlockAccessTimes())
+        t = [x[1] for x in self.getBlockAccessTimes()]
         if not t:
             return 0.0
         else:

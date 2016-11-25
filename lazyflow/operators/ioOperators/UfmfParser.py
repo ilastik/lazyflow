@@ -1,6 +1,6 @@
 # This file was copied from the motmot ufmf GitHub repository: https://github.com/motmot/ufmf commit c795ffe369b7e58de69d34926388af33ce71b711
 
-from __future__ import division
+
 import sys
 import struct, collections
 import warnings
@@ -17,7 +17,7 @@ import time
 
 import math
 
-import FlyMovieFormat as FMF
+from . import FlyMovieFormat as FMF
 
 class UfmfError(Exception):
     pass
@@ -145,8 +145,8 @@ def identify_ufmf_version(filename):
 
 def _write_dict(fd,save_dict):
     fd.write('d')
-    fd.write(chr(len(save_dict.keys())))
-    keys = save_dict.keys()
+    fd.write(chr(len(list(save_dict.keys()))))
+    keys = list(save_dict.keys())
     keys.sort() # keep ordering fixed to file remains same if re-indexed
     for key in keys:
         value = save_dict[key]
@@ -600,7 +600,7 @@ class _UFmfV3Indexer(object):
         result = {'frame':self._index['frame']}
         # remove defaultdict and convert to dict
         result['keyframe'] = {}
-        for keyframe_type,value in self._index['keyframe'].iteritems():
+        for keyframe_type,value in self._index['keyframe'].items():
             result['keyframe'][keyframe_type] = value
         return result
 
@@ -633,11 +633,11 @@ class _UFmfV3Indexer(object):
         if self._index_progress:
             pbar.finish()
         # convert to arrays
-        for keyframe_type in self._index['keyframe'].keys():
-            for key in self._index['keyframe'][keyframe_type].keys():
+        for keyframe_type in list(self._index['keyframe'].keys()):
+            for key in list(self._index['keyframe'][keyframe_type].keys()):
                 self._index['keyframe'][keyframe_type][key]=np.array(
                     self._index['keyframe'][keyframe_type][key])
-        for key in self._index['frame'].keys():
+        for key in list(self._index['frame'].keys()):
             self._index['frame'][key]=np.array(
                 self._index['frame'][key])
         if self._index_chunk_location is None:
@@ -787,7 +787,7 @@ class UfmfV3(UfmfBase):
                                    self._max_width, self._max_height,
                                    len(self._coding) )
                 self._fd.write(buf)
-            except IOError, err:
+            except IOError as err:
                 if raise_write_errors:
                     raise
                 else:
@@ -995,7 +995,7 @@ class UfmfV4(UfmfV3):
                                    self._isfixedsize,
                                    len(self._coding) )
                 self._fd.write(buf)
-            except IOError, err:
+            except IOError as err:
                 if raise_write_errors:
                     raise
                 else:
@@ -1038,7 +1038,7 @@ def md5sum_headtail(filename):
 
     try:
         fd.seek(-1000,os.SEEK_END)
-    except IOError,err:
+    except IOError as err:
         # it's OK, we'll just read up to another 1000 bytes
         pass
 
@@ -1111,7 +1111,7 @@ class FlyMovieEmulator(object):
             warnings.warn('unsupported argument "allow_partial_frames" ignored')
         try:
             self.seek(fno)
-        except NoSuchFrameError, err:
+        except NoSuchFrameError as err:
             if self._allow_no_such_frame_errors:
                 raise
             else:
@@ -1256,7 +1256,7 @@ class FlyMovieEmulator(object):
                     self._timestamps = npz['timestamps']
                     self._fno2loc = npz['fno2loc']
                     return
-        except Exception, err:
+        except Exception as err:
             if int(os.environ.get('UFMF_FORCE_CACHE','0')):
                 raise
             else:
@@ -1286,7 +1286,7 @@ class FlyMovieEmulator(object):
                      my_hash=my_hash,
                      timestamps=timestamps,
                      fno2loc=fno2loc)
-        except Exception,err:
+        except Exception as err:
             if int(os.environ.get('UFMF_FORCE_CACHE','0')):
                 raise
             else:
@@ -1581,7 +1581,7 @@ class AutoShrinkUfmfSaverV3(UfmfSaverV3):
         super(AutoShrinkUfmfSaverV3,self).__init__(*args,**kwargs)
     def _add_frame_regions(self,timestamp,regions):
         if len(regions):
-            for kf_type in self._cached_keyframes.keys():
+            for kf_type in list(self._cached_keyframes.keys()):
                 kf_image_data, kf_timestamp = self._cached_keyframes[kf_type]
                 super(AutoShrinkUfmfSaverV3,self).add_keyframe( \
                                           kf_type, kf_image_data, kf_timestamp)

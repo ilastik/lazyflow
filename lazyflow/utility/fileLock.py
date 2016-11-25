@@ -196,7 +196,7 @@ if __name__ == "__main__":
     import tempfile
     temp_dir = tempfile.mkdtemp()
     protected_filepath = os.path.join( temp_dir, "somefile.txt" )
-    print "Protecting file: {}".format( protected_filepath )
+    print("Protecting file: {}".format( protected_filepath ))
     fl = FileLock( protected_filepath )
 
     def writeLines(line, repeat=10):

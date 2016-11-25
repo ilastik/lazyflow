@@ -202,7 +202,7 @@ class OpCompressedUserLabelArray(OpUnmanagedCompressedCache):
         stored_block_rois_destination = [None]
         self._executeCleanBlocks( stored_block_rois_destination )
         stored_block_rois = stored_block_rois_destination[0]
-        block_slicings = map( lambda block_roi: roiToSlice(*block_roi), stored_block_rois )
+        block_slicings = [roiToSlice(*block_roi) for block_roi in stored_block_rois]
         destination[0] = block_slicings
 
     def _executeProjection2D(self, roi, destination):
@@ -215,10 +215,10 @@ class OpCompressedUserLabelArray(OpUnmanagedCompressedCache):
         # If more than one axis has a width of 1, then we choose an 
         #  axis according to the following priority order: zyxt
         tagged_input_shape = self.Output.meta.getTaggedShape()
-        tagged_result_shape = collections.OrderedDict( zip( tagged_input_shape.keys(),
-                                                            destination.shape ) )
+        tagged_result_shape = collections.OrderedDict( list(zip( list(tagged_input_shape.keys()),
+                                                            destination.shape )) )
         nonprojection_axes = []
-        for key in tagged_input_shape.keys():
+        for key in list(tagged_input_shape.keys()):
             if (key == 'c' or tagged_input_shape[key] == 1 or tagged_result_shape[key] > 1):
                 nonprojection_axes.append( key )
             
@@ -253,7 +253,7 @@ class OpCompressedUserLabelArray(OpUnmanagedCompressedCache):
         block_starts = getIntersectingBlocks( self._blockshape, (input_roi.start, input_roi.stop) )
 
         # (Parallelism wouldn't help here: h5py will serialize these requests anyway)
-        block_starts = map( tuple, block_starts )
+        block_starts = list(map( tuple, block_starts ))
         for block_start in block_starts:
             if block_start not in self._cacheFiles:
                 # No label data in this block.  Move on.
@@ -334,7 +334,7 @@ class OpCompressedUserLabelArray(OpUnmanagedCompressedCache):
         For blocks that aren't currently stored, just write zeros.
         """
         # (Parallelism not needed here: h5py will serialize these requests anyway)
-        block_starts = map( tuple, block_starts )
+        block_starts = list(map( tuple, block_starts ))
         for block_start in block_starts:
             entire_block_roi = getBlockBounds( self.Output.meta.shape, self._blockshape, block_start )
 
@@ -456,7 +456,7 @@ class OpCompressedUserLabelArray(OpUnmanagedCompressedCache):
 
         # Get logical blocking.
         block_starts = getIntersectingBlocks( self._blockshape, roiFromShape(self.Output.meta.shape) )
-        block_starts = map( tuple, block_starts )
+        block_starts = list(map( tuple, block_starts ))
 
         # Write each block
         for block_start in block_starts:

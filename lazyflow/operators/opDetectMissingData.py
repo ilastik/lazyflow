@@ -21,7 +21,7 @@
 ###############################################################################
 import logging
 from functools import partial
-import cPickle as pickle
+import pickle as pickle
 import tempfile
 from threading import Lock as ThreadLock
 import re
@@ -58,7 +58,7 @@ def extractVersion(s):
 try:
     from sklearn import __version__ as sklearnVersion
     svcTakesScaleC = extractVersion(sklearnVersion) < 11
-except ImportError, VersionError:
+except ImportError as VersionError:
     logger.warning("Could not import dependency 'sklearn' for SVMs")
     havesklearn = False
 else:
@@ -326,7 +326,7 @@ class OpDetectMissing(Operator):
             pred = self.predict(x, method=method)
 
             hard = np.where(pred != ind)[0]
-            easy = np.setdiff1d(range(len(x)), hard)
+            easy = np.setdiff1d(list(range(len(x))), hard)
             logger.debug(" {}: currently {} hard and {} easy samples".format(
                 case, len(hard), len(easy)))
 
@@ -568,7 +568,7 @@ class SVMManager(object):
                     n, self._svms))
 
     def add(self, svm, n, overwrite=False):
-        if not n in self._svms.keys() or overwrite:
+        if not n in list(self._svms.keys()) or overwrite:
             self._svms[n] = svm
 
     def remove(self, n):
@@ -590,8 +590,8 @@ class SVMManager(object):
             return
         else:
             try:
-                for n in obj['svm'].keys():
-                    for svm in obj['svm'][n].values():
+                for n in list(obj['svm'].keys()):
+                    for svm in list(obj['svm'][n].values()):
                         self.add(svm, n, overwrite=True)
             except KeyError:
                 #don't fail, just complain
@@ -943,9 +943,9 @@ if __name__ == "__main__":
     try:
         opts = [int(opt) for opt in args.opts.split(",")]
         assert len(opts) == 5
-        opts = dict(zip(
+        opts = dict(list(zip(
             ["firstSamples", "maxRemovePerStep", "maxAddPerStep",
-             "maxSamples", "nTrainingSteps"], opts))
+             "maxSamples", "nTrainingSteps"], opts)))
     except:
         raise ValueError(
             "Cannot parse '--opts' argument '{}'".format(args.opts))

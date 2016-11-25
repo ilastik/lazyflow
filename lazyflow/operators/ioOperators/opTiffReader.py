@@ -127,7 +127,7 @@ class OpTiffReader(Operator):
         page_index_roi = roi[:, :-num_page_axes]
         roi_within_page = roi[:, -num_page_axes:]
 
-        logger.debug("Roi: {}".format(map(tuple, roi)))
+        logger.debug("Roi: {}".format(list(map(tuple, roi))))
 
         # Read each page out individually
         page_index_roi_shape = page_index_roi[1] - page_index_roi[0]
@@ -157,10 +157,10 @@ if __name__ == "__main__":
     graph = Graph()
     opReader = OpTiffReader(graph=graph)
     opReader.Filepath.setValue('/groups/flyem/home/bergs/Downloads/Tiff_t4_HOM3_10frames_4slices_28sec.tif')
-    print opReader.Output.meta.axistags
-    print opReader.Output.meta.shape
-    print opReader.Output.meta.dtype
-    print opReader.Output[2:3,2:3,2:3,10:20,20:50].wait().shape
+    print(opReader.Output.meta.axistags)
+    print(opReader.Output.meta.shape)
+    print(opReader.Output.meta.dtype)
+    print(opReader.Output[2:3,2:3,2:3,10:20,20:50].wait().shape)
 
 #     opReader.Filepath.setValue('/magnetic/data/synapse_small.tiff')
 #     print opReader.Output.meta.axistags

@@ -58,7 +58,7 @@ class OpSimpleStacker(Operator):
         # For example, if inputs have length 10, 15, 20,
         # stacked_output_ranges = [(0, 10), (10, 25), (25, 45)]
         stacked_range_stops = [0] + list(np.add.accumulate(stacked_sizes))
-        self.stacked_output_ranges = zip(stacked_range_stops[:-1], stacked_range_stops[1:])
+        self.stacked_output_ranges = list(zip(stacked_range_stops[:-1], stacked_range_stops[1:]))
 
         # Assign output metadata
         self.Output.meta.assignFrom( self.Images[0].meta )

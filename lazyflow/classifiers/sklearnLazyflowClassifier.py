@@ -1,7 +1,7 @@
-import cPickle as pickle
+import pickle as pickle
 import numpy
 import vigra
-from lazyflowClassifier import LazyflowVectorwiseClassifierABC, LazyflowVectorwiseClassifierFactoryABC
+from .lazyflowClassifier import LazyflowVectorwiseClassifierABC, LazyflowVectorwiseClassifierFactoryABC
 
 import logging
 logger = logging.getLogger(__name__)

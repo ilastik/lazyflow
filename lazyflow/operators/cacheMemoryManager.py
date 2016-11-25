@@ -42,7 +42,7 @@ logger = logging.getLogger(__name__)
 default_refresh_interval = 10
 
 
-class CacheMemoryManager(threading.Thread):
+class CacheMemoryManager(threading.Thread, metaclass=Singleton):
     """
     class for the management of cache memory
 
@@ -71,7 +71,6 @@ class CacheMemoryManager(threading.Thread):
     the interval is measured in seconds. Each change of refresh interval
     triggers cleanup.
     """
-    __metaclass__ = Singleton
 
     totalCacheMemory = OrderedSignal()
 

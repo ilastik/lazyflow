@@ -20,7 +20,7 @@
 #		   http://ilastik.org/license/
 ###############################################################################
 import os
-import httplib
+import http.client
 import collections
 import logging
 
@@ -64,7 +64,7 @@ class OpDvidVolume(Operator):
             self._default_accessor = VoxelsAccessor( self._hostname, self._uuid, self._dataname, self._query_args )
             self._throttled_accessor = VoxelsAccessor( self._hostname, self._uuid, self._dataname, self._query_args, throttle=True )
         except DVIDException as ex:
-            if ex.status == httplib.NOT_FOUND:
+            if ex.status == http.client.NOT_FOUND:
                 raise OpDvidVolume.DatasetReadError("DVIDException: " + ex.message)
             raise
         except ErrMsg as ex:
@@ -89,8 +89,8 @@ class OpDvidVolume(Operator):
             # In headless mode, we allow the users to request regions outside the currently valid regions of the image.
             # For now, the easiest way to allow that is to simply hard-code DVID volumes to have a really large (1M cubed) shape.
             logger.info("Using absurdly large DVID volume extents, to allow out-of-bounds requests.")
-            tagged_shape = collections.OrderedDict( zip(axiskeys, shape) )
-            for k,v in tagged_shape.items():
+            tagged_shape = collections.OrderedDict( list(zip(axiskeys, shape)) )
+            for k,v in list(tagged_shape.items()):
                 if k in 'xyz':
                     tagged_shape[k] = int(1e6)
             shape = tuple(tagged_shape.values())

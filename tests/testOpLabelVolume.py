@@ -77,7 +77,7 @@ class TestVigra(unittest.TestCase):
 
         for c in range(out.shape[3]):
             for t in range(out.shape[4]):
-                print("t={}, c={}".format(t, c))
+                print(("t={}, c={}".format(t, c)))
                 assertEquivalentLabeling(blocks[..., c, t], out[..., c, t])
 
     def testSingletonZ(self):
@@ -104,7 +104,7 @@ class TestVigra(unittest.TestCase):
 
         for c in range(out.shape[3]):
             for t in range(out.shape[4]):
-                print("t={}, c={}".format(t, c))
+                print(("t={}, c={}".format(t, c)))
                 assertEquivalentLabeling(blocks[..., c, t], out[..., c, t])
 
     def testConsistency(self):
@@ -315,7 +315,7 @@ class TestVigra(unittest.TestCase):
             ref = r()
             if ref is not None:
                 for i, o in enumerate(gc.get_referrers(ref)):
-                    print "Object", i, ":", type(o), ":", o
+                    print("Object", i, ":", type(o), ":", o)
 
             assert r() is None, "OpBlockedArrayCache was not cleaned up correctly"
         finally:

@@ -26,7 +26,7 @@ from lazyflow.roi import getIntersectingBlocks, getBlockBounds, getIntersection,
 
 import logging
 import warnings
-from memory import Memory
+from .memory import Memory
 logger = logging.getLogger(__name__)
 
 class BigRequestStreamer(object):
@@ -116,7 +116,7 @@ class BigRequestStreamer(object):
             def roiGen():
                 block_iter = block_starts.__iter__()
                 while True:
-                    block_start = block_iter.next()
+                    block_start = next(block_iter)
     
                     # Use offset blocking
                     offset_block_start = block_start - self._bigRoi[0]
@@ -137,7 +137,7 @@ class BigRequestStreamer(object):
             def roiGen():
                 block_iter = block_starts.__iter__()
                 while True:
-                    block_start = block_iter.next()
+                    block_start = next(block_iter)
                     block_bounds = getBlockBounds( outputSlot.meta.shape, blockshape, block_start )
                     block_intersecting_portion = getIntersection( block_bounds, roi )
     
@@ -160,9 +160,9 @@ class BigRequestStreamer(object):
         tagged_shape = outputSlot.meta.getTaggedShape()
         
         # Generally, we don't want to split requests across channels.
-        if 'c' in tagged_shape.keys():
+        if 'c' in list(tagged_shape.keys()):
             num_channels = tagged_shape['c']
-            channel_index = tagged_shape.keys().index('c')
+            channel_index = list(tagged_shape.keys()).index('c')
             input_shape = input_shape[:channel_index] + input_shape[channel_index+1:]
             max_blockshape = max_blockshape[:channel_index] + max_blockshape[channel_index+1:]
             if ideal_blockshape:

@@ -316,7 +316,7 @@ class TestObjectBlockwiseFileset(object):
         
         logger.debug( "Checking data..." )
         for a,b in zip(self.data.flat, read_data.flat):
-            for (k1,v1),(k2,v2) in zip(a.items(), b.items()):
+            for (k1,v1),(k2,v2) in zip(list(a.items()), list(b.items())):
                 assert k1 == k2
                 assert (v1 == v2).all()
 
@@ -332,7 +332,7 @@ class TestObjectBlockwiseFileset(object):
         logger.debug( "Checking data..." )
         assert self.data[slicing].shape == read_data.shape
         for a,b in zip(self.data[slicing].flat, read_data.flat):
-            for (k1,v1),(k2,v2) in zip(a.items(), b.items()):
+            for (k1,v1),(k2,v2) in zip(list(a.items()), list(b.items())):
                 assert k1 == k2
                 assert (v1 == v2).all()
 

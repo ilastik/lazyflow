@@ -22,7 +22,7 @@
 from lazyflow.graph import Operator, InputSlot, OutputSlot
 import numpy
 import vigra
-import opGridCreator
+from . import opGridCreator
 from lazyflow.request import RequestLock
 
 def make_grid(shape, patch, grid, offset):

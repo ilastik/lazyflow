@@ -13,7 +13,7 @@ from lazyflow.rtype import SubRegion
 from lazyflow.metaDict import MetaDict
 from lazyflow.request import Request, RequestPool
 from lazyflow.operators import OpBlockedArrayCache, OpReorderAxes
-from opLazyConnectedComponents import OpLazyConnectedComponents
+from .opLazyConnectedComponents import OpLazyConnectedComponents
 
 logger = logging.getLogger(__name__)
 
@@ -168,10 +168,7 @@ class OpLabelVolume(Operator):
 
 
 ## parent class for all connected component labeling implementations
-class OpLabelingABC(Operator):
-    __metaclass__ = ABCMeta
-
-    ## input with axes 'txyzc'
+class OpLabelingABC(Operator, metaclass=ABCMeta):
     Input = InputSlot()
 
     ## background with axes 'txyzc', spatial axes must be singletons

@@ -28,7 +28,7 @@ import numpy
 import vigra
 import copy
 
-import MmfParser
+from . import MmfParser
 
 from lazyflow.graph import Operator, InputSlot, OutputSlot
 

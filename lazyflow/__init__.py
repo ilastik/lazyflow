@@ -25,11 +25,11 @@ try:
 except ImportError:
     pass
 
-import utility
-import roi
-import rtype
-import stype
-import operators
-import request
-import graph
-import slot
+from . import utility
+from . import roi
+from . import rtype
+from . import stype
+from . import operators
+from . import request
+from . import graph
+from . import slot

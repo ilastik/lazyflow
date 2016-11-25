@@ -5,6 +5,7 @@ import threading
 import warnings
 import multiprocessing
 import numpy
+import collections
 
 # This code uses multiprocessing to read hdf5 datasets faster
 # I'm still experimenting with implementation details, 
@@ -136,11 +137,11 @@ class _Dataset(object):
             # Briefly open the file and read the attribute directly from h5py
             with h5py.File(self.mp_file._filepath) as f:
                 val = getattr(f[self._internal_path], name)
-                assert not callable(val), "MultiprocessingHdf5File Datasets cannot provide access to callable items."
+                assert not isinstance(val, collections.Callable), "MultiprocessingHdf5File Datasets cannot provide access to callable items."
                 
                 # Special case: copy hdf5 dataset attrs into a dict
                 if name == 'attrs':
-                    val = dict(val.items())
+                    val = dict(list(val.items()))
                 return val
 
     def read_direct(self, out_array, slicing):
@@ -171,10 +172,10 @@ class _Group(object):
             return True
 
     def __iter__(self):
-        return self.iterkeys()
+        return iter(self.keys())
     
     def keys(self):
-        return list(self.iterkeys())
+        return list(self.keys())
     
     def iterkeys(self):
         internal_path = self._internal_path
@@ -217,7 +218,7 @@ class _Group(object):
             # Briefly open the file and read the attribute directly from h5py
             with h5py.File(self.mp_file._filepath) as f:
                 val = getattr(f[self._internal_path], name)
-                assert not callable(val), "MultiprocessingHdf5File Groups cannot provide access to callable items."
+                assert not isinstance(val, collections.Callable), "MultiprocessingHdf5File Groups cannot provide access to callable items."
                 return copy.copy(val)
 
 class MultiProcessHdf5File(_Group):
@@ -256,7 +257,7 @@ class MultiProcessHdf5File(_Group):
             
     def close(self):
         with self._lock:
-            readers = self._reader_processes.values()
+            readers = list(self._reader_processes.values())
             self._reader_processes.clear()
             for reader in readers:
                 reader.join()
@@ -369,17 +370,17 @@ if __name__ == "__main__":
         whole_vol = mphf[datapath][:]
         assert (whole_vol == testvol).all()
 
-        print mphf[u'mygroup'].name
-        print mphf[datapath].attrs.keys()
-        print mphf[datapath].shape
-        print mphf[datapath].dtype
-        print 'mygroup' in mphf
-        print '/mygroup/bigdata' in mphf
-        print 'bigdata' in mphf['mygroup']
+        print(mphf['mygroup'].name)
+        print(list(mphf[datapath].attrs.keys()))
+        print(mphf[datapath].shape)
+        print(mphf[datapath].dtype)
+        print('mygroup' in mphf)
+        print('/mygroup/bigdata' in mphf)
+        print('bigdata' in mphf['mygroup'])
 
-        print 'root keys are: ', list(mphf.iterkeys())
-        print 'mygroup keys are: ', list(mphf['mygroup'].iterkeys())
-        print 'othergroup keys are: ', list(mphf['othergroup'].iterkeys())
+        print('root keys are: ', list(mphf.keys()))
+        print('mygroup keys are: ', list(mphf['mygroup'].keys()))
+        print('othergroup keys are: ', list(mphf['othergroup'].keys()))
         
         mphf[datapath].read_direct(whole_vol[0], numpy.s_[0])
 
@@ -400,7 +401,7 @@ if __name__ == "__main__":
 
     bigfile_path = '/tmp/big_testfile7.h5'
     if not os.path.exists(bigfile_path):
-        print "generating test file:", bigfile_path
+        print("generating test file:", bigfile_path)
         with h5py.File(bigfile_path, 'w') as f:
             f.create_dataset( 'data', 
                               data=numpy.random.randint(0,255, (100,10000,1000)).astype(numpy.uint8), 
@@ -442,4 +443,4 @@ if __name__ == "__main__":
             
         stop_time = time.time()
 
-        print "Time: {} seconds".format( stop_time - start_time )
+        print("Time: {} seconds".format( stop_time - start_time ))

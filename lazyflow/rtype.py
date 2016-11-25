@@ -20,7 +20,7 @@
 #		   http://ilastik.org/license/
 ###############################################################################
 import numpy, copy
-import cPickle as pickle
+import pickle as pickle
 import collections
 import sys
 
@@ -38,13 +38,11 @@ class RoiMeta(type):
     def __new__(cls, name, bases, classDict):
         cls = super(RoiMeta, cls).__new__(cls, name, bases, classDict)
         # Don't register the Roi baseclass itself.
-        if bases[0] != object > 1:
+        if (bases[0] != object) > 1:
             Roi._registerSubclass(cls)
         return cls
 
-class Roi(object):
-    __metaclass__ = RoiMeta
-
+class Roi(object, metaclass=RoiMeta):
     def __init__(self, slot):
         self.slot = slot
         pass
@@ -129,8 +127,8 @@ class SubRegion(Roi):
         self.dim = len(self.start)
 
         for start, stop in zip(self.start, self.stop):
-            assert isinstance(start, (int, long, numpy.integer)), "Roi contains non-integers: {}".format( self )
-            assert isinstance(start, (int, long, numpy.integer)), "Roi contains non-integers: {}".format( self )
+            assert isinstance(start, (int, numpy.integer)), "Roi contains non-integers: {}".format( self )
+            assert isinstance(start, (int, numpy.integer)), "Roi contains non-integers: {}".format( self )
 
 # FIXME: This assertion is good at finding bugs, but it is currently triggered by 
 #        the DataExport applet when the output axis order is changed. 
@@ -240,7 +238,7 @@ class SubRegion(Roi):
     def adjustRoi(self,halo,cIndex=None):
         if type(halo) != list:
             halo = [halo]*len(self.start)
-        notAtStartEgde = map(lambda x,y: True if x<y else False,halo,self.start)
+        notAtStartEgde = list(map(lambda x,y: True if x<y else False,halo,self.start))
         for i in range(len(notAtStartEgde)):
             if notAtStartEgde[i]:
                 self.stop[i] = int(self.stop[i]-self.start[i]+halo[i])

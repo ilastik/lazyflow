@@ -19,12 +19,12 @@
 # This information is also available on the ilastik web site at:
 #		   http://ilastik.org/license/
 ###############################################################################
-from __future__ import division
+
 from lazyflow.graph import Operator, InputSlot, OutputSlot, Graph
 from lazyflow.request import RequestLock
 import numpy
 import vigra
-import opGridCreator
+from . import opGridCreator
 
 
 def _add_channel(img):

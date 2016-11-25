@@ -19,7 +19,7 @@
 # This information is also available on the ilastik web site at:
 #		   http://ilastik.org/license/
 ###############################################################################
-from __future__ import division
+
 import sys
 from functools import partial
 
@@ -171,7 +171,7 @@ class RoiRequestBatch( object ):
                         self._condition.wait()
 
                 if self._failure_excinfo:
-                    raise self._failure_excinfo[0], self._failure_excinfo[1], self._failure_excinfo[2]
+                    raise self._failure_excinfo[0](self._failure_excinfo[1]).with_traceback(self._failure_excinfo[2])
 
                 # Launch new requests until we have the correct number of active requests
                 while not self._failure_excinfo and self._activated_count - self._completed_count < self._batchSize:
@@ -180,7 +180,7 @@ class RoiRequestBatch( object ):
                         self._activated_count += 1
 
                 if self._failure_excinfo:
-                    raise self._failure_excinfo[0], self._failure_excinfo[1], self._failure_excinfo[2]
+                    raise self._failure_excinfo[0](self._failure_excinfo[1]).with_traceback(self._failure_excinfo[2])
 
         except StopIteration:
             # We've run out of requests to launch.
@@ -190,7 +190,7 @@ class RoiRequestBatch( object ):
                     self._condition.wait()
 
             if self._failure_excinfo:
-                raise self._failure_excinfo[0], self._failure_excinfo[1], self._failure_excinfo[2]
+                raise self._failure_excinfo[0](self._failure_excinfo[1]).with_traceback(self._failure_excinfo[2])
 
         self.progressSignal( 100 )
 
@@ -200,7 +200,7 @@ class RoiRequestBatch( object ):
         Otherwise, raises StopIteration
         """
         # This could raise StopIteration
-        roi = self._roiIter.next()
+        roi = next(self._roiIter)
         req = self._outputSlot( roi[0], roi[1] )
         
         # We have to make sure that we didn't get a so-called "ValueRequest"

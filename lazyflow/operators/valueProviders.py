@@ -112,7 +112,7 @@ class OpMetadataInjector(Operator):
 
         # Inject the additional metadata attributes
         extraMetadata = self.Metadata.value
-        for k,v in extraMetadata.items():
+        for k,v in list(extraMetadata.items()):
             setattr(self.Output.meta, k, v)
 
     def execute(self, slot, subindex, roi, result):

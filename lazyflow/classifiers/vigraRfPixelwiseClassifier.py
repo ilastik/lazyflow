@@ -1,19 +1,19 @@
 import os
 import tempfile
-import cPickle as pickle
+import pickle as pickle
 from itertools import starmap
 
 import numpy
 import vigra
 import h5py
 
-from lazyflowClassifier import LazyflowPixelwiseClassifierABC, LazyflowPixelwiseClassifierFactoryABC
+from .lazyflowClassifier import LazyflowPixelwiseClassifierABC, LazyflowPixelwiseClassifierFactoryABC
 
 import logging
 logger = logging.getLogger(__name__)
 
 def roi_to_slice(start, stop):
-    return tuple( starmap(slice, zip(start, stop)) )
+    return tuple( starmap(slice, list(zip(start, stop))) )
 
 class VigraRfPixelwiseClassifierFactory(LazyflowPixelwiseClassifierFactoryABC):
     """

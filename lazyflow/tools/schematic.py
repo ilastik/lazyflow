@@ -19,8 +19,8 @@
 # This information is also available on the ilastik web site at:
 #		   http://ilastik.org/license/
 ###############################################################################
-from schematic_abc import DrawableABC, ConnectableABC
-import svg
+from .schematic_abc import DrawableABC, ConnectableABC
+from . import svg
 import numpy
 from functools import partial
 import itertools
@@ -210,7 +210,7 @@ class SvgOperator( DrawableABC ):
     def getInputSize(self):
         inputWidth = 0
         inputHeight = self.MinPaddingBetweenSlots * (len(self.inputs)+1)
-        for svgSlot in self.inputs.values():
+        for svgSlot in list(self.inputs.values()):
             slotSize = svgSlot.size()
             inputWidth = max(inputWidth, slotSize[0])
             inputHeight += slotSize[1]
@@ -219,7 +219,7 @@ class SvgOperator( DrawableABC ):
     def getOutputSize(self):
         outputWidth = 0
         outputHeight = self.MinPaddingBetweenSlots * (len(self.outputs)+1)
-        for svgSlot in self.outputs.values():
+        for svgSlot in list(self.outputs.values()):
             slotSize = svgSlot.size()
             outputWidth = max(outputWidth, slotSize[0])
             outputHeight += slotSize[1]
@@ -231,7 +231,7 @@ class SvgOperator( DrawableABC ):
             canvas += self._code
 
     def drawConnections(self, canvas):
-        for slot in self.op.inputs.values() + self.op.outputs.values():
+        for slot in list(self.op.inputs.values()) + list(self.op.outputs.values()):
             assert slot in slot_registry
             slot_registry[slot].drawConnectionToPartner(canvas)
         
@@ -309,8 +309,8 @@ class SvgOperator( DrawableABC ):
                 m = max(m, len(slot.name))
             return m
         
-        max_input_name = max_slot_name_length(self.op.inputs.values())
-        max_output_name = max_slot_name_length(self.op.outputs.values())
+        max_input_name = max_slot_name_length(list(self.op.inputs.values()))
+        max_output_name = max_slot_name_length(list(self.op.outputs.values()))
 
         rect_width = max_child_x - rect_x
         rect_width = max( rect_width, 2*self.PaddingBetweenInternalOps )
@@ -344,7 +344,7 @@ class SvgOperator( DrawableABC ):
         
         # Draw inputs
         y += 1.5*self.TitleHeight + inputSlotPadding
-        for slot in self.inputs.values():
+        for slot in list(self.inputs.values()):
             size = slot.size()
             slot_x, slot_y = (x+(inputSize[0]-size[0]),y)
             slot.drawAt( canvas, (slot_x, slot_y) )
@@ -361,7 +361,7 @@ class SvgOperator( DrawableABC ):
         x, y = upperLeft
         x += rect_width + inputSize[0]
         y += 1.5*self.TitleHeight + outputSlotPadding
-        for slot in self.outputs.values():
+        for slot in list(self.outputs.values()):
             size = slot.size()
             text_x, text_y = (x - 5, y + size[1]/2)
             slot.drawAt( canvas, (x,y) )
@@ -384,7 +384,7 @@ def get_column_within_parent( op ):
         return memoized_columns[op]
     
     max_column = 0
-    for slot in op.inputs.values():
+    for slot in list(op.inputs.values()):
         if slot.partner is None:
             continue
         upstream_op = slot.partner.getRealOperator()

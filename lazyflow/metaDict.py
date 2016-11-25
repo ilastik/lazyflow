@@ -81,7 +81,7 @@ class MetaDict(defaultdict):
     def __eq__(self, other):
         if other is None:
             return False
-        for k in set(self.keys() + other.keys()):
+        for k in set(list(self.keys()) + list(other.keys())):
             if k.startswith('__') or k == 'NOTREADY':
                 continue
             if k not in other or k not in self:
@@ -108,7 +108,7 @@ class MetaDict(defaultdict):
         origready = self._ready
         if dirty:
             self.clear()
-            for k, v in other.items():
+            for k, v in list(other.items()):
                 self[k] = copy.copy(v)
         self._dirty = origdirty | dirty
 
@@ -125,7 +125,7 @@ class MetaDict(defaultdict):
         origdirty = self._dirty
         origready = self._ready
         if dirty:
-            for k, v in other.items():
+            for k, v in list(other.items()):
                 self[k] = copy.copy(v)
         self._dirty = origdirty | dirty
 
@@ -141,7 +141,7 @@ class MetaDict(defaultdict):
         assert self.axistags is not None
         assert self.shape is not None
         keys = self.getAxisKeys()
-        return OrderedDict(zip(keys, self.shape))
+        return OrderedDict(list(zip(keys, self.shape)))
 
     def getAxisKeys(self):
         assert self.axistags is not None
@@ -169,7 +169,7 @@ class MetaDict(defaultdict):
             if key in self:
                 pairs.append( key + ' : ' + repr(self[key]) )
         
-        for key, value in self.items():
+        for key, value in list(self.items()):
             if key not in standard_keys:
                 pairs.append( key + ' : ' + repr(value) )
         

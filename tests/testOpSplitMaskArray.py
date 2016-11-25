@@ -48,7 +48,7 @@ class TestOpSplitMaskArray(object):
         # Mask borders of the expected output.
         left_slicing = (mask.ndim - 1) * (slice(None),) + (slice(None, 1),)
         right_slicing = (mask.ndim - 1) * (slice(None),) + (slice(-1, None),)
-        for i in xrange(mask.ndim):
+        for i in range(mask.ndim):
             left_slicing = left_slicing[-1:] + left_slicing[:-1]
             right_slicing = right_slicing[-1:] + right_slicing[:-1]
 
@@ -92,7 +92,7 @@ class TestOpSplitMaskArray(object):
         # Mask borders of the expected output.
         left_slicing = (mask.ndim - 1) * (slice(None),) + (slice(None, 1),)
         right_slicing = (mask.ndim - 1) * (slice(None),) + (slice(-1, None),)
-        for i in xrange(mask.ndim):
+        for i in range(mask.ndim):
             left_slicing = left_slicing[-1:] + left_slicing[:-1]
             right_slicing = right_slicing[-1:] + right_slicing[:-1]
 

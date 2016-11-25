@@ -76,7 +76,7 @@ class OpObjectFeatures(Operator):
                 for cc in range(labels.shape[-1]):
                     regionFeatures = vigra.analysis.extractRegionFeatures(image[...,ic], labels[...,cc], features)
                     for name in regionFeatures.activeNames():
-                        if not c_features.has_key(name):
+                        if name not in c_features:
                             c_features[name] = []
                             c_features_maxlen[name] = regionFeatures[name]
 
@@ -85,14 +85,14 @@ class OpObjectFeatures(Operator):
                         if c_features_maxlen[name].shape[0] < regionFeatures[name].shape[0]:
                             c_features_maxlen[name] = regionFeatures[name]
             
-                for name,feat in c_features_maxlen.items():
+                for name,feat in list(c_features_maxlen.items()):
                     for cc in range(labels.shape[-1]):
                         labs = numpy.sort(vigra.analysis.unique(labels[...,cc]))
                         feat[labs,...] = c_features[name][cc][labs,...]
 
                 
-                for name,feat in c_features_maxlen.items():
-                    if not result.has_key(name):
+                for name,feat in list(c_features_maxlen.items()):
+                    if name not in result:
                         result[name] = []
                     result[name].append(feat)
             
@@ -104,7 +104,7 @@ class OpObjectFeatures(Operator):
 
             flat_arr = []
 
-            for name,feat_arr in c_features.items():
+            for name,feat_arr in list(c_features.items()):
                 for i, arr in enumerate(feat_arr):
                     prod = 1
                     for ds in arr.shape[1:]:
@@ -141,16 +141,16 @@ if __name__ == "__main__":
     op.Image.setValue(image)
     op.Labels.setValue(labels)
 
-    print "Available Features: \n", op.AvailableFeatures[0].wait()
+    print("Available Features: \n", op.AvailableFeatures[0].wait())
 
     op.SelectedFeatures.setValue(['Skewness', 'Variance', 'Covariance', 'Kurtosis', 'Maximum', 'Mean', 'Minimum'])
 
     calculated_features = op.FeatureDict[:].wait()[0]   # get dict of channel-feature arrays
-    print "Calculated Features: \n", calculated_features
+    print("Calculated Features: \n", calculated_features)
 
-    print calculated_features["Mean"][0].shape   # shape of feature "Mean" for channel 0
+    print(calculated_features["Mean"][0].shape)   # shape of feature "Mean" for channel 0
 
 
     feature_matrix = op.FeatureMatrix[:].wait()[0] # get feature matrix
-    print "Shape of Feature Matrix", feature_matrix.shape
+    print("Shape of Feature Matrix", feature_matrix.shape)
 

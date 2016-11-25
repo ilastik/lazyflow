@@ -236,7 +236,7 @@ class Slot(object):
 
         # Allow slots to be sorted by their order of creation for
         # debug output and diagramming purposes.
-        self._global_slot_id = Slot._global_counter.next()
+        self._global_slot_id = next(Slot._global_counter)
 
     ###########################
     #  A p i    M e t h o d s #
@@ -812,7 +812,7 @@ class Slot(object):
         if slot.partner is not None:
             return Slot._findUpstreamProblemSlot( slot.partner )
         if slot.getRealOperator() is not None:
-            for inputSlot in slot.getRealOperator().inputs.values():
+            for inputSlot in list(slot.getRealOperator().inputs.values()):
                 if not inputSlot._optional and not inputSlot.ready():
                     return inputSlot
         return "Couldn't find an upstream problem slot."
@@ -1172,7 +1172,7 @@ class Slot(object):
                 self._value = value
                 self.stype.setupMetaForValue(value)
 
-                for k,v in extra_meta.items():
+                for k,v in list(extra_meta.items()):
                     setattr(self.meta, k, v)
                 
                 self.meta._dirty = True
@@ -1250,7 +1250,7 @@ class Slot(object):
                 self.logger.error("Error: Caught a secondary exception while handling a different exception.")                
                 import traceback
                 traceback.print_exc() 
-                raise exc_info[0], exc_info[1], exc_info[2]
+                raise exc_info[0](exc_info[1]).with_traceback(exc_info[2])
             raise
 
     @property

@@ -19,7 +19,7 @@
 # This information is also available on the ilastik web site at:
 #		   http://ilastik.org/license/
 ###############################################################################
-from __future__ import division
+
 import sys
 from lazyflow.graph import Operator,InputSlot,OutputSlot
 from lazyflow.utility.helpers import newIterator
@@ -33,6 +33,7 @@ from functools import partial
 from lazyflow.roi import roiToSlice,sliceToRoi
 import collections
 import warnings
+from functools import reduce
 
 class OpBaseVigraFilter(Operator):
     
@@ -442,7 +443,7 @@ class OpPixelFeaturesPresmoothed(Operator):
         #####
         
         #this matrix will contain the instances of the operators
-        self.operatorMatrix = [[None]*len(self.inMatrix[0]) for i in xrange(len(self.inMatrix))]
+        self.operatorMatrix = [[None]*len(self.inMatrix[0]) for i in range(len(self.inMatrix))]
         #this matrix will contain the start and stop position in the channel dimension of the ouput
         #for each op/sig combination. Roughly equivalent to self.featureOutputChannels
         self.positionMatrix = numpy.zeros_like(self.operatorMatrix)
@@ -457,8 +458,8 @@ class OpPixelFeaturesPresmoothed(Operator):
         totalFeatureCount = (self.inMatrix == True).sum()
         self.Features.resize( totalFeatureCount )
 
-        for i in xrange(len(self.inMatrix)): #Cycle through operators == i
-            for j in xrange(len(self.inMatrix[i])): #Cycle through sigmas == j
+        for i in range(len(self.inMatrix)): #Cycle through operators == i
+            for j in range(len(self.inMatrix[i])): #Cycle through sigmas == j
                 if self.inMatrix[i][j]:
                     self.operatorMatrix[i][j] = self.FeatureInfos[self.features[i]][0](parent=self)
                     self.operatorMatrix[i][j].Input.connect(self.Input)
@@ -499,9 +500,9 @@ class OpPixelFeaturesPresmoothed(Operator):
         #####
         
         #transpose operatorMatrix and positionMatrix for better handling
-        self.operatorMatrix = zip(*self.operatorMatrix)
+        self.operatorMatrix = list(zip(*self.operatorMatrix))
         self.operatorMatrix = [list(t) for t in self.operatorMatrix]
-        self.positionMatrix = zip(*self.positionMatrix)
+        self.positionMatrix = list(zip(*self.positionMatrix))
         self.positionMatrix = [list(t) for t in self.positionMatrix]
         
         #cast the scales to float
@@ -513,14 +514,14 @@ class OpPixelFeaturesPresmoothed(Operator):
         self.modSigmas = [0]*len(self.inScales)
         
         #set modified sigmas
-        for i in xrange(len(self.inScales)):
+        for i in range(len(self.inScales)):
             if self.inScales[i] > self.destSigma:
                 self.modSigmas[i]=(sqrt(self.inScales[i]**2-self.destSigma**2))
             else:
                 self.modSigmas[i]=self.inScales[i]
         
         self.modSigmas.insert(0,0)
-        for i in xrange(len(self.modSigmas)-1):
+        for i in range(len(self.modSigmas)-1):
             self.incrSigmas[i]=sqrt(self.modSigmas[i+1]**2-self.modSigmas[i]**2)
         self.modSigmas.remove(0)
         
@@ -550,8 +551,8 @@ class OpPixelFeaturesPresmoothed(Operator):
             #get the maximum halo 
             halo = 0
             opM = self.operatorMatrix
-            for sig in xrange(len(opM)):#for each sigma
-                for op in xrange(len(opM[sig])): #for each operator with this sig
+            for sig in range(len(opM)):#for each sigma
+                for op in range(len(opM[sig])): #for each operator with this sig
                     if opM[sig][op] is not None:
                         halo=max(halo,opM[sig][op].calculateHalo(opM[sig][op].setupFilter()))
             #check smoothing operations halo
@@ -564,7 +565,7 @@ class OpPixelFeaturesPresmoothed(Operator):
             opM = self.operatorMatrix
             resIter = 0
             cstart,cstop = origRoi.start[cIndex],origRoi.stop[cIndex]
-            for sig in xrange(len(opM)):#for each sigma
+            for sig in range(len(opM)):#for each sigma
 
                 warnings.warn("FIXME: Can't use an operator like this in execute!  This won't work for parallel calls to execute()")                
                 self.smoother.Sigma.setValue(self.incrSigmas[sig])
@@ -580,11 +581,11 @@ class OpPixelFeaturesPresmoothed(Operator):
                 
                 
                 source = vigra.VigraArray(source,axistags=axistags)
-                for op in xrange(len(opM[sig])): #for each operator with this sigma
+                for op in range(len(opM[sig])): #for each operator with this sigma
                     try:
                         pos = self.positionMatrix[sig][op]
                     except:
-                        print sig,op
+                        print(sig,op)
                     if opM[sig][op] is not None and pos[1] > cstart and pos[0] < cstop:
                         if opM[sig][op].Input.connected():
                             opM[sig][op].Input.disconnect()

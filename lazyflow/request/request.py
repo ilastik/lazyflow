@@ -28,7 +28,7 @@ import threading
 import multiprocessing
 import platform
 import traceback
-import StringIO
+import io
 from random import randrange
 
 import logging
@@ -38,7 +38,7 @@ logger = logging.getLogger(__name__)
 import greenlet
 
 # lazyflow
-import threadPool
+from . import threadPool
 
 # This module's code needs to be sanitized if you're not using CPython.
 # In particular, check that set operations like remove() are still atomic.
@@ -78,7 +78,7 @@ def log_exception( logger, msg=None, exc_info=None, level=logging.ERROR ):
     It is better to log exceptions this way instead of merely printing them to the console, 
     so that other logger outputs (such as log files) show the exception, too.
     """
-    sio = StringIO.StringIO()
+    sio = io.StringIO()
     if exc_info:
         traceback.print_exception( exc_info[0], exc_info[1], exc_info[2], file=sio )
     else:
@@ -210,7 +210,7 @@ class Request( object ):
         self.parent_request = current_request
         self._max_child_priority = 0
         if current_request is None:
-            self._priority = root_priority + [ Request._root_request_counter.next() ]
+            self._priority = root_priority + [ next(Request._root_request_counter) ]
         else:
             with current_request._lock:
                 current_request.child_requests.add(self)
@@ -408,7 +408,7 @@ class Request( object ):
             # The _execute() function normally intercepts exceptions to hide them from the worker threads.
             # In this debug mode, we want to re-raise the exception.
             if self.exception is not None:
-                raise self.exception_info[0], self.exception_info[1], self.exception_info[2]
+                raise self.exception_info[0](self.exception_info[1]).with_traceback(self.exception_info[2])
 
     def _wake_up(self):
         """
@@ -533,7 +533,7 @@ class Request( object ):
             # (which can happen if the request is calling wait() from within a notify_finished callback)
             if self.finished:
                 if self.exception is not None:
-                    raise self.exception_info[0], self.exception_info[1], self.exception_info[2]
+                    raise self.exception_info[0](self.exception_info[1]).with_traceback(self.exception_info[2])
                 else:
                     return
             else:
@@ -555,7 +555,7 @@ class Request( object ):
             raise Request.InvalidRequestException()
         
         if self.exception is not None:
-            raise self.exception_info[0], self.exception_info[1], self.exception_info[2]
+            raise self.exception_info[0](self.exception_info[1]).with_traceback(self.exception_info[2])
 
     def _wait_within_request(self, current_request):
         """
@@ -584,7 +584,7 @@ class Request( object ):
             if self.exception is not None:
                 # This request was already started and already failed.
                 # Simply raise the exception back to the current request.
-                raise self.exception_info[0], self.exception_info[1], self.exception_info[2]
+                raise self.exception_info[0](self.exception_info[1]).with_traceback(self.exception_info[2])
 
             direct_execute_needed = not self.started
             suspend_needed = self.started and not self.execution_complete
@@ -625,7 +625,7 @@ class Request( object ):
         
         # Are we back because we failed?
         if self.exception is not None:
-            raise self.exception_info[0], self.exception_info[1], self.exception_info[2]
+            raise self.exception_info[0](self.exception_info[1]).with_traceback(self.exception_info[2])
 
     def _handle_finished_request(self, request, *args):
         """

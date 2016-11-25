@@ -19,4 +19,4 @@
 # This information is also available on the ilastik web site at:
 #		   http://ilastik.org/license/
 ###############################################################################
-from request import *
+from .request import *
