@@ -1,0 +1,827 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>lazyflow.utility.io_util.blockwiseFileset &#8212; lazyflow 0.1 documentation</title>
+    
+    <link rel="stylesheet" href="../../../../_static/classic.css" type="text/css" />
+    <link rel="stylesheet" href="../../../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../../../',
+        VERSION:     '0.1',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../../_static/doctools.js"></script>
+    <link rel="index" title="Index" href="../../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../../search.html" />
+    <link rel="top" title="lazyflow 0.1 documentation" href="../../../../index.html" />
+    <link rel="up" title="Module code" href="../../../index.html" /> 
+  </head>
+  <body role="document">
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../../../index.html">lazyflow 0.1 documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="../../../index.html" accesskey="U">Module code</a> &#187;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for lazyflow.utility.io_util.blockwiseFileset</h1><div class="highlight"><pre>
+<span></span><span class="c1">###############################################################################</span>
+<span class="c1">#   lazyflow: data flow based lazy parallel computation framework</span>
+<span class="c1">#</span>
+<span class="c1">#       Copyright (C) 2011-2014, the ilastik developers</span>
+<span class="c1">#                                &lt;team@ilastik.org&gt;</span>
+<span class="c1">#</span>
+<span class="c1"># This program is free software; you can redistribute it and/or</span>
+<span class="c1"># modify it under the terms of the Lesser GNU General Public License</span>
+<span class="c1"># as published by the Free Software Foundation; either version 2.1</span>
+<span class="c1"># of the License, or (at your option) any later version.</span>
+<span class="c1">#</span>
+<span class="c1"># This program is distributed in the hope that it will be useful,</span>
+<span class="c1"># but WITHOUT ANY WARRANTY; without even the implied warranty of</span>
+<span class="c1"># MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the</span>
+<span class="c1"># GNU Lesser General Public License for more details.</span>
+<span class="c1">#</span>
+<span class="c1"># See the files LICENSE.lgpl2 and LICENSE.lgpl3 for full text of the</span>
+<span class="c1"># GNU Lesser General Public License version 2.1 and 3 respectively.</span>
+<span class="c1"># This information is also available on the ilastik web site at:</span>
+<span class="c1">#		   http://ilastik.org/license/</span>
+<span class="c1">###############################################################################</span>
+<span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">import</span> <span class="nn">copy</span>
+<span class="kn">import</span> <span class="nn">shutil</span>
+<span class="kn">import</span> <span class="nn">threading</span>
+<span class="kn">import</span> <span class="nn">platform</span>
+<span class="kn">import</span> <span class="nn">numpy</span>
+<span class="kn">import</span> <span class="nn">h5py</span>
+<span class="kn">import</span> <span class="nn">logging</span>
+<span class="n">logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="n">__name__</span><span class="p">)</span>
+
+<span class="kn">import</span> <span class="nn">cPickle</span> <span class="k">as</span> <span class="nn">pickle</span>
+
+<span class="c1"># The natural thing to do here is to use numpy.vectorize,</span>
+<span class="c1">#  but that somehow interacts strangely with pickle.</span>
+<span class="c1">#vectorized_pickle_dumps = numpy.vectorize( pickle.dumps, otypes=[str] )</span>
+<span class="c1">#vectorized_pickle_loads = numpy.vectorize( pickke.loads, otypes=[object] )</span>
+
+<span class="k">def</span> <span class="nf">vectorized_pickle_dumps</span><span class="p">(</span><span class="n">a</span><span class="p">):</span>
+    <span class="n">out</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">ndarray</span><span class="p">(</span><span class="n">shape</span><span class="o">=</span><span class="n">a</span><span class="o">.</span><span class="n">shape</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="s1">&#39;O&#39;</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">i</span><span class="p">,</span><span class="n">x</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">a</span><span class="o">.</span><span class="n">flat</span><span class="p">):</span>
+        <span class="c1"># Must use protocol 0 to avoid null bytes in the h5py dataset</span>
+        <span class="n">out</span><span class="o">.</span><span class="n">flat</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">pickle</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">out</span>
+
+<span class="k">def</span> <span class="nf">vectorized_pickle_loads</span><span class="p">(</span><span class="n">a</span><span class="p">):</span>
+    <span class="n">out</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">ndarray</span><span class="p">(</span><span class="n">shape</span><span class="o">=</span><span class="n">a</span><span class="o">.</span><span class="n">shape</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">object</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">i</span><span class="p">,</span><span class="n">s</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">a</span><span class="o">.</span><span class="n">flat</span><span class="p">):</span>
+        <span class="n">out</span><span class="o">.</span><span class="n">flat</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">pickle</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">s</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">out</span>
+
+
+<span class="kn">from</span> <span class="nn">lazyflow.utility.jsonConfig</span> <span class="k">import</span> <span class="n">AutoEval</span><span class="p">,</span> <span class="n">FormattedField</span><span class="p">,</span> <span class="n">JsonConfigParser</span>
+<span class="kn">from</span> <span class="nn">lazyflow.utility.log_exception</span> <span class="k">import</span> <span class="n">log_exception</span>
+<span class="kn">from</span> <span class="nn">lazyflow.roi</span> <span class="k">import</span> <span class="n">getIntersection</span><span class="p">,</span> <span class="n">roiToSlice</span>
+<span class="kn">from</span> <span class="nn">lazyflow.utility</span> <span class="k">import</span> <span class="n">PathComponents</span><span class="p">,</span> <span class="n">getPathVariants</span><span class="p">,</span> <span class="n">FileLock</span>
+<span class="kn">from</span> <span class="nn">lazyflow.roi</span> <span class="k">import</span> <span class="n">getIntersectingBlocks</span><span class="p">,</span> <span class="n">getBlockBounds</span><span class="p">,</span> <span class="n">TinyVector</span>
+
+<span class="k">try</span><span class="p">:</span>
+    <span class="kn">import</span> <span class="nn">vigra</span>
+    <span class="n">_use_vigra</span> <span class="o">=</span> <span class="kc">True</span>
+<span class="k">except</span><span class="p">:</span>
+    <span class="n">_use_vigra</span> <span class="o">=</span> <span class="kc">False</span>
+
+<span class="k">class</span> <span class="nc">BlockwiseFilesetFactory</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    
+    <span class="n">creationFns</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
+    
+    <span class="nd">@classmethod</span>
+    <span class="k">def</span> <span class="nf">register</span><span class="p">(</span><span class="n">cls</span><span class="p">,</span> <span class="n">creationFn</span> <span class="p">):</span>
+        <span class="n">BlockwiseFilesetFactory</span><span class="o">.</span><span class="n">creationFns</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">creationFn</span><span class="p">)</span>
+    
+    <span class="nd">@classmethod</span>
+    <span class="k">def</span> <span class="nf">create</span><span class="p">(</span><span class="n">cls</span><span class="p">,</span> <span class="n">descriptionPath</span><span class="p">,</span> <span class="n">mode</span><span class="p">):</span>
+        <span class="k">for</span> <span class="n">fn</span> <span class="ow">in</span> <span class="n">BlockwiseFilesetFactory</span><span class="o">.</span><span class="n">creationFns</span><span class="p">:</span>
+            <span class="n">bfs</span> <span class="o">=</span> <span class="n">fn</span><span class="p">(</span><span class="n">descriptionPath</span><span class="p">,</span> <span class="n">mode</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">bfs</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="k">return</span> <span class="n">bfs</span>
+        <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span> <span class="s2">&quot;Wasn&#39;t able to create a blockwise fileset from your file: </span><span class="si">{}</span><span class="s2"> &quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">descriptionPath</span><span class="p">)</span> <span class="p">)</span>
+
+<div class="viewcode-block" id="BlockwiseFileset"><a class="viewcode-back" href="../../../../utilities.html#lazyflow.utility.io_util.BlockwiseFileset">[docs]</a><span class="k">class</span> <span class="nc">BlockwiseFileset</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    This class handles writing and reading a &#39;blockwise file set&#39;.</span>
+<span class="sd">    A &#39;blockwise file set&#39; is a directory with a particular structure, which contains the entire dataset broken up into blocks.</span>
+<span class="sd">    Important parameters (e.g. shape, dtype, blockshape) are specified in a JSON file, which must match the schema given by :py:data:`BlockwiseFileset.DescriptionFields`.</span>
+<span class="sd">    The parent directory of the description file is considered to be the top-most directory in the blockwise dataset hierarchy.</span>
+<span class="sd">    </span>
+<span class="sd">    - Simultaneous reads are threadsafe.</span>
+<span class="sd">    - NOT threadsafe for reading and writing simultaneously (or writing and writing).</span>
+<span class="sd">    - NOT threadsafe for closing.  Do not call close() while reading or writing.</span>
+
+<span class="sd">    .. note:: See the unit tests in ``tests/testBlockwiseFileset.py`` for example usage.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="c1">#: These fields describe the schema of the description file.</span>
+    <span class="c1">#: See the source code comments for a description of each field.    </span>
+    <span class="n">DescriptionFields</span> <span class="o">=</span> \
+    <span class="p">{</span>
+        <span class="s2">&quot;_schema_name&quot;</span> <span class="p">:</span> <span class="s2">&quot;blockwise-fileset-description&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;_schema_version&quot;</span> <span class="p">:</span> <span class="mf">1.1</span><span class="p">,</span>
+
+        <span class="s2">&quot;name&quot;</span> <span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+        <span class="s2">&quot;format&quot;</span> <span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+        <span class="s2">&quot;axes&quot;</span> <span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+        <span class="s2">&quot;shape&quot;</span> <span class="p">:</span> <span class="n">AutoEval</span><span class="p">(</span><span class="n">numpy</span><span class="o">.</span><span class="n">array</span><span class="p">),</span> <span class="c1"># This is the shape of the dataset on disk</span>
+        <span class="s2">&quot;dtype&quot;</span> <span class="p">:</span> <span class="n">AutoEval</span><span class="p">(),</span>
+        <span class="s2">&quot;drange&quot;</span> <span class="p">:</span> <span class="n">AutoEval</span><span class="p">(</span><span class="nb">tuple</span><span class="p">),</span> <span class="c1"># Optional. Data range, e.g. (0.0, 1.0)</span>
+        <span class="s2">&quot;chunks&quot;</span> <span class="p">:</span> <span class="n">AutoEval</span><span class="p">(</span><span class="n">numpy</span><span class="o">.</span><span class="n">array</span><span class="p">),</span> <span class="c1"># Optional.  If null, no chunking. Only used when writing data.</span>
+        <span class="s2">&quot;compression&quot;</span> <span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="c1"># Optional.  Options include &#39;lzf&#39; and &#39;gzip&#39;, among others.  Note: h5py automatically enables chunking on compressed datasets.</span>
+        <span class="s2">&quot;compression_opts&quot;</span> <span class="p">:</span> <span class="n">AutoEval</span><span class="p">(</span><span class="nb">int</span><span class="p">),</span> <span class="c1"># Optional. Hdf5-specific</span>
+        <span class="s2">&quot;block_shape&quot;</span> <span class="p">:</span> <span class="n">AutoEval</span><span class="p">(</span><span class="n">numpy</span><span class="o">.</span><span class="n">array</span><span class="p">),</span>
+        <span class="s2">&quot;view_origin&quot;</span> <span class="p">:</span> <span class="n">AutoEval</span><span class="p">(</span><span class="n">numpy</span><span class="o">.</span><span class="n">array</span><span class="p">),</span> <span class="c1"># Optional.  Defaults to zeros.  All requests will be translated before the data is accessed.</span>
+                                <span class="c1"># For example, if the offset is [100, 200, 300], then a request for roi([0,0,0],[2,2,2]) </span>
+                                <span class="c1">#  will pull from the dataset on disk as though the request was ([100,200,300],[102,202,302]).</span>
+                                <span class="c1"># It is an error to specify an view_origin that is not a multiple of the block_shape.</span>
+        <span class="s2">&quot;view_shape&quot;</span> <span class="p">:</span> <span class="n">AutoEval</span><span class="p">(</span><span class="n">numpy</span><span class="o">.</span><span class="n">array</span><span class="p">),</span> <span class="c1"># Optional.  Defaults to (shape - view_origin) Limits the shape of the provided data.</span>
+        <span class="s2">&quot;block_file_name_format&quot;</span> <span class="p">:</span> <span class="n">FormattedField</span><span class="p">(</span> <span class="n">requiredFields</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;roiString&quot;</span><span class="p">]</span> <span class="p">),</span> <span class="c1"># For hdf5, include dataset name, e.g. myfile_block{roiString}.h5/volume/data</span>
+        <span class="s2">&quot;dataset_root_dir&quot;</span> <span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="c1"># Abs path or relative to the description file itself. Defaults to &quot;.&quot; if left blank.</span>
+        <span class="s2">&quot;hash_id&quot;</span> <span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="c1"># Not user-defined (clients may use this)</span>
+
+        <span class="c1"># Added in schema v1.1</span>
+        <span class="s2">&quot;sub_block_shape&quot;</span> <span class="p">:</span> <span class="n">AutoEval</span><span class="p">(</span><span class="n">numpy</span><span class="o">.</span><span class="n">array</span><span class="p">)</span> <span class="c1"># Optional.  Must divide evenly into the block shape.</span>
+    <span class="p">}</span>
+
+    <span class="n">DescriptionSchema</span> <span class="o">=</span> <span class="n">JsonConfigParser</span><span class="p">(</span> <span class="n">DescriptionFields</span> <span class="p">)</span>
+
+    <span class="nd">@classmethod</span>
+<div class="viewcode-block" id="BlockwiseFileset.readDescription"><a class="viewcode-back" href="../../../../utilities.html#lazyflow.utility.io_util.BlockwiseFileset.readDescription">[docs]</a>    <span class="k">def</span> <span class="nf">readDescription</span><span class="p">(</span><span class="n">cls</span><span class="p">,</span> <span class="n">descriptionFilePath</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Parse the description file at the given path and return a </span>
+<span class="sd">        :py:class:`jsonConfig.Namespace` object with the description parameters.</span>
+<span class="sd">        The file will be parsed according to the schema given by :py:data:`BlockwiseFileset.DescriptionFields`.</span>
+<span class="sd">        </span>
+<span class="sd">        :param descriptionFilePath: The path to the description file to parse.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="n">BlockwiseFileset</span><span class="o">.</span><span class="n">DescriptionSchema</span><span class="o">.</span><span class="n">parseConfigFile</span><span class="p">(</span> <span class="n">descriptionFilePath</span> <span class="p">)</span></div>
+
+    <span class="nd">@classmethod</span>
+<div class="viewcode-block" id="BlockwiseFileset.writeDescription"><a class="viewcode-back" href="../../../../utilities.html#lazyflow.utility.io_util.BlockwiseFileset.writeDescription">[docs]</a>    <span class="k">def</span> <span class="nf">writeDescription</span><span class="p">(</span><span class="n">cls</span><span class="p">,</span> <span class="n">descriptionFilePath</span><span class="p">,</span> <span class="n">descriptionFields</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Write a :py:class:`jsonConfig.Namespace` object to the given path.</span>
+<span class="sd">        </span>
+<span class="sd">        :param descriptionFilePath: The path to overwrite with the description fields.</span>
+<span class="sd">        :param descriptionFields: The fields to write.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">BlockwiseFileset</span><span class="o">.</span><span class="n">DescriptionSchema</span><span class="o">.</span><span class="n">writeConfigFile</span><span class="p">(</span> <span class="n">descriptionFilePath</span><span class="p">,</span> <span class="n">descriptionFields</span> <span class="p">)</span></div>
+
+<div class="viewcode-block" id="BlockwiseFileset.BlockNotReadyError"><a class="viewcode-back" href="../../../../utilities.html#lazyflow.utility.io_util.BlockwiseFileset.BlockNotReadyError">[docs]</a>    <span class="k">class</span> <span class="nc">BlockNotReadyError</span><span class="p">(</span><span class="ne">Exception</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        This exception is raised if `readData()` is called for data that isn&#39;t available on disk.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">block_start</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">block_start</span> <span class="o">=</span> <span class="n">block_start</span></div>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">description</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        The :py:class:`jsonConfig.Namespace` object that describes this dataset.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_description</span>
+
+    <span class="nd">@classmethod</span>
+    <span class="k">def</span> <span class="nf">_createAndReturnBlockwiseFileset</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">descriptionFilePath</span><span class="p">,</span> <span class="n">mode</span><span class="p">):</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">bfs</span> <span class="o">=</span> <span class="n">BlockwiseFileset</span><span class="p">(</span> <span class="n">descriptionFilePath</span><span class="p">,</span> <span class="n">mode</span> <span class="p">)</span>
+        <span class="k">except</span> <span class="n">JsonConfigParser</span><span class="o">.</span><span class="n">SchemaError</span><span class="p">:</span>
+            <span class="n">bfs</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="k">return</span> <span class="n">bfs</span>
+
+    <span class="nd">@classmethod</span>
+    <span class="k">def</span> <span class="nf">_prepare_system</span><span class="p">(</span><span class="n">cls</span><span class="p">):</span>
+        <span class="c1"># None of this code is tested on Windows.</span>
+        <span class="c1"># It might work, but you&#39;ll need to improve the unit tests to know for sure.</span>
+        <span class="k">assert</span> <span class="n">platform</span><span class="o">.</span><span class="n">system</span><span class="p">()</span> <span class="o">!=</span> <span class="s1">&#39;Windows&#39;</span><span class="p">,</span> <span class="s2">&quot;This code is all untested on Windows, and probably needs some modification before it will work.&quot;</span>
+
+        <span class="c1"># If you get a &quot;Too many open files&quot; error, this soft limit may need to be increased.</span>
+        <span class="c1"># The way to set this limit in bash is via &quot;ulimit -n 4096&quot;</span>
+        <span class="c1"># Fortunately, Python lets us increase the limit via the resource module.</span>
+        <span class="kn">import</span> <span class="nn">resource</span>
+        <span class="n">softlimit</span><span class="p">,</span> <span class="n">hardlimit</span> <span class="o">=</span> <span class="n">resource</span><span class="o">.</span><span class="n">getrlimit</span><span class="p">(</span><span class="n">resource</span><span class="o">.</span><span class="n">RLIMIT_NOFILE</span><span class="p">)</span>
+        <span class="n">softlimit</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span> <span class="mi">4096</span><span class="p">,</span> <span class="n">softlimit</span> <span class="p">)</span>
+        <span class="n">resource</span><span class="o">.</span><span class="n">setrlimit</span><span class="p">(</span><span class="n">resource</span><span class="o">.</span><span class="n">RLIMIT_NOFILE</span><span class="p">,</span> <span class="p">(</span> <span class="n">softlimit</span><span class="p">,</span> <span class="n">hardlimit</span> <span class="p">))</span>
+            
+
+<div class="viewcode-block" id="BlockwiseFileset.__init__"><a class="viewcode-back" href="../../../../utilities.html#lazyflow.utility.io_util.BlockwiseFileset.__init__">[docs]</a>    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span> <span class="bp">self</span><span class="p">,</span> <span class="n">descriptionFilePath</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s1">&#39;r&#39;</span><span class="p">,</span> <span class="n">preparsedDescription</span><span class="o">=</span><span class="kc">None</span> <span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Constructor.  Uses `readDescription` interally.</span>
+<span class="sd">        </span>
+<span class="sd">        :param descriptionFilePath: The path to the .json file that describes the dataset.</span>
+<span class="sd">        :param mode: Set to ``&#39;r&#39;`` if the fileset should be read-only.</span>
+<span class="sd">        :param preparsedDescription: (Optional) Provide pre-parsed description fields, in which case the provided description file will not be parsed.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_prepare_system</span><span class="p">()</span>
+        
+        <span class="k">assert</span> <span class="n">mode</span> <span class="o">==</span> <span class="s1">&#39;r&#39;</span> <span class="ow">or</span> <span class="n">mode</span> <span class="o">==</span> <span class="s1">&#39;a&#39;</span><span class="p">,</span> <span class="s2">&quot;Valid modes are &#39;r&#39; or &#39;a&#39;, not &#39;</span><span class="si">{}</span><span class="s2">&#39;&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">mode</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">mode</span> <span class="o">=</span> <span class="n">mode</span>
+        
+        <span class="k">assert</span> <span class="n">descriptionFilePath</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">,</span> <span class="s2">&quot;Must provide a path to the description file, even if you are providing pre-parsed fields. (Path is used to find block directory).&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_descriptionFilePath</span> <span class="o">=</span> <span class="n">descriptionFilePath</span>
+        
+        <span class="k">if</span> <span class="n">preparsedDescription</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_description</span> <span class="o">=</span> <span class="n">preparsedDescription</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_description</span> <span class="o">=</span> <span class="n">BlockwiseFileset</span><span class="o">.</span><span class="n">readDescription</span><span class="p">(</span> <span class="n">descriptionFilePath</span> <span class="p">)</span>
+
+        <span class="c1"># Check for errors</span>
+        <span class="k">assert</span> <span class="bp">self</span><span class="o">.</span><span class="n">_description</span><span class="o">.</span><span class="n">format</span> <span class="o">==</span> <span class="s2">&quot;hdf5&quot;</span><span class="p">,</span> <span class="s2">&quot;Only hdf5 blockwise filesets are supported so far.&quot;</span>        
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_description</span><span class="o">.</span><span class="n">compression_opts</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">assert</span> <span class="bp">self</span><span class="o">.</span><span class="n">_description</span><span class="o">.</span><span class="n">compression</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">,</span> <span class="s2">&quot;You specified compression_opts=</span><span class="si">{}</span><span class="s2"> without specifying a compression type&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span> <span class="bp">self</span><span class="o">.</span><span class="n">_description</span><span class="o">.</span><span class="n">compression</span> <span class="p">)</span>
+        <span class="n">drange</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_description</span><span class="o">.</span><span class="n">drange</span>
+        <span class="k">if</span> <span class="n">drange</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">assert</span> <span class="nb">len</span><span class="p">(</span><span class="n">drange</span><span class="p">)</span> <span class="o">==</span> <span class="mi">2</span><span class="p">,</span> <span class="s2">&quot;Invalid drange: </span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">drange</span><span class="p">)</span>
+            <span class="k">assert</span> <span class="n">drange</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">&lt;=</span> <span class="n">drange</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="s2">&quot;Invalid drange: </span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">drange</span><span class="p">)</span>
+
+        <span class="n">sub_block_shape</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_description</span><span class="o">.</span><span class="n">sub_block_shape</span>
+        <span class="k">if</span> <span class="n">sub_block_shape</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">block_shape</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_description</span><span class="o">.</span><span class="n">block_shape</span>
+            <span class="n">block_shape_mods</span> <span class="o">=</span> <span class="p">(</span><span class="n">numpy</span><span class="o">.</span><span class="n">mod</span><span class="p">(</span><span class="n">block_shape</span> <span class="p">,</span> <span class="n">sub_block_shape</span><span class="p">)</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">)</span>
+            <span class="n">nonfull_block_shape_dims</span> <span class="o">=</span> <span class="p">(</span><span class="n">block_shape</span> <span class="o">!=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_description</span><span class="o">.</span><span class="n">view_shape</span><span class="p">)</span>
+            <span class="n">invalid_sub_block_dims</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">logical_and</span><span class="p">(</span><span class="n">nonfull_block_shape_dims</span><span class="p">,</span> <span class="n">block_shape_mods</span><span class="p">)</span>
+            <span class="k">assert</span> <span class="p">(</span> <span class="n">invalid_sub_block_dims</span> <span class="o">==</span> <span class="kc">False</span> <span class="p">)</span><span class="o">.</span><span class="n">all</span><span class="p">(),</span> <span class="s2">&quot;Each dimension of sub_block_shape must divide evenly into block_shape,&quot;</span>\
+                                    <span class="s2">&quot; unless the total dataset is only one block wide in that dimension.&quot;</span>
+
+        <span class="c1"># default view_origin        </span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_description</span><span class="o">.</span><span class="n">view_origin</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_description</span><span class="o">.</span><span class="n">view_origin</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">array</span><span class="p">(</span> <span class="p">(</span><span class="mi">0</span><span class="p">,)</span> <span class="o">*</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_description</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span> <span class="p">)</span>
+        <span class="k">assert</span> <span class="p">(</span><span class="n">numpy</span><span class="o">.</span><span class="n">mod</span><span class="p">(</span> <span class="bp">self</span><span class="o">.</span><span class="n">_description</span><span class="o">.</span><span class="n">view_origin</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_description</span><span class="o">.</span><span class="n">block_shape</span> <span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">all</span><span class="p">(),</span> <span class="s2">&quot;view_origin is not compatible with block_shape.  Must be a multiple!&quot;</span>
+
+        <span class="c1"># default view_shape        </span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_description</span><span class="o">.</span><span class="n">view_shape</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_description</span><span class="o">.</span><span class="n">view_shape</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">subtract</span><span class="p">(</span> <span class="bp">self</span><span class="o">.</span><span class="n">_description</span><span class="o">.</span><span class="n">shape</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_description</span><span class="o">.</span><span class="n">view_origin</span> <span class="p">)</span>
+        <span class="n">view_roi</span> <span class="o">=</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_description</span><span class="o">.</span><span class="n">view_origin</span><span class="p">,</span> <span class="n">numpy</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_description</span><span class="o">.</span><span class="n">view_origin</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_description</span><span class="o">.</span><span class="n">view_shape</span><span class="p">))</span>
+        <span class="k">assert</span> <span class="p">(</span><span class="n">numpy</span><span class="o">.</span><span class="n">subtract</span><span class="p">(</span> <span class="bp">self</span><span class="o">.</span><span class="n">_description</span><span class="o">.</span><span class="n">shape</span><span class="p">,</span> <span class="n">view_roi</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="p">)</span> <span class="o">&gt;=</span> <span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">all</span><span class="p">(),</span> <span class="s2">&quot;View ROI must not exceed on-disk shape: View roi: </span><span class="si">{}</span><span class="s2">, on-disk shape: </span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span> <span class="n">view_roi</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_description</span><span class="o">.</span><span class="n">shape</span> <span class="p">)</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_description</span><span class="o">.</span><span class="n">dataset_root_dir</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="c1"># Default to same directory as the description file</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_description</span><span class="o">.</span><span class="n">dataset_root_dir</span> <span class="o">=</span> <span class="s2">&quot;.&quot;</span>
+        
+        <span class="bp">self</span><span class="o">.</span><span class="n">_lock</span> <span class="o">=</span> <span class="n">threading</span><span class="o">.</span><span class="n">Lock</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_openBlockFiles</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_fileLocks</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_closed</span> <span class="o">=</span> <span class="kc">False</span></div>
+
+    <span class="k">def</span> <span class="nf">__del__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s1">&#39;_closed&#39;</span><span class="p">)</span> <span class="ow">and</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">_closed</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+            
+    <span class="k">def</span> <span class="nf">__enter__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span>
+
+    <span class="k">def</span> <span class="nf">__exit__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+
+<div class="viewcode-block" id="BlockwiseFileset.close"><a class="viewcode-back" href="../../../../utilities.html#lazyflow.utility.io_util.BlockwiseFileset.close">[docs]</a>    <span class="k">def</span> <span class="nf">close</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Close all open block files.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">_lock</span><span class="p">:</span>
+            <span class="k">assert</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">_closed</span>
+            <span class="n">paths</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_openBlockFiles</span><span class="o">.</span><span class="n">keys</span><span class="p">()</span>
+            <span class="k">for</span> <span class="n">path</span> <span class="ow">in</span> <span class="n">paths</span><span class="p">:</span>
+                <span class="n">blockFile</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_openBlockFiles</span><span class="p">[</span><span class="n">path</span><span class="p">]</span>
+                <span class="n">blockFile</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+                <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">mode</span> <span class="o">==</span> <span class="s1">&#39;a&#39;</span><span class="p">:</span>
+                    <span class="n">fileLock</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_fileLocks</span><span class="p">[</span><span class="n">path</span><span class="p">]</span>
+                    <span class="n">fileLock</span><span class="o">.</span><span class="n">release</span><span class="p">()</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_openBlockFiles</span> <span class="o">=</span> <span class="p">{}</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_fileLocks</span> <span class="o">=</span> <span class="p">{}</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_closed</span> <span class="o">=</span> <span class="kc">True</span></div>
+    
+    <span class="k">def</span> <span class="nf">reopen</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">mode</span><span class="p">):</span>
+        <span class="k">assert</span> <span class="bp">self</span><span class="o">.</span><span class="n">_closed</span><span class="p">,</span> <span class="s2">&quot;Can&#39;t reopen a fileset that isn&#39;t closed.&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">mode</span> <span class="o">=</span> <span class="n">mode</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_closed</span> <span class="o">=</span> <span class="kc">False</span>
+
+<div class="viewcode-block" id="BlockwiseFileset.readData"><a class="viewcode-back" href="../../../../utilities.html#lazyflow.utility.io_util.BlockwiseFileset.readData">[docs]</a>    <span class="k">def</span> <span class="nf">readData</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">roi</span><span class="p">,</span> <span class="n">out_array</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Read data from the fileset.</span>
+<span class="sd">        </span>
+<span class="sd">        :param roi: The region of interest to read from the dataset.  Must be a tuple of iterables: (start, stop).</span>
+<span class="sd">        :param out_array: The location to store the read data.  Must be the correct size for the given roi.  If not provided, an array is created for you.</span>
+<span class="sd">        :returns: The requested data.  If out_array was provided, returns out_array.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">out_array</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">out_array</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">ndarray</span><span class="p">(</span> <span class="n">shape</span><span class="o">=</span><span class="n">numpy</span><span class="o">.</span><span class="n">subtract</span><span class="p">(</span><span class="n">roi</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">roi</span><span class="p">[</span><span class="mi">0</span><span class="p">]),</span> <span class="n">dtype</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_description</span><span class="o">.</span><span class="n">dtype</span> <span class="p">)</span>
+        <span class="n">roi_shape</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">subtract</span><span class="p">(</span><span class="n">roi</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">roi</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+        <span class="k">assert</span> <span class="p">(</span> <span class="n">roi_shape</span> <span class="o">==</span> <span class="n">out_array</span><span class="o">.</span><span class="n">shape</span> <span class="p">)</span><span class="o">.</span><span class="n">all</span><span class="p">(),</span> <span class="s2">&quot;out_array must match roi shape&quot;</span>
+        <span class="k">assert</span> <span class="p">(</span><span class="n">roi_shape</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">all</span><span class="p">(),</span> <span class="s2">&quot;Requested roi </span><span class="si">{}</span><span class="s2"> has zero volume!&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span> <span class="n">roi</span> <span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_transferData</span><span class="p">(</span><span class="n">roi</span><span class="p">,</span> <span class="n">out_array</span><span class="p">,</span> <span class="n">read</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">out_array</span></div>
+
+<div class="viewcode-block" id="BlockwiseFileset.writeData"><a class="viewcode-back" href="../../../../utilities.html#lazyflow.utility.io_util.BlockwiseFileset.writeData">[docs]</a>    <span class="k">def</span> <span class="nf">writeData</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">roi</span><span class="p">,</span> <span class="n">data</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Write data to the fileset.</span>
+<span class="sd">        </span>
+<span class="sd">        :param roi: The region of interest to write the data to.  Must be a tuple of iterables: (start, stop).</span>
+<span class="sd">        :param data: The data to write.  Must be the correct size for the given roi.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">assert</span> <span class="bp">self</span><span class="o">.</span><span class="n">mode</span> <span class="o">!=</span> <span class="s1">&#39;r&#39;</span>
+        <span class="k">assert</span> <span class="p">(</span><span class="n">numpy</span><span class="o">.</span><span class="n">subtract</span><span class="p">(</span><span class="n">roi</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">roi</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">all</span><span class="p">(),</span> <span class="s2">&quot;Requested roi </span><span class="si">{}</span><span class="s2"> has zero volume!&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span> <span class="n">roi</span> <span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_transferData</span><span class="p">(</span><span class="n">roi</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span> <span class="n">read</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="BlockwiseFileset.getDatasetDirectory"><a class="viewcode-back" href="../../../../utilities.html#lazyflow.utility.io_util.BlockwiseFileset.getDatasetDirectory">[docs]</a>    <span class="k">def</span> <span class="nf">getDatasetDirectory</span><span class="p">(</span> <span class="bp">self</span><span class="p">,</span> <span class="n">blockstart</span> <span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Return the directory that contains the block that starts at the given coordinates.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># Add the view origin to find the on-disk block coordinates</span>
+        <span class="n">blockstart</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">add</span><span class="p">(</span> <span class="n">blockstart</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_description</span><span class="o">.</span><span class="n">view_origin</span> <span class="p">)</span>
+        <span class="n">descriptionFileDir</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_descriptionFilePath</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="n">absPath</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">getPathVariants</span><span class="p">(</span> <span class="bp">self</span><span class="o">.</span><span class="n">_description</span><span class="o">.</span><span class="n">dataset_root_dir</span><span class="p">,</span> <span class="n">descriptionFileDir</span> <span class="p">)</span>
+        <span class="n">blockFilePath</span> <span class="o">=</span> <span class="n">absPath</span>
+
+        <span class="k">for</span> <span class="n">axis</span><span class="p">,</span> <span class="n">start</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_description</span><span class="o">.</span><span class="n">axes</span><span class="p">,</span> <span class="n">blockstart</span><span class="p">):</span>
+            <span class="n">blockFilePath</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span> <span class="n">blockFilePath</span><span class="p">,</span> <span class="s2">&quot;</span><span class="si">{}</span><span class="s2">_</span><span class="si">{:08d}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span> <span class="n">axis</span><span class="p">,</span> <span class="n">start</span> <span class="p">)</span> <span class="p">)</span>
+        <span class="k">return</span> <span class="n">blockFilePath</span></div>
+
+    <span class="k">def</span> <span class="nf">_getBlockFileName</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">block_start</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Get the path to the block file that starts at the given coordinate.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># Translate to find disk block start</span>
+        <span class="n">block_start</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">add</span><span class="p">(</span> <span class="bp">self</span><span class="o">.</span><span class="n">_description</span><span class="o">.</span><span class="n">view_origin</span><span class="p">,</span> <span class="n">block_start</span> <span class="p">)</span>
+        <span class="c1"># Get true (disk) block bounds (i.e. use on-disk shape, not view_shape)</span>
+        <span class="n">entire_block_roi</span> <span class="o">=</span> <span class="n">getBlockBounds</span><span class="p">(</span> <span class="bp">self</span><span class="o">.</span><span class="n">_description</span><span class="o">.</span><span class="n">shape</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_description</span><span class="o">.</span><span class="n">block_shape</span><span class="p">,</span> <span class="n">block_start</span> <span class="p">)</span>
+        <span class="n">roiString</span> <span class="o">=</span> <span class="s2">&quot;</span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span> <span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="n">entire_block_roi</span><span class="p">[</span><span class="mi">0</span><span class="p">]),</span> <span class="nb">list</span><span class="p">(</span><span class="n">entire_block_roi</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span> <span class="p">)</span> <span class="p">)</span>
+        <span class="n">datasetFilename</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_description</span><span class="o">.</span><span class="n">block_file_name_format</span><span class="o">.</span><span class="n">format</span><span class="p">(</span> <span class="n">roiString</span><span class="o">=</span><span class="n">roiString</span> <span class="p">)</span>
+        <span class="k">return</span> <span class="n">datasetFilename</span>
+
+<div class="viewcode-block" id="BlockwiseFileset.getDatasetPathComponents"><a class="viewcode-back" href="../../../../utilities.html#lazyflow.utility.io_util.BlockwiseFileset.getDatasetPathComponents">[docs]</a>    <span class="k">def</span> <span class="nf">getDatasetPathComponents</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">block_start</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Return a PathComponents object for the block file that corresponds to the given block start coordinate.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">datasetFilename</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_getBlockFileName</span><span class="p">(</span><span class="n">block_start</span><span class="p">)</span>
+        <span class="n">datasetDir</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">getDatasetDirectory</span><span class="p">(</span> <span class="n">block_start</span> <span class="p">)</span>
+        <span class="n">datasetPath</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span> <span class="n">datasetDir</span><span class="p">,</span> <span class="n">datasetFilename</span> <span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">PathComponents</span><span class="p">(</span> <span class="n">datasetPath</span> <span class="p">)</span></div>
+
+    <span class="n">BLOCK_NOT_AVAILABLE</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="n">BLOCK_AVAILABLE</span> <span class="o">=</span> <span class="mi">1</span>
+<div class="viewcode-block" id="BlockwiseFileset.getBlockStatus"><a class="viewcode-back" href="../../../../utilities.html#lazyflow.utility.io_util.BlockwiseFileset.getBlockStatus">[docs]</a>    <span class="k">def</span> <span class="nf">getBlockStatus</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">blockstart</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Check a block&#39;s status.</span>
+<span class="sd">        (Just because a block file exists doesn&#39;t mean that it has valid data.)</span>
+<span class="sd">        Returns a status code of either ``BlockwiseFileset.BLOCK_AVAILABLE`` or ``BlockwiseFileset.BLOCK_NOT_AVAILABLE``.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">blockDir</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">getDatasetDirectory</span><span class="p">(</span><span class="n">blockstart</span><span class="p">)</span>
+        <span class="n">statusFilePath</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">blockDir</span><span class="p">,</span> <span class="s2">&quot;STATUS.txt&quot;</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span> <span class="n">statusFilePath</span> <span class="p">):</span>
+            <span class="k">return</span> <span class="n">BlockwiseFileset</span><span class="o">.</span><span class="n">BLOCK_NOT_AVAILABLE</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">BlockwiseFileset</span><span class="o">.</span><span class="n">BLOCK_AVAILABLE</span></div>
+
+<div class="viewcode-block" id="BlockwiseFileset.isBlockLocked"><a class="viewcode-back" href="../../../../utilities.html#lazyflow.utility.io_util.BlockwiseFileset.isBlockLocked">[docs]</a>    <span class="k">def</span> <span class="nf">isBlockLocked</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">blockstart</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Return True if the block is locked for writing.</span>
+<span class="sd">        Note that both &#39;available&#39; and &#39;not available&#39; blocks might be locked.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">datasetPathComponents</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">getDatasetPathComponents</span><span class="p">(</span><span class="n">blockstart</span><span class="p">)</span>
+        <span class="n">hdf5FilePath</span> <span class="o">=</span> <span class="n">datasetPathComponents</span><span class="o">.</span><span class="n">externalPath</span>
+        <span class="n">testLock</span> <span class="o">=</span> <span class="n">FileLock</span><span class="p">(</span> <span class="n">hdf5FilePath</span> <span class="p">)</span>
+        <span class="k">return</span> <span class="ow">not</span> <span class="n">testLock</span><span class="o">.</span><span class="n">available</span><span class="p">()</span></div>
+        
+<div class="viewcode-block" id="BlockwiseFileset.setBlockStatus"><a class="viewcode-back" href="../../../../utilities.html#lazyflow.utility.io_util.BlockwiseFileset.setBlockStatus">[docs]</a>    <span class="k">def</span> <span class="nf">setBlockStatus</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">blockstart</span><span class="p">,</span> <span class="n">status</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Set a block status on disk.</span>
+<span class="sd">        We use a simple convention: If the status file exists, the block is available.  Otherwise, it ain&#39;t.</span>
+<span class="sd">        </span>
+<span class="sd">        :param status: Must be either ``BlockwiseFileset.BLOCK_AVAILABLE`` or ``BlockwiseFileset.BLOCK_NOT_AVAILABLE``.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">blockDir</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">getDatasetDirectory</span><span class="p">(</span> <span class="n">blockstart</span> <span class="p">)</span>
+        <span class="n">statusFilePath</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">blockDir</span><span class="p">,</span> <span class="s2">&quot;STATUS.txt&quot;</span><span class="p">)</span>
+        
+        <span class="k">if</span> <span class="n">status</span> <span class="o">==</span> <span class="n">BlockwiseFileset</span><span class="o">.</span><span class="n">BLOCK_AVAILABLE</span><span class="p">:</span>
+            <span class="c1"># touch the status file.</span>
+            <span class="nb">open</span><span class="p">(</span> <span class="n">statusFilePath</span><span class="p">,</span> <span class="s1">&#39;w&#39;</span> <span class="p">)</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+        <span class="k">elif</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span> <span class="n">statusFilePath</span> <span class="p">):</span>
+            <span class="c1"># Remove the status file</span>
+            <span class="n">os</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span> <span class="n">statusFilePath</span> <span class="p">)</span></div>
+
+    <span class="k">def</span> <span class="nf">setBlockStatusesForRoi</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">roi</span><span class="p">,</span> <span class="n">status</span><span class="p">):</span>
+        <span class="n">block_starts</span> <span class="o">=</span> <span class="n">getIntersectingBlocks</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_description</span><span class="o">.</span><span class="n">block_shape</span><span class="p">,</span> <span class="n">roi</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">block_start</span> <span class="ow">in</span> <span class="n">block_starts</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">setBlockStatus</span><span class="p">(</span><span class="n">block_start</span><span class="p">,</span> <span class="n">status</span><span class="p">)</span>
+
+<div class="viewcode-block" id="BlockwiseFileset.getEntireBlockRoi"><a class="viewcode-back" href="../../../../utilities.html#lazyflow.utility.io_util.BlockwiseFileset.getEntireBlockRoi">[docs]</a>    <span class="k">def</span> <span class="nf">getEntireBlockRoi</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">block_start</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Return the roi for the entire block that starts at the given coordinate.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="n">getBlockBounds</span><span class="p">(</span> <span class="bp">self</span><span class="o">.</span><span class="n">_description</span><span class="o">.</span><span class="n">view_shape</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_description</span><span class="o">.</span><span class="n">block_shape</span><span class="p">,</span> <span class="n">block_start</span> <span class="p">)</span></div>
+
+<div class="viewcode-block" id="BlockwiseFileset.getAllBlockRois"><a class="viewcode-back" href="../../../../utilities.html#lazyflow.utility.io_util.BlockwiseFileset.getAllBlockRois">[docs]</a>    <span class="k">def</span> <span class="nf">getAllBlockRois</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Return the list of rois for all VIEWED blocks in the dataset.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">entire_dataset_roi</span> <span class="o">=</span> <span class="p">([</span><span class="mi">0</span><span class="p">]</span><span class="o">*</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_description</span><span class="o">.</span><span class="n">view_shape</span><span class="p">),</span> <span class="bp">self</span><span class="o">.</span><span class="n">_description</span><span class="o">.</span><span class="n">view_shape</span><span class="p">)</span>
+        <span class="n">block_starts</span> <span class="o">=</span> <span class="n">getIntersectingBlocks</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_description</span><span class="o">.</span><span class="n">block_shape</span><span class="p">,</span> <span class="n">entire_dataset_roi</span><span class="p">)</span>
+        <span class="n">rois</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">block_start</span> <span class="ow">in</span> <span class="n">block_starts</span><span class="p">:</span>
+            <span class="n">rois</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">getEntireBlockRoi</span><span class="p">(</span><span class="n">block_start</span><span class="p">))</span>
+        <span class="k">return</span> <span class="n">rois</span></div>
+
+    <span class="k">def</span> <span class="nf">_transferData</span><span class="p">(</span> <span class="bp">self</span><span class="p">,</span> <span class="n">roi</span><span class="p">,</span> <span class="n">array_data</span><span class="p">,</span> <span class="n">read</span> <span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Read or write data from/to the fileset.</span>
+<span class="sd">        </span>
+<span class="sd">        :param roi: The region of interest.</span>
+<span class="sd">        :param array_data: If ``read`` is True, ``array_data`` is the destination array for the read data.  If ``read`` is False, array_data contains the data to write to disk.</span>
+<span class="sd">        :param read: If True, read data from the fileset into ``array_data``.  Otherwise, write data from ``array_data`` into the fileset on disk.</span>
+<span class="sd">        :type read: bool</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">entire_dataset_roi</span> <span class="o">=</span> <span class="p">([</span><span class="mi">0</span><span class="p">]</span> <span class="o">*</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_description</span><span class="o">.</span><span class="n">view_shape</span><span class="p">),</span> <span class="bp">self</span><span class="o">.</span><span class="n">_description</span><span class="o">.</span><span class="n">view_shape</span><span class="p">)</span>
+        <span class="n">clipped_roi</span> <span class="o">=</span> <span class="n">getIntersection</span><span class="p">(</span> <span class="n">roi</span><span class="p">,</span> <span class="n">entire_dataset_roi</span> <span class="p">)</span>
+        <span class="k">assert</span> <span class="p">(</span><span class="n">numpy</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">clipped_roi</span><span class="p">)</span> <span class="o">==</span> <span class="n">numpy</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">roi</span><span class="p">))</span><span class="o">.</span><span class="n">all</span><span class="p">(),</span> <span class="s2">&quot;Roi </span><span class="si">{}</span><span class="s2"> does not fit within dataset bounds: </span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">roi</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_description</span><span class="o">.</span><span class="n">view_shape</span><span class="p">)</span>
+        
+        <span class="n">block_starts</span> <span class="o">=</span> <span class="n">getIntersectingBlocks</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_description</span><span class="o">.</span><span class="n">block_shape</span><span class="p">,</span> <span class="n">roi</span><span class="p">)</span>
+        
+        <span class="c1"># TODO: Parallelize this loop?</span>
+        <span class="k">for</span> <span class="n">block_start</span> <span class="ow">in</span> <span class="n">block_starts</span><span class="p">:</span>
+            <span class="n">entire_block_roi</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">getEntireBlockRoi</span><span class="p">(</span><span class="n">block_start</span><span class="p">)</span> <span class="c1"># Roi of this whole block within the whole dataset</span>
+            <span class="n">transfer_block_roi</span> <span class="o">=</span> <span class="n">getIntersection</span><span class="p">(</span> <span class="n">entire_block_roi</span><span class="p">,</span> <span class="n">roi</span> <span class="p">)</span> <span class="c1"># Roi of data needed from this block within the whole dataset</span>
+            <span class="n">block_relative_roi</span> <span class="o">=</span> <span class="p">(</span> <span class="n">transfer_block_roi</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">-</span> <span class="n">block_start</span><span class="p">,</span> <span class="n">transfer_block_roi</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="n">block_start</span> <span class="p">)</span> <span class="c1"># Roi of needed data from this block, relative to the block itself</span>
+            <span class="n">array_data_roi</span> <span class="o">=</span> <span class="p">(</span><span class="n">transfer_block_roi</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">-</span> <span class="n">roi</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">transfer_block_roi</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="n">roi</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span> <span class="c1"># Roi of data needed from this block within array_data</span>
+
+            <span class="n">array_slicing</span> <span class="o">=</span> <span class="n">roiToSlice</span><span class="p">(</span> <span class="o">*</span><span class="n">array_data_roi</span> <span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_transferBlockData</span><span class="p">(</span> <span class="n">entire_block_roi</span><span class="p">,</span> <span class="n">block_relative_roi</span><span class="p">,</span> <span class="n">array_data</span><span class="p">,</span> <span class="n">array_slicing</span><span class="p">,</span> <span class="n">read</span> <span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_transferBlockData</span><span class="p">(</span> <span class="bp">self</span><span class="p">,</span> <span class="n">entire_block_roi</span><span class="p">,</span> <span class="n">block_relative_roi</span><span class="p">,</span> <span class="n">array_data</span><span class="p">,</span> <span class="n">array_slicing</span><span class="p">,</span> <span class="n">read</span> <span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Read or write data to a single block in the fileset.</span>
+<span class="sd">        </span>
+<span class="sd">        :param entire_block_roi: The roi of the entire block, relative to the whole dataset.</span>
+<span class="sd">        :param block_relative_roi: The roi of the data being read/written, relative to the block itself (not the whole dataset).</span>
+<span class="sd">        :param array_data: Either the source or the destination of the data being transferred to/from the fileset on disk.</span>
+<span class="sd">        :param read: If True, read data from the block into ``array_data``.  Otherwise, write data from ``array_data`` into the block on disk.</span>
+<span class="sd">        :type read: bool</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">datasetPathComponents</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">getDatasetPathComponents</span><span class="p">(</span><span class="n">entire_block_roi</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_description</span><span class="o">.</span><span class="n">format</span> <span class="o">==</span> <span class="s2">&quot;hdf5&quot;</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_transferBlockDataHdf5</span><span class="p">(</span> <span class="n">entire_block_roi</span><span class="p">,</span> <span class="n">block_relative_roi</span><span class="p">,</span> <span class="n">array_data</span><span class="p">,</span> <span class="n">array_slicing</span><span class="p">,</span> <span class="n">read</span><span class="p">,</span> <span class="n">datasetPathComponents</span> <span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">assert</span> <span class="kc">False</span><span class="p">,</span> <span class="s2">&quot;Unknown format&quot;</span>        
+
+    <span class="k">def</span> <span class="nf">_transferBlockDataHdf5</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">entire_block_roi</span><span class="p">,</span> <span class="n">block_relative_roi</span><span class="p">,</span> <span class="n">array_data</span><span class="p">,</span> <span class="n">array_slicing</span><span class="p">,</span> <span class="n">read</span><span class="p">,</span> <span class="n">datasetPathComponents</span> <span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Transfer a block of data to/from an hdf5 dataset.</span>
+<span class="sd">        See _transferBlockData() for details.</span>
+<span class="sd">        </span>
+<span class="sd">        We use separate parameters for array_data and array_slicing to allow users to pass an hdf5 dataset for array_data.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># For the hdf5 format, the full path format INCLUDES the dataset name, e.g. /path/to/myfile.h5/volume/data</span>
+        <span class="n">path_parts</span> <span class="o">=</span> <span class="n">datasetPathComponents</span>
+        <span class="n">datasetDir</span> <span class="o">=</span> <span class="n">path_parts</span><span class="o">.</span><span class="n">externalDirectory</span>
+        <span class="n">hdf5FilePath</span> <span class="o">=</span> <span class="n">path_parts</span><span class="o">.</span><span class="n">externalPath</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">path_parts</span><span class="o">.</span><span class="n">internalPath</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="s2">&quot;Your hdf5 block filename format MUST specify an internal path, e.g. block</span><span class="si">{roiString}</span><span class="s2">.h5/volume/blockdata&quot;</span><span class="p">)</span>
+
+        <span class="n">block_start</span> <span class="o">=</span> <span class="n">entire_block_roi</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="k">if</span> <span class="n">read</span><span class="p">:</span>
+            <span class="c1"># Check for problems before reading.</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">getBlockStatus</span><span class="p">(</span> <span class="n">block_start</span> <span class="p">)</span> <span class="ow">is</span> <span class="ow">not</span> <span class="n">BlockwiseFileset</span><span class="o">.</span><span class="n">BLOCK_AVAILABLE</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="n">BlockwiseFileset</span><span class="o">.</span><span class="n">BlockNotReadyError</span><span class="p">(</span> <span class="n">block_start</span> <span class="p">)</span>
+
+            <span class="n">hdf5File</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_getOpenHdf5Blockfile</span><span class="p">(</span> <span class="n">hdf5FilePath</span> <span class="p">)</span>
+
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_description</span><span class="o">.</span><span class="n">dtype</span> <span class="o">!=</span> <span class="nb">object</span> <span class="ow">and</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">array_data</span><span class="p">,</span> <span class="n">numpy</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span> <span class="ow">and</span> <span class="n">array_data</span><span class="o">.</span><span class="n">flags</span><span class="o">.</span><span class="n">c_contiguous</span><span class="p">:</span>
+                <span class="n">hdf5File</span><span class="p">[</span> <span class="n">path_parts</span><span class="o">.</span><span class="n">internalPath</span> <span class="p">]</span><span class="o">.</span><span class="n">read_direct</span><span class="p">(</span> <span class="n">array_data</span><span class="p">,</span> <span class="n">roiToSlice</span><span class="p">(</span> <span class="o">*</span><span class="n">block_relative_roi</span> <span class="p">),</span> <span class="n">array_slicing</span> <span class="p">)</span>
+            <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">_description</span><span class="o">.</span><span class="n">dtype</span> <span class="o">==</span> <span class="nb">object</span><span class="p">:</span>
+                <span class="c1"># We store arrays of dtype=object as arrays of pickle strings.</span>
+                <span class="n">array_pickled_data</span> <span class="o">=</span> <span class="n">hdf5File</span><span class="p">[</span> <span class="n">path_parts</span><span class="o">.</span><span class="n">internalPath</span> <span class="p">][</span> <span class="n">roiToSlice</span><span class="p">(</span> <span class="o">*</span><span class="n">block_relative_roi</span> <span class="p">)</span> <span class="p">]</span>
+                <span class="n">array_data</span><span class="p">[</span> <span class="n">array_slicing</span> <span class="p">]</span> <span class="o">=</span> <span class="n">vectorized_pickle_loads</span><span class="p">(</span><span class="n">array_pickled_data</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">array_data</span><span class="p">[</span> <span class="n">array_slicing</span> <span class="p">]</span> <span class="o">=</span> <span class="n">hdf5File</span><span class="p">[</span> <span class="n">path_parts</span><span class="o">.</span><span class="n">internalPath</span> <span class="p">][</span> <span class="n">roiToSlice</span><span class="p">(</span> <span class="o">*</span><span class="n">block_relative_roi</span> <span class="p">)</span> <span class="p">]</span>
+                
+        <span class="k">else</span><span class="p">:</span>
+            <span class="c1"># Create the directory</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span> <span class="n">datasetDir</span> <span class="p">):</span>
+                <span class="n">os</span><span class="o">.</span><span class="n">makedirs</span><span class="p">(</span> <span class="n">datasetDir</span> <span class="p">)</span>
+                <span class="c1"># For debug purposes, output a copy of the settings </span>
+                <span class="c1">#  that were active **when this block was created**</span>
+                <span class="n">descriptionFileName</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_descriptionFilePath</span><span class="p">)[</span><span class="mi">1</span><span class="p">]</span>
+                <span class="n">debugDescriptionFileCopyPath</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">datasetDir</span><span class="p">,</span> <span class="n">descriptionFileName</span><span class="p">)</span>
+                <span class="n">BlockwiseFileset</span><span class="o">.</span><span class="n">writeDescription</span><span class="p">(</span><span class="n">debugDescriptionFileCopyPath</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_description</span><span class="p">)</span>
+
+            <span class="c1"># Clear the block status.</span>
+            <span class="c1"># The CALLER is responsible for setting it again.</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">setBlockStatus</span><span class="p">(</span> <span class="n">block_start</span><span class="p">,</span> <span class="n">BlockwiseFileset</span><span class="o">.</span><span class="n">BLOCK_NOT_AVAILABLE</span> <span class="p">)</span>
+
+            <span class="c1"># Write the block data file</span>
+            <span class="n">hdf5File</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_getOpenHdf5Blockfile</span><span class="p">(</span> <span class="n">hdf5FilePath</span> <span class="p">)</span>
+            <span class="k">if</span> <span class="n">path_parts</span><span class="o">.</span><span class="n">internalPath</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">hdf5File</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_createDatasetInFile</span><span class="p">(</span> <span class="n">hdf5File</span><span class="p">,</span> <span class="n">path_parts</span><span class="o">.</span><span class="n">internalPath</span><span class="p">,</span> <span class="n">entire_block_roi</span> <span class="p">)</span>
+            <span class="n">dataset</span> <span class="o">=</span> <span class="n">hdf5File</span><span class="p">[</span> <span class="n">path_parts</span><span class="o">.</span><span class="n">internalPath</span> <span class="p">]</span>
+            <span class="n">data</span> <span class="o">=</span> <span class="n">array_data</span><span class="p">[</span> <span class="n">array_slicing</span> <span class="p">]</span>
+            <span class="k">if</span> <span class="n">data</span><span class="o">.</span><span class="n">dtype</span> <span class="o">==</span> <span class="nb">object</span><span class="p">:</span>
+                <span class="c1"># hdf5 can&#39;t handle datasets with dtype=object,</span>
+                <span class="c1">#  so we have to pickle each item first.</span>
+                <span class="n">dataset</span><span class="p">[</span> <span class="n">roiToSlice</span><span class="p">(</span> <span class="o">*</span><span class="n">block_relative_roi</span> <span class="p">)</span> <span class="p">]</span> <span class="o">=</span> <span class="n">vectorized_pickle_dumps</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">dataset</span><span class="p">[</span> <span class="n">roiToSlice</span><span class="p">(</span> <span class="o">*</span><span class="n">block_relative_roi</span> <span class="p">)</span> <span class="p">]</span> <span class="o">=</span> <span class="n">data</span>
+            
+
+    <span class="k">def</span> <span class="nf">_createDatasetInFile</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">hdf5File</span><span class="p">,</span> <span class="n">datasetName</span><span class="p">,</span> <span class="n">roi</span><span class="p">):</span>
+        <span class="n">shape</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span> <span class="n">roi</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="n">roi</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="p">)</span>
+        <span class="n">chunks</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_description</span><span class="o">.</span><span class="n">chunks</span>
+        <span class="k">if</span> <span class="n">chunks</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="c1"># chunks must not be bigger than the data in any dim</span>
+            <span class="n">chunks</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">minimum</span><span class="p">(</span> <span class="n">chunks</span><span class="p">,</span> <span class="n">shape</span> <span class="p">)</span>
+            <span class="n">chunks</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">chunks</span><span class="p">)</span>
+        <span class="n">compression</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_description</span><span class="o">.</span><span class="n">compression</span>
+        <span class="n">compression_opts</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_description</span><span class="o">.</span><span class="n">compression_opts</span>
+        
+        <span class="n">dtype</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_description</span><span class="o">.</span><span class="n">dtype</span>
+        <span class="k">if</span> <span class="n">dtype</span> <span class="o">==</span> <span class="nb">object</span><span class="p">:</span>
+            <span class="n">dtype</span> <span class="o">=</span> <span class="n">h5py</span><span class="o">.</span><span class="n">new_vlen</span><span class="p">(</span><span class="nb">str</span><span class="p">)</span>
+        <span class="n">dataset</span> <span class="o">=</span> <span class="n">hdf5File</span><span class="o">.</span><span class="n">create_dataset</span><span class="p">(</span> <span class="n">datasetName</span><span class="p">,</span>
+                                 <span class="n">shape</span><span class="o">=</span><span class="n">shape</span><span class="p">,</span>
+                                 <span class="n">dtype</span><span class="o">=</span><span class="n">dtype</span><span class="p">,</span>
+                                 <span class="n">chunks</span><span class="o">=</span><span class="n">chunks</span><span class="p">,</span>
+                                 <span class="n">compression</span><span class="o">=</span><span class="n">compression</span><span class="p">,</span>
+                                 <span class="n">compression_opts</span><span class="o">=</span><span class="n">compression_opts</span> <span class="p">)</span>
+
+        <span class="c1"># Set data attributes</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_description</span><span class="o">.</span><span class="n">drange</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">dataset</span><span class="o">.</span><span class="n">attrs</span><span class="p">[</span><span class="s1">&#39;drange&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_description</span><span class="o">.</span><span class="n">drange</span>
+        <span class="k">if</span> <span class="n">_use_vigra</span><span class="p">:</span>
+            <span class="n">dataset</span><span class="o">.</span><span class="n">attrs</span><span class="p">[</span><span class="s1">&#39;axistags&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">vigra</span><span class="o">.</span><span class="n">defaultAxistags</span><span class="p">(</span> <span class="bp">self</span><span class="o">.</span><span class="n">_description</span><span class="o">.</span><span class="n">axes</span> <span class="p">)</span><span class="o">.</span><span class="n">toJSON</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="nf">_getOpenHdf5Blockfile</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">blockFilePath</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Return a handle to the open hdf5File at the given path.</span>
+<span class="sd">        If we haven&#39;t opened the file yet, open it first.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># Try once without locking</span>
+        <span class="k">if</span> <span class="n">blockFilePath</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_openBlockFiles</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_openBlockFiles</span><span class="p">[</span> <span class="n">blockFilePath</span> <span class="p">]</span>
+
+        <span class="c1"># Obtain the lock and try again</span>
+        <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">_lock</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">blockFilePath</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_openBlockFiles</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+                <span class="k">try</span><span class="p">:</span>
+                    <span class="n">writeLock</span> <span class="o">=</span> <span class="n">FileLock</span><span class="p">(</span> <span class="n">blockFilePath</span><span class="p">,</span> <span class="n">timeout</span><span class="o">=</span><span class="mi">10</span> <span class="p">)</span>
+                    <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">mode</span> <span class="o">==</span> <span class="s1">&#39;a&#39;</span><span class="p">:</span>
+                        <span class="n">acquired</span> <span class="o">=</span> <span class="n">writeLock</span><span class="o">.</span><span class="n">acquire</span><span class="p">(</span> <span class="n">blocking</span><span class="o">=</span><span class="kc">False</span> <span class="p">)</span>
+                        <span class="k">assert</span> <span class="n">acquired</span><span class="p">,</span> <span class="s2">&quot;Couldn&#39;t obtain an exclusive lock for writing to file: </span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span> <span class="n">blockFilePath</span> <span class="p">)</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">_fileLocks</span><span class="p">[</span><span class="n">blockFilePath</span><span class="p">]</span> <span class="o">=</span> <span class="n">writeLock</span>
+                    <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">mode</span> <span class="o">==</span> <span class="s1">&#39;r&#39;</span><span class="p">:</span>
+                        <span class="k">assert</span> <span class="n">writeLock</span><span class="o">.</span><span class="n">available</span><span class="p">(),</span> <span class="s2">&quot;Can&#39;t read from a file that is being written to elsewhere.&quot;</span>
+                    <span class="k">else</span><span class="p">:</span> 
+                        <span class="k">assert</span> <span class="kc">False</span><span class="p">,</span> <span class="s2">&quot;Unsupported mode&quot;</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">_openBlockFiles</span><span class="p">[</span> <span class="n">blockFilePath</span> <span class="p">]</span> <span class="o">=</span> <span class="n">h5py</span><span class="o">.</span><span class="n">File</span><span class="p">(</span> <span class="n">blockFilePath</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">mode</span> <span class="p">)</span>
+                <span class="k">except</span><span class="p">:</span>
+                    <span class="n">log_exception</span><span class="p">(</span> <span class="n">logger</span><span class="p">,</span> <span class="s2">&quot;Couldn&#39;t open </span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">blockFilePath</span><span class="p">)</span> <span class="p">)</span>
+                    <span class="k">raise</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_openBlockFiles</span><span class="p">[</span> <span class="n">blockFilePath</span> <span class="p">]</span>
+
+<div class="viewcode-block" id="BlockwiseFileset.getOpenHdf5FileForBlock"><a class="viewcode-back" href="../../../../utilities.html#lazyflow.utility.io_util.BlockwiseFileset.getOpenHdf5FileForBlock">[docs]</a>    <span class="k">def</span> <span class="nf">getOpenHdf5FileForBlock</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">block_start</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Returns a handle to a file in this dataset.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">block_start</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">block_start</span><span class="p">)</span>
+        <span class="n">path_components</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">getDatasetPathComponents</span><span class="p">(</span><span class="n">block_start</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_getOpenHdf5Blockfile</span><span class="p">(</span><span class="n">path_components</span><span class="o">.</span><span class="n">externalPath</span><span class="p">)</span></div>
+    
+<div class="viewcode-block" id="BlockwiseFileset.purgeAllLocks"><a class="viewcode-back" href="../../../../utilities.html#lazyflow.utility.io_util.BlockwiseFileset.purgeAllLocks">[docs]</a>    <span class="k">def</span> <span class="nf">purgeAllLocks</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Clears all .lock files from the local blockwise fileset.</span>
+<span class="sd">        This may be necessary if previous processes crashed or were killed while some blocks were downloading.</span>
+<span class="sd">        You must ensure that this is NOT called while more than one process (or thread) has access to the fileset.</span>
+<span class="sd">        For example, in a master/worker situation, call this only from the master, before the workers have been started.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">found_lock</span> <span class="o">=</span> <span class="kc">False</span>
+        
+        <span class="n">view_shape</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">description</span><span class="o">.</span><span class="n">view_shape</span>
+        <span class="n">view_roi</span> <span class="o">=</span> <span class="p">([</span><span class="mi">0</span><span class="p">]</span><span class="o">*</span><span class="nb">len</span><span class="p">(</span><span class="n">view_shape</span><span class="p">),</span> <span class="n">view_shape</span><span class="p">)</span>
+        <span class="n">block_starts</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span> <span class="n">getIntersectingBlocks</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">description</span><span class="o">.</span><span class="n">block_shape</span><span class="p">,</span> <span class="n">view_roi</span><span class="p">)</span> <span class="p">)</span>
+        <span class="k">for</span> <span class="n">block_start</span> <span class="ow">in</span> <span class="n">block_starts</span><span class="p">:</span>
+            <span class="n">blockFilePathComponents</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">getDatasetPathComponents</span><span class="p">(</span> <span class="n">block_start</span> <span class="p">)</span>
+            <span class="n">fileLock</span> <span class="o">=</span> <span class="n">FileLock</span><span class="p">(</span> <span class="n">blockFilePathComponents</span><span class="o">.</span><span class="n">externalPath</span> <span class="p">)</span>
+            <span class="n">found_lock</span> <span class="o">|=</span> <span class="n">fileLock</span><span class="o">.</span><span class="n">purge</span><span class="p">()</span>
+            <span class="k">if</span> <span class="n">found_lock</span><span class="p">:</span>
+                <span class="n">logger</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span> <span class="s2">&quot;Purged lock for block: </span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">block_start</span><span class="p">)</span> <span class="p">)</span> <span class="p">)</span>
+        
+        <span class="k">return</span> <span class="n">found_lock</span></div>
+
+<div class="viewcode-block" id="BlockwiseFileset.exportRoiToHdf5"><a class="viewcode-back" href="../../../../utilities.html#lazyflow.utility.io_util.BlockwiseFileset.exportRoiToHdf5">[docs]</a>    <span class="k">def</span> <span class="nf">exportRoiToHdf5</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">roi</span><span class="p">,</span> <span class="n">exportDirectory</span><span class="p">,</span> <span class="n">use_view_coordinates</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Export an arbitrary roi to a single hdf5 file.</span>
+<span class="sd">        The file will be placed in the given exportDirectory,</span>
+<span class="sd">        and will be named according to the exported roi.</span>
+<span class="sd">        </span>
+<span class="sd">        :param roi: The roi to export</span>
+<span class="sd">        :param exportDirectory: The directory in which the result should be placed.</span>
+<span class="sd">        :param use_view_coordinates: If True, assume the roi was given relative to the view start.</span>
+<span class="sd">                                     Otherwise, assume it was given relative to the on-disk coordinates.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">roi</span> <span class="o">=</span> <span class="nb">map</span><span class="p">(</span> <span class="n">TinyVector</span><span class="p">,</span> <span class="n">roi</span> <span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">use_view_coordinates</span><span class="p">:</span>
+            <span class="n">abs_roi</span> <span class="o">=</span> <span class="n">roi</span>
+            <span class="k">assert</span> <span class="p">(</span><span class="n">abs_roi</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">&gt;=</span> <span class="bp">self</span><span class="o">.</span><span class="n">description</span><span class="o">.</span><span class="n">view_origin</span><span class="p">),</span> \
+                <span class="s2">&quot;Roi </span><span class="si">{}</span><span class="s2"> is out-of-bounds: must not span lower than the view origin: &quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span> <span class="n">roi</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">description</span><span class="o">.</span><span class="n">origin</span> <span class="p">)</span>
+            <span class="n">view_roi</span> <span class="o">=</span> <span class="n">roi</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">description</span><span class="o">.</span><span class="n">view_origin</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">view_roi</span> <span class="o">=</span> <span class="n">roi</span>
+            <span class="n">abs_roi</span> <span class="o">=</span> <span class="n">view_roi</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">description</span><span class="o">.</span><span class="n">view_origin</span>
+        
+        <span class="c1"># Always name the file according to the absolute roi</span>
+        <span class="n">roiString</span> <span class="o">=</span> <span class="s2">&quot;</span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span> <span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="n">abs_roi</span><span class="p">[</span><span class="mi">0</span><span class="p">]),</span> <span class="nb">list</span><span class="p">(</span><span class="n">abs_roi</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span> <span class="p">)</span> <span class="p">)</span>
+        <span class="n">datasetPath</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_description</span><span class="o">.</span><span class="n">block_file_name_format</span><span class="o">.</span><span class="n">format</span><span class="p">(</span> <span class="n">roiString</span><span class="o">=</span><span class="n">roiString</span> <span class="p">)</span>
+        <span class="n">fullDatasetPath</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span> <span class="n">exportDirectory</span><span class="p">,</span> <span class="n">datasetPath</span> <span class="p">)</span>
+        <span class="n">path_parts</span> <span class="o">=</span> <span class="n">PathComponents</span><span class="p">(</span> <span class="n">fullDatasetPath</span> <span class="p">)</span>
+        
+        <span class="k">with</span> <span class="n">h5py</span><span class="o">.</span><span class="n">File</span><span class="p">(</span><span class="n">path_parts</span><span class="o">.</span><span class="n">externalPath</span><span class="p">,</span> <span class="s1">&#39;w&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_createDatasetInFile</span><span class="p">(</span> <span class="n">f</span><span class="p">,</span> <span class="n">path_parts</span><span class="o">.</span><span class="n">internalPath</span><span class="p">,</span> <span class="n">view_roi</span> <span class="p">)</span>
+            <span class="n">dataset</span> <span class="o">=</span> <span class="n">f</span><span class="p">[</span> <span class="n">path_parts</span><span class="o">.</span><span class="n">internalPath</span> <span class="p">]</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">readData</span><span class="p">(</span> <span class="n">view_roi</span><span class="p">,</span> <span class="n">dataset</span> <span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">fullDatasetPath</span></div>
+
+<div class="viewcode-block" id="BlockwiseFileset.exportSubset"><a class="viewcode-back" href="../../../../utilities.html#lazyflow.utility.io_util.BlockwiseFileset.exportSubset">[docs]</a>    <span class="k">def</span> <span class="nf">exportSubset</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">roi</span><span class="p">,</span> <span class="n">exportDirectory</span><span class="p">,</span> <span class="n">use_view_coordinates</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Create a new blockwise fileset by copying a subset of this blockwise fileset.</span>
+<span class="sd">        </span>
+<span class="sd">        :param roi: The portion to export.  Must be along block boundaries, in ABSOLUTE coordinates.</span>
+<span class="sd">        :param exportDirectory: The directory to copy the new blockwise fileset to.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># For now, this implementation assumes it can simply copy EVERYTHING in the block directories,</span>
+        <span class="c1">#  including lock files.  Therefore, we require that the fileset be opened in read-only mode.</span>
+        <span class="c1"># If that&#39;s a problem, change this function to ignore lock files when copying (or purge them afterwards).</span>
+        <span class="n">roi</span> <span class="o">=</span> <span class="nb">map</span><span class="p">(</span> <span class="n">TinyVector</span><span class="p">,</span> <span class="n">roi</span> <span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">use_view_coordinates</span><span class="p">:</span>
+            <span class="n">abs_roi</span> <span class="o">=</span> <span class="n">roi</span>
+            <span class="k">assert</span> <span class="p">(</span><span class="n">abs_roi</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">&gt;=</span> <span class="bp">self</span><span class="o">.</span><span class="n">description</span><span class="o">.</span><span class="n">view_origin</span><span class="p">),</span> \
+                <span class="s2">&quot;Roi </span><span class="si">{}</span><span class="s2"> is out-of-bounds: must not span lower than the view origin: &quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span> <span class="n">roi</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">description</span><span class="o">.</span><span class="n">origin</span> <span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">abs_roi</span> <span class="o">=</span> <span class="n">roi</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">description</span><span class="o">.</span><span class="n">view_origin</span>
+
+        <span class="k">assert</span> <span class="bp">self</span><span class="o">.</span><span class="n">mode</span> <span class="o">==</span> <span class="s1">&#39;r&#39;</span><span class="p">,</span> <span class="s2">&quot;Can&#39;t export from a fileset that is open in read/write mode.&quot;</span>
+        
+        <span class="n">block_shape</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_description</span><span class="o">.</span><span class="n">block_shape</span>
+        <span class="n">abs_shape</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_description</span><span class="o">.</span><span class="n">shape</span>
+        <span class="n">view_origin</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_description</span><span class="o">.</span><span class="n">view_origin</span>
+
+        <span class="k">assert</span> <span class="p">(</span><span class="n">abs_roi</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">%</span> <span class="n">block_shape</span> <span class="o">==</span> <span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">all</span><span class="p">(),</span> <span class="s2">&quot;exportSubset() requires roi to start on a block boundary&quot;</span>
+        <span class="k">assert</span> <span class="p">((</span> <span class="n">abs_roi</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">%</span> <span class="n">block_shape</span> <span class="o">==</span> <span class="mi">0</span><span class="p">)</span> <span class="o">|</span> <span class="p">(</span> <span class="n">abs_roi</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">==</span> <span class="n">abs_shape</span> <span class="p">))</span><span class="o">.</span><span class="n">all</span><span class="p">(),</span> <span class="s2">&quot;exported subset must end on block or dataset boundary.&quot;</span>
+        
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span> <span class="n">exportDirectory</span> <span class="p">):</span>
+            <span class="n">os</span><span class="o">.</span><span class="n">makedirs</span><span class="p">(</span> <span class="n">exportDirectory</span> <span class="p">)</span>
+        
+        <span class="n">source_desc_path</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_descriptionFilePath</span>
+        <span class="n">source_desc_dir</span><span class="p">,</span> <span class="n">source_desc_filename</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">split</span><span class="p">(</span> <span class="n">source_desc_path</span> <span class="p">)</span>
+        <span class="n">source_root_dir</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">description</span><span class="o">.</span><span class="n">dataset_root_dir</span>
+        
+        <span class="c1"># Copy/update description file</span>
+        <span class="n">dest_desc_path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">exportDirectory</span><span class="p">,</span> <span class="n">source_desc_filename</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span> <span class="n">dest_desc_path</span> <span class="p">):</span>
+            <span class="n">dest_description</span> <span class="o">=</span> <span class="n">BlockwiseFileset</span><span class="o">.</span><span class="n">readDescription</span><span class="p">(</span><span class="n">dest_desc_path</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">dest_description</span> <span class="o">=</span> <span class="n">copy</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_description</span><span class="p">)</span>
+            <span class="n">dest_description</span><span class="o">.</span><span class="n">view_shape</span> <span class="o">=</span> <span class="n">abs_roi</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="n">view_origin</span>
+            <span class="n">dest_description</span><span class="o">.</span><span class="n">hash_id</span> <span class="o">=</span> <span class="kc">None</span>
+        
+        <span class="n">BlockwiseFileset</span><span class="o">.</span><span class="n">writeDescription</span><span class="p">(</span><span class="n">dest_desc_path</span><span class="p">,</span> <span class="n">dest_description</span><span class="p">)</span>
+
+        <span class="c1"># Determine destination root block dir        </span>
+        <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isabs</span><span class="p">(</span><span class="n">source_root_dir</span><span class="p">):</span>
+            <span class="n">source_root_dir</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">normpath</span><span class="p">(</span><span class="n">source_root_dir</span><span class="p">)</span>
+            <span class="n">source_root_dir_name</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="n">source_root_dir</span><span class="p">)[</span><span class="mi">1</span><span class="p">]</span>
+            <span class="n">dest_root_dir</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span> <span class="n">exportDirectory</span><span class="p">,</span> <span class="n">source_root_dir_name</span> <span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">dest_root_dir</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span> <span class="n">exportDirectory</span><span class="p">,</span> <span class="n">source_root_dir</span> <span class="p">)</span>
+
+        <span class="n">source_root_dir</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">getPathVariants</span><span class="p">(</span> <span class="n">source_root_dir</span><span class="p">,</span> <span class="n">source_desc_dir</span> <span class="p">)</span>
+
+        <span class="n">view_roi</span> <span class="o">=</span> <span class="n">abs_roi</span> <span class="o">-</span> <span class="n">view_origin</span>
+        <span class="n">block_starts</span> <span class="o">=</span> <span class="n">getIntersectingBlocks</span><span class="p">(</span> <span class="n">block_shape</span><span class="p">,</span> <span class="n">view_roi</span> <span class="p">)</span>
+        <span class="k">for</span> <span class="n">block_start</span> <span class="ow">in</span> <span class="n">block_starts</span><span class="p">:</span>
+            <span class="n">source_block_dir</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">getDatasetDirectory</span><span class="p">(</span> <span class="n">block_start</span> <span class="p">)</span>
+            <span class="n">rel_block_dir</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">relpath</span><span class="p">(</span> <span class="n">source_block_dir</span><span class="p">,</span> <span class="n">source_root_dir</span> <span class="p">)</span>
+            <span class="n">dest_block_dir</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span> <span class="n">dest_root_dir</span><span class="p">,</span> <span class="n">rel_block_dir</span> <span class="p">)</span>
+
+            <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span> <span class="n">dest_block_dir</span> <span class="p">):</span>
+                <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span> <span class="s2">&quot;Skipping existing block directory: </span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span> <span class="n">dest_block_dir</span> <span class="p">)</span> <span class="p">)</span>
+            <span class="k">elif</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span> <span class="n">source_block_dir</span> <span class="p">):</span>
+                <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span> <span class="s2">&quot;Skipping missing block directory: </span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span> <span class="n">source_block_dir</span> <span class="p">)</span> <span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="c1"># Copy the entire block directory</span>
+                <span class="k">assert</span> <span class="n">dest_block_dir</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">!=</span> <span class="s1">&#39;/&#39;</span>
+                <span class="n">dest_block_dir_parent</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">split</span><span class="p">(</span> <span class="n">dest_block_dir</span> <span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+                <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">dest_block_dir_parent</span><span class="p">):</span>
+                    <span class="n">os</span><span class="o">.</span><span class="n">makedirs</span><span class="p">(</span> <span class="n">dest_block_dir_parent</span> <span class="p">)</span>
+                <span class="n">shutil</span><span class="o">.</span><span class="n">copytree</span><span class="p">(</span> <span class="n">source_block_dir</span><span class="p">,</span> <span class="n">dest_block_dir</span> <span class="p">)</span>
+        
+        <span class="k">return</span> <span class="n">dest_desc_path</span></div></div>
+
+<span class="n">BlockwiseFilesetFactory</span><span class="o">.</span><span class="n">register</span><span class="p">(</span> <span class="n">BlockwiseFileset</span><span class="o">.</span><span class="n">_createAndReturnBlockwiseFileset</span> <span class="p">)</span>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../../../../search.html" method="get">
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../../../index.html">lazyflow 0.1 documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="../../../index.html" >Module code</a> &#187;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2012, Christoph Straehle, Bernhard X. Kausler, Thorben Kröger, Ullrich Köthe , Fred A. Hamprecht, Anna Kreshuk, Luca Fiaschi, Stuart Berg.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.4.8.
+    </div>
+  </body>
+</html>

@@ -1,0 +1,360 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>lazyflow.request.threadPool &#8212; lazyflow 0.1 documentation</title>
+    
+    <link rel="stylesheet" href="../../../_static/classic.css" type="text/css" />
+    <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../../',
+        VERSION:     '0.1',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../_static/doctools.js"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" />
+    <link rel="top" title="lazyflow 0.1 documentation" href="../../../index.html" />
+    <link rel="up" title="Module code" href="../../index.html" /> 
+  </head>
+  <body role="document">
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../../index.html">lazyflow 0.1 documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="../../index.html" accesskey="U">Module code</a> &#187;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for lazyflow.request.threadPool</h1><div class="highlight"><pre>
+<span></span><span class="c1">###############################################################################</span>
+<span class="c1">#   lazyflow: data flow based lazy parallel computation framework</span>
+<span class="c1">#</span>
+<span class="c1">#       Copyright (C) 2011-2014, the ilastik developers</span>
+<span class="c1">#                                &lt;team@ilastik.org&gt;</span>
+<span class="c1">#</span>
+<span class="c1"># This program is free software; you can redistribute it and/or</span>
+<span class="c1"># modify it under the terms of the Lesser GNU General Public License</span>
+<span class="c1"># as published by the Free Software Foundation; either version 2.1</span>
+<span class="c1"># of the License, or (at your option) any later version.</span>
+<span class="c1">#</span>
+<span class="c1"># This program is distributed in the hope that it will be useful,</span>
+<span class="c1"># but WITHOUT ANY WARRANTY; without even the implied warranty of</span>
+<span class="c1"># MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the</span>
+<span class="c1"># GNU Lesser General Public License for more details.</span>
+<span class="c1">#</span>
+<span class="c1"># See the files LICENSE.lgpl2 and LICENSE.lgpl3 for full text of the</span>
+<span class="c1"># GNU Lesser General Public License version 2.1 and 3 respectively.</span>
+<span class="c1"># This information is also available on the ilastik web site at:</span>
+<span class="c1">#		   http://ilastik.org/license/</span>
+<span class="c1">###############################################################################</span>
+<span class="c1"># Built-in</span>
+<span class="kn">import</span> <span class="nn">atexit</span>
+<span class="kn">import</span> <span class="nn">collections</span>
+<span class="kn">import</span> <span class="nn">heapq</span>
+<span class="kn">import</span> <span class="nn">threading</span>
+<span class="kn">import</span> <span class="nn">platform</span>
+<span class="kn">import</span> <span class="nn">time</span>
+<span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">import</span> <span class="nn">ctypes</span>
+
+<span class="kn">import</span> <span class="nn">psutil</span>
+
+<span class="kn">from</span> <span class="nn">lazyflow.utility.priorityQueue</span> <span class="k">import</span> <span class="n">PriorityQueue</span>
+
+
+<div class="viewcode-block" id="ThreadPool"><a class="viewcode-back" href="../../../request.html#lazyflow.request.threadPool.ThreadPool">[docs]</a><span class="k">class</span> <span class="nc">ThreadPool</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Manages a set of worker threads and dispatches tasks to them.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="c1">#_DefaultQueueType = FifoQueue</span>
+    <span class="c1">#_DefaultQueueType = LifoQueue</span>
+    <span class="n">_DefaultQueueType</span> <span class="o">=</span> <span class="n">PriorityQueue</span>
+    
+<div class="viewcode-block" id="ThreadPool.__init__"><a class="viewcode-back" href="../../../request.html#lazyflow.request.threadPool.ThreadPool.__init__">[docs]</a>    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">num_workers</span><span class="p">,</span> <span class="n">queue_type</span><span class="o">=</span><span class="n">_DefaultQueueType</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Constructor.  Starts all workers.</span>
+<span class="sd">        </span>
+<span class="sd">        :param num_workers: The number of worker threads to create.</span>
+<span class="sd">        :param queue_type: The type of queue to use for prioritizing tasks.  Possible queue types include :py:class:`PriorityQueue`,</span>
+<span class="sd">                           :py:class:`FifoQueue`, and :py:class:`LifoQueue`, or any class with ``push()``, ``pop()``, and ``__len__()`` methods.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">job_condition</span> <span class="o">=</span> <span class="n">threading</span><span class="o">.</span><span class="n">Condition</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">unassigned_tasks</span> <span class="o">=</span> <span class="n">queue_type</span><span class="p">()</span>
+        <span class="c1">#self.memory = MemoryWatcher(self)</span>
+        <span class="c1">#self.memory.start()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">num_workers</span> <span class="o">=</span> <span class="n">num_workers</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">workers</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_start_workers</span><span class="p">(</span> <span class="n">num_workers</span><span class="p">,</span> <span class="n">queue_type</span> <span class="p">)</span>
+
+        <span class="c1"># ThreadPools automatically stop upon program exit</span>
+        <span class="n">atexit</span><span class="o">.</span><span class="n">register</span><span class="p">(</span> <span class="bp">self</span><span class="o">.</span><span class="n">stop</span> <span class="p">)</span></div>
+
+<div class="viewcode-block" id="ThreadPool.wake_up"><a class="viewcode-back" href="../../../request.html#lazyflow.request.threadPool.ThreadPool.wake_up">[docs]</a>    <span class="k">def</span> <span class="nf">wake_up</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">task</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Schedule the given task on the worker that is assigned to it.</span>
+<span class="sd">        If it has no assigned worker yet, assign it to the first worker that becomes available.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># Once a task has been assigned, it must always be processed in the same worker</span>
+        <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">task</span><span class="p">,</span> <span class="s1">&#39;assigned_worker&#39;</span><span class="p">)</span> <span class="ow">and</span> <span class="n">task</span><span class="o">.</span><span class="n">assigned_worker</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">task</span><span class="o">.</span><span class="n">assigned_worker</span><span class="o">.</span><span class="n">wake_up</span><span class="p">(</span> <span class="n">task</span> <span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">unassigned_tasks</span><span class="o">.</span><span class="n">push</span><span class="p">(</span><span class="n">task</span><span class="p">)</span>
+            <span class="c1"># Notify all currently waiting workers that there&#39;s new work</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_notify_all_workers</span><span class="p">()</span></div>
+
+<div class="viewcode-block" id="ThreadPool.stop"><a class="viewcode-back" href="../../../request.html#lazyflow.request.threadPool.ThreadPool.stop">[docs]</a>    <span class="k">def</span> <span class="nf">stop</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Stop all threads in the pool, and block for them to complete.</span>
+<span class="sd">        Postcondition: All worker threads have stopped.  Unfinished tasks are simply dropped.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1">#self.memory.stop()</span>
+        
+        <span class="k">for</span> <span class="n">w</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">workers</span><span class="p">:</span>
+            <span class="n">w</span><span class="o">.</span><span class="n">stop</span><span class="p">()</span>
+        
+        <span class="k">for</span> <span class="n">w</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">workers</span><span class="p">:</span>
+            <span class="n">w</span><span class="o">.</span><span class="n">join</span><span class="p">()</span></div>
+    
+    <span class="k">def</span> <span class="nf">get_states</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="p">[</span><span class="n">w</span><span class="o">.</span><span class="n">state</span> <span class="k">for</span> <span class="n">w</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">workers</span><span class="p">]</span>
+    
+    <span class="k">def</span> <span class="nf">_start_workers</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">num_workers</span><span class="p">,</span> <span class="n">queue_type</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Start a set of workers and return the set.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">workers</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">num_workers</span><span class="p">):</span>
+            <span class="n">w</span> <span class="o">=</span> <span class="n">_Worker</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">i</span><span class="p">,</span> <span class="n">queue_type</span><span class="o">=</span><span class="n">queue_type</span><span class="p">)</span>
+            <span class="n">workers</span><span class="o">.</span><span class="n">add</span><span class="p">(</span> <span class="n">w</span> <span class="p">)</span>
+            <span class="n">w</span><span class="o">.</span><span class="n">start</span><span class="p">()</span>
+        <span class="k">return</span> <span class="n">workers</span>
+
+    <span class="k">def</span> <span class="nf">_notify_all_workers</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Wake up all worker threads that are currently waiting for work.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">for</span> <span class="n">worker</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">workers</span><span class="p">:</span>
+            <span class="k">with</span> <span class="n">worker</span><span class="o">.</span><span class="n">job_queue_condition</span><span class="p">:</span>
+                <span class="n">worker</span><span class="o">.</span><span class="n">job_queue_condition</span><span class="o">.</span><span class="n">notify</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="nf">_wait_for_idle</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Useful for testing only.</span>
+<span class="sd">        Wait until there are no tasks left in the threadpool.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">done</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="k">while</span> <span class="ow">not</span> <span class="n">done</span><span class="p">:</span>
+            <span class="k">while</span> <span class="bp">self</span><span class="o">.</span><span class="n">unassigned_tasks</span><span class="p">:</span>
+                <span class="n">time</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="mf">0.1</span><span class="p">)</span>
+            
+            <span class="k">for</span> <span class="n">worker</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">workers</span><span class="p">:</span>
+                <span class="k">while</span> <span class="n">worker</span><span class="o">.</span><span class="n">job_queue</span><span class="p">:</span>
+                    <span class="n">time</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="mf">0.1</span><span class="p">)</span>
+            
+            <span class="c1"># Second pass: did any of those completing tasks launch new tasks?</span>
+            <span class="n">done</span> <span class="o">=</span> <span class="kc">True</span>
+            <span class="k">for</span> <span class="n">worker</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">workers</span><span class="p">:</span>
+                <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">worker</span><span class="o">.</span><span class="n">job_queue</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+                    <span class="n">done</span> <span class="o">=</span> <span class="kc">False</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">unassigned_tasks</span><span class="p">:</span>
+                <span class="n">done</span> <span class="o">=</span> <span class="kc">False</span></div>
+                    
+
+<span class="k">class</span> <span class="nc">_Worker</span><span class="p">(</span><span class="n">threading</span><span class="o">.</span><span class="n">Thread</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Runs in a loop until stopped.</span>
+<span class="sd">    The loop pops one task from the threadpool and executes it.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">thread_pool</span><span class="p">,</span> <span class="n">index</span><span class="p">,</span> <span class="n">queue_type</span> <span class="p">):</span>
+        <span class="n">name</span> <span class="o">=</span> <span class="s2">&quot;Worker #</span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">index</span><span class="p">)</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">_Worker</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span> <span class="n">name</span><span class="o">=</span><span class="n">name</span> <span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">daemon</span> <span class="o">=</span> <span class="kc">True</span> <span class="c1"># kill automatically on application exit!</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">thread_pool</span> <span class="o">=</span> <span class="n">thread_pool</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">stopped</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">job_queue_condition</span> <span class="o">=</span> <span class="n">threading</span><span class="o">.</span><span class="n">Condition</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">job_queue</span> <span class="o">=</span> <span class="n">queue_type</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">state</span> <span class="o">=</span> <span class="s1">&#39;initialized&#39;</span>
+        
+    <span class="k">def</span> <span class="nf">run</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Keep executing available tasks until we&#39;re stopped.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># Try to get some work.</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">state</span> <span class="o">=</span> <span class="s1">&#39;waiting&#39;</span>
+        <span class="n">next_task</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_next_job</span><span class="p">()</span>
+
+        <span class="k">while</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">stopped</span><span class="p">:</span>
+            <span class="c1"># Start (or resume) the work by switching to its greenlet</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">state</span> <span class="o">=</span> <span class="s1">&#39;running task&#39;</span>
+            <span class="n">next_task</span><span class="p">()</span>
+
+            <span class="c1"># We&#39;re done with this request.</span>
+            <span class="c1"># Free it immediately for garbage collection.</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">state</span> <span class="o">=</span> <span class="s1">&#39;freeing task&#39;</span>
+            <span class="n">next_task</span> <span class="o">=</span> <span class="kc">None</span>
+
+            <span class="c1"># Now try to get some work (wait if necessary).</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">state</span> <span class="o">=</span> <span class="s1">&#39;waiting&#39;</span>
+            <span class="n">next_task</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_next_job</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="nf">stop</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Tell this worker to stop running.</span>
+<span class="sd">        Does not block for thread completion.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">stopped</span> <span class="o">=</span> <span class="kc">True</span>
+        <span class="c1"># Wake up the thread if it&#39;s waiting for work</span>
+        <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">job_queue_condition</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">job_queue_condition</span><span class="o">.</span><span class="n">notify</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="nf">wake_up</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">task</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Add this task to the queue of tasks that are ready to be processed.</span>
+<span class="sd">        The task may or not be started already.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">assert</span> <span class="n">task</span><span class="o">.</span><span class="n">assigned_worker</span> <span class="ow">is</span> <span class="bp">self</span>
+        <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">job_queue_condition</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">job_queue</span><span class="o">.</span><span class="n">push</span><span class="p">(</span><span class="n">task</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">job_queue_condition</span><span class="o">.</span><span class="n">notify</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="nf">_get_next_job</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Get the next available job to perform.</span>
+<span class="sd">        If necessary, block until:</span>
+<span class="sd">            - a task is available (return it) OR</span>
+<span class="sd">            - the worker has been stopped (might return None)</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># Keep trying until we get a job        </span>
+        <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">job_queue_condition</span><span class="p">:</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">stopped</span><span class="p">:</span>
+                <span class="k">return</span> <span class="kc">None</span>
+            <span class="n">next_task</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_pop_job</span><span class="p">()</span>
+
+            <span class="k">while</span> <span class="n">next_task</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">and</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">stopped</span><span class="p">:</span>
+                <span class="c1"># Wait for work to become available</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">job_queue_condition</span><span class="o">.</span><span class="n">wait</span><span class="p">()</span>
+                <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">stopped</span><span class="p">:</span>
+                    <span class="k">return</span> <span class="kc">None</span>
+                <span class="n">next_task</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_pop_job</span><span class="p">()</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">stopped</span><span class="p">:</span>
+            <span class="k">assert</span> <span class="n">next_task</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
+            <span class="k">assert</span> <span class="n">next_task</span><span class="o">.</span><span class="n">assigned_worker</span> <span class="ow">is</span> <span class="bp">self</span>
+
+        <span class="k">return</span> <span class="n">next_task</span>
+    
+    <span class="k">def</span> <span class="nf">_pop_job</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Non-blocking.</span>
+<span class="sd">        If possible, get a job from our own job queue.</span>
+<span class="sd">        Otherwise, get one from the global job queue.</span>
+<span class="sd">        Return None if neither queue has work to do.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># Try our own queue first</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">job_queue</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">job_queue</span><span class="o">.</span><span class="n">pop</span><span class="p">()</span>
+
+        <span class="c1"># Otherwise, try to claim a job from the global unassigned list            </span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="c1">#task = self.thread_pool.memory.filter(self.thread_pool.unassigned_tasks.pop())</span>
+            <span class="n">task</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">thread_pool</span><span class="o">.</span><span class="n">unassigned_tasks</span><span class="o">.</span><span class="n">pop</span><span class="p">()</span>
+        <span class="k">except</span> <span class="ne">IndexError</span><span class="p">:</span>
+            <span class="k">return</span> <span class="kc">None</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">task</span><span class="o">.</span><span class="n">assigned_worker</span> <span class="o">=</span> <span class="bp">self</span> <span class="c1"># If this fails, then your callable is some built-in that doesn&#39;t allow arbitrary  </span>
+                                        <span class="c1">#  members (e.g. .assigned_worker) to be &quot;monkey-patched&quot; onto it.  You may have to wrap it in a custom class first.</span>
+            <span class="k">return</span> <span class="n">task</span>
+    
+    <span class="k">def</span> <span class="nf">raise_exc</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">excobj</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        I HAVEN&#39;T TESTED THIS YET.  (But it looks useful.)</span>
+<span class="sd">        http://code.activestate.com/recipes/496960-thread2-killable-threads</span>
+
+<span class="sd">        Debugging method.</span>
+<span class="sd">        Asynchronously raise an exception in this thread.</span>
+<span class="sd">        See docstring for _async_raise() for more details.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">assert</span> <span class="bp">self</span><span class="o">.</span><span class="n">isAlive</span><span class="p">(),</span> <span class="s2">&quot;thread must be started&quot;</span>
+        <span class="k">for</span> <span class="n">tid</span><span class="p">,</span> <span class="n">tobj</span> <span class="ow">in</span> <span class="n">threading</span><span class="o">.</span><span class="n">_active</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="k">if</span> <span class="n">tobj</span> <span class="ow">is</span> <span class="bp">self</span><span class="p">:</span>
+                <span class="n">_Worker</span><span class="o">.</span><span class="n">_async_raise</span><span class="p">(</span><span class="n">tid</span><span class="p">,</span> <span class="n">excobj</span><span class="p">)</span>
+                <span class="k">return</span>
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">_async_raise</span><span class="p">(</span><span class="n">tid</span><span class="p">,</span> <span class="n">excobj</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Raise an exception in the thread with the given id.</span>
+<span class="sd">        http://code.activestate.com/recipes/496960-thread2-killable-threads</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">res</span> <span class="o">=</span> <span class="n">ctypes</span><span class="o">.</span><span class="n">pythonapi</span><span class="o">.</span><span class="n">PyThreadState_SetAsyncExc</span><span class="p">(</span><span class="n">tid</span><span class="p">,</span> <span class="n">ctypes</span><span class="o">.</span><span class="n">py_object</span><span class="p">(</span><span class="n">excobj</span><span class="p">))</span>
+        <span class="k">if</span> <span class="n">res</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;nonexistent thread id&quot;</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">res</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="c1"># &quot;&quot;&quot;if it returns a number greater than one, you&#39;re in trouble, </span>
+            <span class="c1"># and you should call it again with exc=NULL to revert the effect&quot;&quot;&quot;</span>
+            <span class="n">ctypes</span><span class="o">.</span><span class="n">pythonapi</span><span class="o">.</span><span class="n">PyThreadState_SetAsyncExc</span><span class="p">(</span><span class="n">tid</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+            <span class="k">raise</span> <span class="ne">SystemError</span><span class="p">(</span><span class="s2">&quot;PyThreadState_SetAsyncExc failed&quot;</span><span class="p">)</span>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../../../search.html" method="get">
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../../index.html">lazyflow 0.1 documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="../../index.html" >Module code</a> &#187;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2012, Christoph Straehle, Bernhard X. Kausler, Thorben Kröger, Ullrich Köthe , Fred A. Hamprecht, Anna Kreshuk, Luca Fiaschi, Stuart Berg.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.4.8.
+    </div>
+  </body>
+</html>

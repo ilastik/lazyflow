@@ -1,0 +1,175 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>lazyflow.utility.orderedSignal &#8212; lazyflow 0.1 documentation</title>
+    
+    <link rel="stylesheet" href="../../../_static/classic.css" type="text/css" />
+    <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../../',
+        VERSION:     '0.1',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../_static/doctools.js"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" />
+    <link rel="top" title="lazyflow 0.1 documentation" href="../../../index.html" />
+    <link rel="up" title="Module code" href="../../index.html" /> 
+  </head>
+  <body role="document">
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../../index.html">lazyflow 0.1 documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="../../index.html" accesskey="U">Module code</a> &#187;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for lazyflow.utility.orderedSignal</h1><div class="highlight"><pre>
+<span></span><span class="c1">###############################################################################</span>
+<span class="c1">#   lazyflow: data flow based lazy parallel computation framework</span>
+<span class="c1">#</span>
+<span class="c1">#       Copyright (C) 2011-2014, the ilastik developers</span>
+<span class="c1">#                                &lt;team@ilastik.org&gt;</span>
+<span class="c1">#</span>
+<span class="c1"># This program is free software; you can redistribute it and/or</span>
+<span class="c1"># modify it under the terms of the Lesser GNU General Public License</span>
+<span class="c1"># as published by the Free Software Foundation; either version 2.1</span>
+<span class="c1"># of the License, or (at your option) any later version.</span>
+<span class="c1">#</span>
+<span class="c1"># This program is distributed in the hope that it will be useful,</span>
+<span class="c1"># but WITHOUT ANY WARRANTY; without even the implied warranty of</span>
+<span class="c1"># MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the</span>
+<span class="c1"># GNU Lesser General Public License for more details.</span>
+<span class="c1">#</span>
+<span class="c1"># See the files LICENSE.lgpl2 and LICENSE.lgpl3 for full text of the</span>
+<span class="c1"># GNU Lesser General Public License version 2.1 and 3 respectively.</span>
+<span class="c1"># This information is also available on the ilastik web site at:</span>
+<span class="c1">#		   http://ilastik.org/license/</span>
+<span class="c1">###############################################################################</span>
+<span class="kn">from</span> <span class="nn">collections</span> <span class="k">import</span> <span class="n">OrderedDict</span>
+
+<div class="viewcode-block" id="OrderedSignal"><a class="viewcode-back" href="../../../utilities.html#lazyflow.utility.OrderedSignal">[docs]</a><span class="k">class</span> <span class="nc">OrderedSignal</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    A simple callback mechanism that ensures callbacks occur in the same order as subscription.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">hide_cancellation_exceptions</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">callbacks</span> <span class="o">=</span> <span class="n">OrderedDict</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">hide_cancellation_exceptions</span> <span class="o">=</span> <span class="n">hide_cancellation_exceptions</span>
+
+<div class="viewcode-block" id="OrderedSignal.subscribe"><a class="viewcode-back" href="../../../utilities.html#lazyflow.utility.OrderedSignal.subscribe">[docs]</a>    <span class="k">def</span> <span class="nf">subscribe</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">fn</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Subscribe the given callable to be called when the signal is fired.</span>
+<span class="sd">        If the callable is already subscribed to the signal, it is relocated to the end of the callback list.</span>
+<span class="sd">        </span>
+<span class="sd">        :param fn: The callable to add to this signal&#39;s list of callbacks. Must be hashable.</span>
+<span class="sd">        :param kwargs: **DEPRECATED**.  Additional parameters to include when the signal calls the function. </span>
+<span class="sd">                       Instead of using this parameter, consider binding arguments to your callable </span>
+<span class="sd">                       with ``functools.partial`` or (better) ``ilastik.bind``.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># Remove this function if we already have it</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">unsubscribe</span><span class="p">(</span><span class="n">fn</span><span class="p">)</span>
+        <span class="c1"># Add it to the end</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">callbacks</span><span class="p">[</span><span class="n">fn</span><span class="p">]</span> <span class="o">=</span> <span class="n">kwargs</span></div>
+
+<div class="viewcode-block" id="OrderedSignal.unsubscribe"><a class="viewcode-back" href="../../../utilities.html#lazyflow.utility.OrderedSignal.unsubscribe">[docs]</a>    <span class="k">def</span> <span class="nf">unsubscribe</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">fn</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Unsubscribe the given function from the signal&#39;s callback list.</span>
+<span class="sd">        If the callable was not found in the list, this function returns silently.</span>
+<span class="sd">        </span>
+<span class="sd">        :param fn: The callable to remove from the subscription list.</span>
+<span class="sd">        </span>
+<span class="sd">        .. note:: This relies on the callable&#39;s ``__eq__`` operator.  </span>
+<span class="sd">                  Note that ``functools.partial`` objects do not implement special support </span>
+<span class="sd">                  for ``__eq__``. If your callback is of that type, you must provide the </span>
+<span class="sd">                  exact instance when unsubscribing.  Note that ``ilastik.bind`` objects </span>
+<span class="sd">                  ARE equality comparable.  For those callables, it is not necessary to </span>
+<span class="sd">                  provide the exact instance of the callable that was used for subscription.</span>
+<span class="sd">                  An equivalent ``ilastik.bind`` object (same target and bound args) will suffice.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># Find this function and remove its entry</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">callbacks</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="n">fn</span><span class="p">)</span>
+        <span class="k">except</span> <span class="ne">KeyError</span><span class="p">:</span>
+            <span class="k">pass</span></div>
+
+
+<div class="viewcode-block" id="OrderedSignal.__call__"><a class="viewcode-back" href="../../../utilities.html#lazyflow.utility.OrderedSignal.__call__">[docs]</a>    <span class="k">def</span> <span class="nf">__call__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Emit the signal.  Calls each callback in the subscription list, in order, with the specified arguments.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="kn">from</span> <span class="nn">lazyflow.request</span> <span class="k">import</span> <span class="n">Request</span> <span class="c1"># Late import to work around circular dependency</span>
+        <span class="k">for</span> <span class="n">f</span><span class="p">,</span> <span class="n">kw</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">callbacks</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">f</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kw</span><span class="p">)</span>
+            <span class="k">except</span> <span class="n">Request</span><span class="o">.</span><span class="n">CancellationException</span><span class="p">:</span>
+                <span class="c1"># We cannot allow graph setup operations to fail due to </span>
+                <span class="c1"># cancellation exceptions from our client functions.</span>
+                <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">hide_cancellation_exceptions</span><span class="p">:</span>
+                    <span class="k">raise</span></div>
+
+    <span class="k">def</span> <span class="nf">clean</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">callbacks</span> <span class="o">=</span> <span class="n">OrderedDict</span><span class="p">()</span></div>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../../../search.html" method="get">
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../../index.html">lazyflow 0.1 documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="../../index.html" >Module code</a> &#187;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2012, Christoph Straehle, Bernhard X. Kausler, Thorben Kröger, Ullrich Köthe , Fred A. Hamprecht, Anna Kreshuk, Luca Fiaschi, Stuart Berg.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.4.8.
+    </div>
+  </body>
+</html>

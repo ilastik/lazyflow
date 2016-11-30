@@ -1,0 +1,1546 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>lazyflow.request.request &#8212; lazyflow 0.1 documentation</title>
+    
+    <link rel="stylesheet" href="../../../_static/classic.css" type="text/css" />
+    <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../../',
+        VERSION:     '0.1',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../_static/doctools.js"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" />
+    <link rel="top" title="lazyflow 0.1 documentation" href="../../../index.html" />
+    <link rel="up" title="Module code" href="../../index.html" /> 
+  </head>
+  <body role="document">
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../../index.html">lazyflow 0.1 documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="../../index.html" accesskey="U">Module code</a> &#187;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for lazyflow.request.request</h1><div class="highlight"><pre>
+<span></span><span class="c1">###############################################################################</span>
+<span class="c1">#   lazyflow: data flow based lazy parallel computation framework</span>
+<span class="c1">#</span>
+<span class="c1">#       Copyright (C) 2011-2014, the ilastik developers</span>
+<span class="c1">#                                &lt;team@ilastik.org&gt;</span>
+<span class="c1">#</span>
+<span class="c1"># This program is free software; you can redistribute it and/or</span>
+<span class="c1"># modify it under the terms of the Lesser GNU General Public License</span>
+<span class="c1"># as published by the Free Software Foundation; either version 2.1</span>
+<span class="c1"># of the License, or (at your option) any later version.</span>
+<span class="c1">#</span>
+<span class="c1"># This program is distributed in the hope that it will be useful,</span>
+<span class="c1"># but WITHOUT ANY WARRANTY; without even the implied warranty of</span>
+<span class="c1"># MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the</span>
+<span class="c1"># GNU Lesser General Public License for more details.</span>
+<span class="c1">#</span>
+<span class="c1"># See the files LICENSE.lgpl2 and LICENSE.lgpl3 for full text of the</span>
+<span class="c1"># GNU Lesser General Public License version 2.1 and 3 respectively.</span>
+<span class="c1"># This information is also available on the ilastik web site at:</span>
+<span class="c1">#		   http://ilastik.org/license/</span>
+<span class="c1">###############################################################################</span>
+<span class="c1"># Built-in</span>
+<span class="kn">import</span> <span class="nn">sys</span>
+<span class="kn">import</span> <span class="nn">heapq</span>
+<span class="kn">import</span> <span class="nn">functools</span>
+<span class="kn">import</span> <span class="nn">itertools</span>
+<span class="kn">import</span> <span class="nn">threading</span>
+<span class="kn">import</span> <span class="nn">multiprocessing</span>
+<span class="kn">import</span> <span class="nn">platform</span>
+<span class="kn">import</span> <span class="nn">traceback</span>
+<span class="kn">import</span> <span class="nn">StringIO</span>
+<span class="kn">from</span> <span class="nn">random</span> <span class="k">import</span> <span class="n">randrange</span>
+
+<span class="kn">import</span> <span class="nn">logging</span>
+<span class="n">logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="n">__name__</span><span class="p">)</span>
+
+<span class="c1"># Third-party</span>
+<span class="kn">import</span> <span class="nn">greenlet</span>
+
+<span class="c1"># lazyflow</span>
+<span class="kn">import</span> <span class="nn">threadPool</span>
+
+<span class="c1"># This module&#39;s code needs to be sanitized if you&#39;re not using CPython.</span>
+<span class="c1"># In particular, check that set operations like remove() are still atomic.</span>
+<span class="k">assert</span> <span class="n">platform</span><span class="o">.</span><span class="n">python_implementation</span><span class="p">()</span> <span class="o">==</span> <span class="s2">&quot;CPython&quot;</span>
+
+<span class="k">class</span> <span class="nc">RequestGreenlet</span><span class="p">(</span><span class="n">greenlet</span><span class="o">.</span><span class="n">greenlet</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">owning_request</span><span class="p">,</span> <span class="n">fn</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">RequestGreenlet</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="n">fn</span><span class="p">,</span> <span class="n">greenlet</span><span class="o">.</span><span class="n">getcurrent</span><span class="p">())</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">owning_requests</span> <span class="o">=</span> <span class="p">[</span><span class="n">owning_request</span><span class="p">]</span>
+
+<span class="k">class</span> <span class="nc">SimpleSignal</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Simple callback mechanism. Not synchronized.  No unsubscribe function.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">callbacks</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_cleaned</span> <span class="o">=</span> <span class="kc">False</span>
+
+    <span class="k">def</span> <span class="nf">subscribe</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">fn</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">callbacks</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">fn</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">__call__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Emit the signal.&quot;&quot;&quot;</span>
+        <span class="k">assert</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">_cleaned</span><span class="p">,</span> <span class="s2">&quot;Can&#39;t emit a signal after it&#39;s already been cleaned!&quot;</span>
+        <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">callbacks</span><span class="p">:</span>
+            <span class="n">f</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        
+    <span class="k">def</span> <span class="nf">clean</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_cleaned</span> <span class="o">=</span> <span class="kc">True</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">callbacks</span> <span class="o">=</span> <span class="p">[]</span>
+
+<span class="k">def</span> <span class="nf">log_exception</span><span class="p">(</span> <span class="n">logger</span><span class="p">,</span> <span class="n">msg</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">exc_info</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">level</span><span class="o">=</span><span class="n">logging</span><span class="o">.</span><span class="n">ERROR</span> <span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Log the current exception to the given logger, and also log the given error message.</span>
+<span class="sd">    If exc_info is provided, log that exception instead of the current exception provided by sys.exc_info.</span>
+<span class="sd">    </span>
+<span class="sd">    It is better to log exceptions this way instead of merely printing them to the console, </span>
+<span class="sd">    so that other logger outputs (such as log files) show the exception, too.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">sio</span> <span class="o">=</span> <span class="n">StringIO</span><span class="o">.</span><span class="n">StringIO</span><span class="p">()</span>
+    <span class="k">if</span> <span class="n">exc_info</span><span class="p">:</span>
+        <span class="n">traceback</span><span class="o">.</span><span class="n">print_exception</span><span class="p">(</span> <span class="n">exc_info</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">exc_info</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">exc_info</span><span class="p">[</span><span class="mi">2</span><span class="p">],</span> <span class="n">file</span><span class="o">=</span><span class="n">sio</span> <span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">traceback</span><span class="o">.</span><span class="n">print_exc</span><span class="p">(</span> <span class="n">file</span><span class="o">=</span><span class="n">sio</span> <span class="p">)</span>
+
+    <span class="n">logger</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">level</span><span class="p">,</span> <span class="n">sio</span><span class="o">.</span><span class="n">getvalue</span><span class="p">()</span> <span class="p">)</span>
+    <span class="k">if</span> <span class="n">msg</span><span class="p">:</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">level</span><span class="p">,</span> <span class="n">msg</span> <span class="p">)</span>
+
+<div class="viewcode-block" id="Request"><a class="viewcode-back" href="../../../request.html#lazyflow.request.Request">[docs]</a><span class="k">class</span> <span class="nc">Request</span><span class="p">(</span> <span class="nb">object</span> <span class="p">):</span>
+    
+    <span class="c1"># One thread pool shared by all requests.</span>
+    <span class="c1"># See initialization after this class definition (below)</span>
+    <span class="n">global_thread_pool</span> <span class="o">=</span> <span class="kc">None</span>
+
+    <span class="c1"># For protecting class variables</span>
+    <span class="n">class_lock</span> <span class="o">=</span> <span class="n">threading</span><span class="o">.</span><span class="n">Lock</span><span class="p">()</span>
+    <span class="n">active_count</span> <span class="o">=</span> <span class="mi">0</span>
+
+    <span class="nd">@classmethod</span>
+<div class="viewcode-block" id="Request.reset_thread_pool"><a class="viewcode-back" href="../../../request.html#lazyflow.request.Request.reset_thread_pool">[docs]</a>    <span class="k">def</span> <span class="nf">reset_thread_pool</span><span class="p">(</span> <span class="n">cls</span><span class="p">,</span> <span class="n">num_workers</span> <span class="o">=</span> <span class="n">multiprocessing</span><span class="o">.</span><span class="n">cpu_count</span><span class="p">()</span> <span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Change the number of threads allocated to the request system.</span>
+
+<span class="sd">        As a special case, you may set ``num_workers`` to 0.  </span>
+<span class="sd">        In that case, the normal thread pool is not used at all.  </span>
+<span class="sd">        Instead, all requests will execute synchronously, from within the submitting thread.  </span>
+<span class="sd">        Utilities like ``RequestLock``, ``SimpleRequestCondition`` will use alternate </span>
+<span class="sd">        implementations based on equivalent classes in the builtin ``threading`` module. </span>
+<span class="sd">        </span>
+<span class="sd">        .. note:: It is only valid to call this function during startup.</span>
+<span class="sd">                  Any existing requests will be dropped from the pool!</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">with</span> <span class="n">cls</span><span class="o">.</span><span class="n">class_lock</span><span class="p">:</span>
+            <span class="n">active_count</span> <span class="o">=</span> <span class="mi">0</span>
+    
+            <span class="k">if</span> <span class="n">cls</span><span class="o">.</span><span class="n">global_thread_pool</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">cls</span><span class="o">.</span><span class="n">global_thread_pool</span><span class="o">.</span><span class="n">stop</span><span class="p">()</span>
+            <span class="n">cls</span><span class="o">.</span><span class="n">global_thread_pool</span> <span class="o">=</span> <span class="n">threadPool</span><span class="o">.</span><span class="n">ThreadPool</span><span class="p">(</span> <span class="n">num_workers</span> <span class="p">)</span></div>
+
+<div class="viewcode-block" id="Request.CancellationException"><a class="viewcode-back" href="../../../request.html#lazyflow.request.Request.CancellationException">[docs]</a>    <span class="k">class</span> <span class="nc">CancellationException</span><span class="p">(</span><span class="ne">Exception</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        This is raised when the whole request has been cancelled.</span>
+<span class="sd">        If you catch this exception from within a request, clean up and return immediately.</span>
+<span class="sd">        If you have nothing to clean up, you are not required to handle this exception.</span>
+<span class="sd">        </span>
+<span class="sd">        Implementation details:</span>
+<span class="sd">        This exception is raised when the cancel flag is checked in the wait() function:</span>
+<span class="sd">        - immediately before the request is suspended OR</span>
+<span class="sd">        - immediately after the request is woken up from suspension</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">pass</span></div>
+
+<div class="viewcode-block" id="Request.InvalidRequestException"><a class="viewcode-back" href="../../../request.html#lazyflow.request.Request.InvalidRequestException">[docs]</a>    <span class="k">class</span> <span class="nc">InvalidRequestException</span><span class="p">(</span><span class="ne">Exception</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        This is raised when calling wait on a request that has already been cancelled,</span>
+<span class="sd">        which can only happen if the request you&#39;re waiting for was spawned elsewhere </span>
+<span class="sd">        (i.e. you are waiting for someone else&#39;s request to avoid duplicate work).</span>
+<span class="sd">        When this occurs, you will typically want to restart the request yourself.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">pass</span></div>
+
+<div class="viewcode-block" id="Request.CircularWaitException"><a class="viewcode-back" href="../../../request.html#lazyflow.request.Request.CircularWaitException">[docs]</a>    <span class="k">class</span> <span class="nc">CircularWaitException</span><span class="p">(</span><span class="ne">Exception</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        This exception is raised if a request calls wait() on itself.</span>
+<span class="sd">        Currently, this only catches the most basic case.</span>
+<span class="sd">        No attempt is made to detect indirect cycles</span>
+<span class="sd">        (e.g. if req.wait() is called from within a req&#39;s own child.),</span>
+<span class="sd">        so don&#39;t rely on it to catch tricky deadlocks due to indirect self-waiting.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">pass</span></div>
+    
+<div class="viewcode-block" id="Request.TimeoutException"><a class="viewcode-back" href="../../../request.html#lazyflow.request.Request.TimeoutException">[docs]</a>    <span class="k">class</span> <span class="nc">TimeoutException</span><span class="p">(</span><span class="ne">Exception</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        This is raised if a call to wait() times out in the context of a foreign thread.</span>
+<span class="sd">        See ``Request.wait()`` for details.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">pass</span></div>
+    
+<div class="viewcode-block" id="Request.InternalError"><a class="viewcode-back" href="../../../request.html#lazyflow.request.Request.InternalError">[docs]</a>    <span class="k">class</span> <span class="nc">InternalError</span><span class="p">(</span><span class="ne">Exception</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        This is raised if an error is detected in the Request framework itself.</span>
+<span class="sd">        If this exception is raised, it implies a bug in this file (request.py).</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">pass</span></div>
+    
+    <span class="n">_root_request_counter</span> <span class="o">=</span> <span class="n">itertools</span><span class="o">.</span><span class="n">count</span><span class="p">()</span>
+
+<div class="viewcode-block" id="Request.__init__"><a class="viewcode-back" href="../../../request.html#lazyflow.request.Request.__init__">[docs]</a>    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">fn</span><span class="p">,</span> <span class="n">root_priority</span><span class="o">=</span><span class="p">[</span><span class="mi">0</span><span class="p">]):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Constructor.</span>
+<span class="sd">        Postconditions: The request has the same cancelled status as its parent (the request that is creating this one).</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_lock</span> <span class="o">=</span> <span class="n">threading</span><span class="o">.</span><span class="n">Lock</span><span class="p">()</span> <span class="c1"># NOT an RLock, since requests may share threads</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_sig_failed</span> <span class="o">=</span> <span class="n">SimpleSignal</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_sig_cancelled</span> <span class="o">=</span> <span class="n">SimpleSignal</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_sig_finished</span> <span class="o">=</span> <span class="n">SimpleSignal</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_sig_execution_complete</span> <span class="o">=</span> <span class="n">SimpleSignal</span><span class="p">()</span>
+
+        <span class="c1"># Workload</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">fn</span> <span class="o">=</span> <span class="n">fn</span>
+
+        <span class="c1">#: After this request finishes execution, this attribute holds the return value from the workload function.</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_result</span> <span class="o">=</span> <span class="kc">None</span>
+
+        <span class="c1"># State</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">started</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">cancelled</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">uncancellable</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">finished</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">execution_complete</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">finished_event</span> <span class="o">=</span> <span class="n">threading</span><span class="o">.</span><span class="n">Event</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">exception</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">exception_info</span> <span class="o">=</span> <span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_cleaned</span> <span class="o">=</span> <span class="kc">False</span>
+
+        <span class="c1"># Execution</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">greenlet</span> <span class="o">=</span> <span class="kc">None</span> <span class="c1"># Not created until assignment to a worker</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_assigned_worker</span> <span class="o">=</span> <span class="kc">None</span>
+
+        <span class="c1"># Request relationships</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">pending_requests</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>  <span class="c1"># Requests that are waiting for this one</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">blocking_requests</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span> <span class="c1"># Requests that this one is waiting for (currently one at most since wait() can only be called on one request at a time)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">child_requests</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>    <span class="c1"># Requests that were created from within this request (NOT the same as pending_requests)</span>
+        
+        <span class="bp">self</span><span class="o">.</span><span class="n">_current_foreign_thread</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="n">current_request</span> <span class="o">=</span> <span class="n">Request</span><span class="o">.</span><span class="n">_current_request</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">parent_request</span> <span class="o">=</span> <span class="n">current_request</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_max_child_priority</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="k">if</span> <span class="n">current_request</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_priority</span> <span class="o">=</span> <span class="n">root_priority</span> <span class="o">+</span> <span class="p">[</span> <span class="n">Request</span><span class="o">.</span><span class="n">_root_request_counter</span><span class="o">.</span><span class="n">next</span><span class="p">()</span> <span class="p">]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">with</span> <span class="n">current_request</span><span class="o">.</span><span class="n">_lock</span><span class="p">:</span>
+                <span class="n">current_request</span><span class="o">.</span><span class="n">child_requests</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+                <span class="c1"># We must ensure that we get the same cancelled status as our parent.</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">cancelled</span> <span class="o">=</span> <span class="n">current_request</span><span class="o">.</span><span class="n">cancelled</span>
+                <span class="c1"># We acquire the same priority as our parent, plus our own sub-priority</span>
+                <span class="n">current_request</span><span class="o">.</span><span class="n">_max_child_priority</span> <span class="o">+=</span> <span class="mi">1</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_priority</span> <span class="o">=</span> <span class="n">current_request</span><span class="o">.</span><span class="n">_priority</span> <span class="o">+</span> <span class="n">root_priority</span> <span class="o">+</span> <span class="p">[</span> <span class="n">current_request</span><span class="o">.</span><span class="n">_max_child_priority</span> <span class="p">]</span></div>
+
+    <span class="k">def</span> <span class="nf">__lt__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Request comparison is by priority.</span>
+<span class="sd">        This allows us to store them in a heap.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">other</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="c1"># In RequestLock, we sometimes compare Request objects with None,</span>
+            <span class="c1">#  which is permitted.  None is considered less (higher priority)</span>
+            <span class="k">return</span> <span class="kc">False</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_priority</span> <span class="o">&lt;</span> <span class="n">other</span><span class="o">.</span><span class="n">_priority</span>
+
+    <span class="k">def</span> <span class="nf">__str__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="s2">&quot;fn=</span><span class="si">{}</span><span class="s2">, assigned_worker=</span><span class="si">{}</span><span class="s2">, started=</span><span class="si">{}</span><span class="s2">, execution_complete=</span><span class="si">{}</span><span class="s2">, exception=</span><span class="si">{}</span><span class="s2">, &quot;</span>\
+               <span class="s2">&quot;greenlet=</span><span class="si">{}</span><span class="s2">, current_foreign_thread=</span><span class="si">{}</span><span class="s2">, uncancellable=</span><span class="si">{}</span><span class="s2">&quot;</span>\
+               <span class="o">.</span><span class="n">format</span><span class="p">(</span> <span class="bp">self</span><span class="o">.</span><span class="n">fn</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">assigned_worker</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">started</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">execution_complete</span><span class="p">,</span> \
+                        <span class="bp">self</span><span class="o">.</span><span class="n">exception</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">greenlet</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_current_foreign_thread</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">uncancellable</span> <span class="p">)</span>
+
+<div class="viewcode-block" id="Request.clean"><a class="viewcode-back" href="../../../request.html#lazyflow.request.Request.clean">[docs]</a>    <span class="k">def</span> <span class="nf">clean</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">_fullClean</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Delete all state from the request, for cleanup purposes.</span>
+<span class="sd">        Removes references to callbacks, children, and the result.</span>
+<span class="sd">        </span>
+<span class="sd">        :param _fullClean: Internal use only.  If False, only clean internal bookkeeping members.</span>
+<span class="sd">                           Otherwise, delete everything, including the result.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_sig_cancelled</span><span class="o">.</span><span class="n">clean</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_sig_finished</span><span class="o">.</span><span class="n">clean</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_sig_failed</span><span class="o">.</span><span class="n">clean</span><span class="p">()</span>
+
+        <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">_lock</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">child</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">child_requests</span><span class="p">:</span>
+                <span class="n">child</span><span class="o">.</span><span class="n">parent_request</span> <span class="o">=</span> <span class="kc">None</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">child_requests</span><span class="o">.</span><span class="n">clear</span><span class="p">()</span>
+
+        <span class="n">parent_req</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">parent_request</span>
+        <span class="k">if</span> <span class="n">parent_req</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">with</span> <span class="n">parent_req</span><span class="o">.</span><span class="n">_lock</span><span class="p">:</span>
+                <span class="n">parent_req</span><span class="o">.</span><span class="n">child_requests</span><span class="o">.</span><span class="n">discard</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">_fullClean</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_cleaned</span> <span class="o">=</span> <span class="kc">True</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_result</span> <span class="o">=</span> <span class="kc">None</span></div>
+        
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">assigned_worker</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        This member is accessed by the ThreadPool to determine which Worker thread this request belongs to.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_assigned_worker</span>
+    
+    <span class="nd">@assigned_worker</span><span class="o">.</span><span class="n">setter</span>
+    <span class="k">def</span> <span class="nf">assigned_worker</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">worker</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Assign this request to the given worker thread.  (A request cannot switch between threads.)</span>
+<span class="sd">        Must be called from the worker thread.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">assert</span> <span class="bp">self</span><span class="o">.</span><span class="n">_assigned_worker</span> <span class="ow">is</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_assigned_worker</span> <span class="o">=</span> <span class="n">worker</span>
+
+        <span class="c1"># Create our greenlet now (so the greenlet has the correct parent, i.e. the worker)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">greenlet</span> <span class="o">=</span> <span class="n">RequestGreenlet</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_execute</span><span class="p">)</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">result</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">assert</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">_cleaned</span><span class="p">,</span> <span class="s2">&quot;Can&#39;t get this result.  The request has already been cleaned!&quot;</span>
+        <span class="k">assert</span> <span class="bp">self</span><span class="o">.</span><span class="n">execution_complete</span><span class="p">,</span> <span class="s2">&quot;Can&#39;t access the result until the request is complete.&quot;</span>
+        <span class="k">assert</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">cancelled</span><span class="p">,</span> <span class="s2">&quot;Can&#39;t access the result of a cancelled request.&quot;</span>
+        <span class="k">assert</span> <span class="bp">self</span><span class="o">.</span><span class="n">exception</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">,</span> <span class="s2">&quot;Can&#39;t access this result.  The request failed.&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_result</span>
+
+    <span class="k">def</span> <span class="nf">_set_started</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">started</span> <span class="o">=</span> <span class="kc">True</span>
+        <span class="k">with</span> <span class="n">Request</span><span class="o">.</span><span class="n">class_lock</span><span class="p">:</span>
+            <span class="n">Request</span><span class="o">.</span><span class="n">active_count</span> <span class="o">+=</span> <span class="mi">1</span>
+
+    <span class="k">def</span> <span class="nf">_execute</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Do the real work of this request.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># Did someone cancel us before we even started?</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">cancelled</span><span class="p">:</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="c1"># Do the actual work</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_result</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">fn</span><span class="p">()</span>
+            <span class="k">except</span> <span class="n">Request</span><span class="o">.</span><span class="n">CancellationException</span><span class="p">:</span>
+                <span class="c1"># Don&#39;t propagate cancellations back to the worker thread,</span>
+                <span class="c1"># even if the user didn&#39;t catch them.</span>
+                <span class="k">pass</span>
+            <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">ex</span><span class="p">:</span>
+                <span class="c1"># The workload raised an exception.</span>
+                <span class="c1"># Save it so we can raise it in any requests that are waiting for us.</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">exception</span> <span class="o">=</span> <span class="n">ex</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">exception_info</span> <span class="o">=</span> <span class="n">sys</span><span class="o">.</span><span class="n">exc_info</span><span class="p">()</span>    <span class="c1"># Documentation warns of circular references here,</span>
+                                                        <span class="c1">#  but that should be okay for us.</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_post_execute</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="nf">_post_execute</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="c1"># Guarantee that self.finished doesn&#39;t change while wait() owns self._lock</span>
+        <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">_lock</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">finished</span> <span class="o">=</span> <span class="kc">True</span>
+
+        <span class="k">try</span><span class="p">:</span>
+            <span class="c1"># Notify ONE callback (never more than one)</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">exception</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_sig_failed</span><span class="p">(</span> <span class="bp">self</span><span class="o">.</span><span class="n">exception</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">exception_info</span> <span class="p">)</span>
+
+                <span class="k">if</span> <span class="p">(</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_sig_failed</span><span class="o">.</span><span class="n">callbacks</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span> <span class="c1"># No callbacks registered</span>
+                     <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">pending_requests</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span>  <span class="c1"># No pending requests to propagate the exception to</span>
+                     <span class="ow">and</span> <span class="n">Request</span><span class="o">.</span><span class="n">_current_request</span><span class="p">()</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="p">):</span> <span class="c1"># Not executing synchronously in a non-worked (&#39;foreign&#39;) thread</span>
+                    <span class="c1"># This request failed, but no body is listening.</span>
+                    <span class="c1"># Call sys.excepthook so the developer sees what went wrong.</span>
+                    <span class="c1"># (Otherwise, it would be hidden.)</span>
+                    <span class="n">sys</span><span class="o">.</span><span class="n">excepthook</span><span class="p">(</span> <span class="o">*</span><span class="bp">self</span><span class="o">.</span><span class="n">exception_info</span> <span class="p">)</span>
+            <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">cancelled</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_sig_cancelled</span><span class="p">()</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_sig_finished</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_result</span><span class="p">)</span>
+
+        <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">ex</span><span class="p">:</span>
+            <span class="c1"># If we&#39;re here, then our completion handler function (e.g. sig_finished or sig_failed)</span>
+            <span class="c1">#  raised an exception.</span>
+            <span class="n">failed_during_failure_handler</span> <span class="o">=</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">exception</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">)</span>
+
+            <span class="c1"># Save the exception so we can re-raise it in any requests that are waiting for us.</span>
+            <span class="c1"># Otherwise, the threadpool just dies.</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">exception</span> <span class="o">=</span> <span class="n">ex</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">exception_info</span> <span class="o">=</span> <span class="n">sys</span><span class="o">.</span><span class="n">exc_info</span><span class="p">()</span>    <span class="c1"># Documentation warns of circular references here,</span>
+                                                    <span class="c1">#  but that should be okay for us.</span>
+                
+            <span class="c1"># If we already fired sig_failed(), then there&#39;s no point in firing it again.</span>
+            <span class="c1">#  That&#39;s the function that caused this problem in the first place!</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">failed_during_failure_handler</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_sig_failed</span><span class="p">(</span> <span class="bp">self</span><span class="o">.</span><span class="n">exception</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">exception_info</span> <span class="p">)</span>
+
+            <span class="k">if</span> <span class="n">failed_during_failure_handler</span> <span class="ow">or</span> \
+            <span class="p">(</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_sig_failed</span><span class="o">.</span><span class="n">callbacks</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span> <span class="c1"># No callbacks registered</span>
+              <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">pending_requests</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span>  <span class="c1"># No pending requests to propagate the exception to</span>
+              <span class="ow">and</span> <span class="n">Request</span><span class="o">.</span><span class="n">_current_request</span><span class="p">()</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="p">):</span> <span class="c1"># Not executing synchronously in a non-worked (&#39;foreign&#39;) thread</span>
+                <span class="c1"># This request failed, but no body is listening.</span>
+                <span class="c1"># Call sys.excepthook so the developer sees what went wrong.</span>
+                <span class="c1"># (Otherwise, it would be hidden.)</span>
+                <span class="n">sys</span><span class="o">.</span><span class="n">excepthook</span><span class="p">(</span> <span class="o">*</span><span class="bp">self</span><span class="o">.</span><span class="n">exception_info</span> <span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="c1"># Now that we&#39;re complete, the signals have fired and any requests we needed to wait for have completed.</span>
+            <span class="c1"># To free memory (and child requests), we can clean up everything but the result.</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">clean</span><span class="p">(</span> <span class="n">_fullClean</span><span class="o">=</span><span class="kc">False</span> <span class="p">)</span>
+
+        <span class="k">finally</span><span class="p">:</span>
+            <span class="c1"># Unconditionally signal (internal use only)</span>
+            <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">_lock</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">execution_complete</span> <span class="o">=</span> <span class="kc">True</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_sig_execution_complete</span><span class="p">()</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_sig_execution_complete</span><span class="o">.</span><span class="n">clean</span><span class="p">()</span>
+
+            <span class="c1"># Notify non-request-based threads</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">finished_event</span><span class="o">.</span><span class="n">set</span><span class="p">()</span>
+
+            <span class="c1"># Clean-up</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">greenlet</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">popped</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">greenlet</span><span class="o">.</span><span class="n">owning_requests</span><span class="o">.</span><span class="n">pop</span><span class="p">()</span>
+                <span class="k">assert</span> <span class="n">popped</span> <span class="o">==</span> <span class="bp">self</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">greenlet</span> <span class="o">=</span> <span class="kc">None</span>
+
+            <span class="k">with</span> <span class="n">Request</span><span class="o">.</span><span class="n">class_lock</span><span class="p">:</span>
+                <span class="n">Request</span><span class="o">.</span><span class="n">active_count</span> <span class="o">-=</span> <span class="mi">1</span>
+
+<div class="viewcode-block" id="Request.submit"><a class="viewcode-back" href="../../../request.html#lazyflow.request.Request.submit">[docs]</a>    <span class="k">def</span> <span class="nf">submit</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        If this request isn&#39;t started yet, schedule it to be started.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">Request</span><span class="o">.</span><span class="n">global_thread_pool</span><span class="o">.</span><span class="n">num_workers</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">_lock</span><span class="p">:</span>
+                <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">started</span><span class="p">:</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">_set_started</span><span class="p">()</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">_wake_up</span><span class="p">()</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="c1"># For debug purposes, we support a worker count of zero.</span>
+            <span class="c1"># In that case, ALL REQUESTS ARE synchronous.</span>
+            <span class="c1"># This can have unintended consequences.  Use with care.</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">started</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_set_started</span><span class="p">()</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_execute</span><span class="p">()</span>
+
+            <span class="c1"># TODO: Exactly how to handle cancellation in this debug mode is not quite clear...</span>
+
+            <span class="c1"># The _execute() function normally intercepts exceptions to hide them from the worker threads.</span>
+            <span class="c1"># In this debug mode, we want to re-raise the exception.</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">exception</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="bp">self</span><span class="o">.</span><span class="n">exception_info</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="bp">self</span><span class="o">.</span><span class="n">exception_info</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="bp">self</span><span class="o">.</span><span class="n">exception_info</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span></div>
+
+    <span class="k">def</span> <span class="nf">_wake_up</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Resume this request&#39;s execution (put it back on the worker&#39;s job queue).</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">Request</span><span class="o">.</span><span class="n">global_thread_pool</span><span class="o">.</span><span class="n">wake_up</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+ 
+    <span class="k">def</span> <span class="nf">_switch_to</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Switch to this request&#39;s greenlet</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">greenlet</span><span class="o">.</span><span class="n">switch</span><span class="p">()</span>
+        <span class="k">except</span> <span class="n">greenlet</span><span class="o">.</span><span class="n">error</span><span class="p">:</span>
+            <span class="c1"># This is a serious error.</span>
+            <span class="c1"># If we are handling an exception here, it means there&#39;s a bug in the request framework,</span>
+            <span class="c1">#  not the client&#39;s code.</span>
+            <span class="n">msg</span> <span class="o">=</span> <span class="s2">&quot;Current thread (</span><span class="si">{}</span><span class="s2">) could not start/resume task: </span><span class="si">{}</span><span class="s2">&quot;</span>\
+                  <span class="o">.</span><span class="n">format</span><span class="p">(</span> <span class="n">threading</span><span class="o">.</span><span class="n">current_thread</span><span class="p">()</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="bp">self</span> <span class="p">)</span>
+            <span class="n">log_exception</span><span class="p">(</span> <span class="n">logger</span><span class="p">,</span> <span class="n">msg</span><span class="p">,</span> <span class="n">level</span><span class="o">=</span><span class="n">logging</span><span class="o">.</span><span class="n">CRITICAL</span> <span class="p">)</span>
+            
+            <span class="c1"># We still run the post-execute code, so that all requests waiting on this </span>
+            <span class="c1">#  one will be notified of the error and produce their own tracebacks.</span>
+            <span class="c1"># Hopefully that will help us reproduce/debug the issue.</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">exception</span> <span class="o">=</span> <span class="n">Request</span><span class="o">.</span><span class="n">InternalError</span><span class="p">(</span> <span class="s2">&quot;A serious error was detected while waiting for another request.  &quot;</span>
+                                                    <span class="s2">&quot;Check the log for other exceptions.&quot;</span> <span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">exception_info</span> <span class="o">=</span> <span class="p">(</span> <span class="nb">type</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">exception</span><span class="p">),</span> 
+                                    <span class="bp">self</span><span class="o">.</span><span class="n">exception</span><span class="p">,</span> 
+                                    <span class="n">sys</span><span class="o">.</span><span class="n">exc_info</span><span class="p">()[</span><span class="mi">2</span><span class="p">]</span> <span class="p">)</span> 
+            <span class="bp">self</span><span class="o">.</span><span class="n">_post_execute</span><span class="p">()</span>
+            
+            <span class="c1"># And now we simply return instead of letting this worker die.</span>
+
+    <span class="c1">#def __call__(self):</span>
+    <span class="c1">#    &quot;&quot;&quot;</span>
+    <span class="c1">#    Resume (or start) the request execution.</span>
+    <span class="c1">#    This is implemented in __call__ so that it can be used with the ThreadPool, which is designed for general callable tasks.</span>
+    <span class="c1">#    </span>
+    <span class="c1">#    .. note:: DO NOT use ``Request.__call__`` explicitly from your code.  It is called internally or from the ThreadPool.</span>
+    <span class="c1">#    &quot;&quot;&quot;</span>
+    <span class="c1">#    self._switch_to()</span>
+    
+    <span class="c1"># Implement __call__ with a direct assignment instead of the </span>
+    <span class="c1">#  above implementation to avoid an unecessary function call.</span>
+    <span class="n">__call__</span> <span class="o">=</span> <span class="n">_switch_to</span>
+        
+    <span class="k">def</span> <span class="nf">_suspend</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Suspend this request so another one can be woken up by the worker.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># Switch back to the worker that we&#39;re currently running in.</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">greenlet</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">switch</span><span class="p">()</span>
+        <span class="k">except</span> <span class="n">greenlet</span><span class="o">.</span><span class="n">error</span><span class="p">:</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">critical</span><span class="p">(</span> <span class="s2">&quot;Current thread (</span><span class="si">{}</span><span class="s2">) could not suspend task: </span><span class="si">{}</span><span class="s2">.  (parent greenlet=</span><span class="si">{}</span><span class="s2">)&quot;</span>
+                             <span class="o">.</span><span class="n">format</span><span class="p">(</span> <span class="n">threading</span><span class="o">.</span><span class="n">current_thread</span><span class="p">()</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="bp">self</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">greenlet</span><span class="o">.</span><span class="n">parent</span> <span class="p">)</span> <span class="p">)</span>
+            <span class="k">raise</span>
+
+<div class="viewcode-block" id="Request.wait"><a class="viewcode-back" href="../../../request.html#lazyflow.request.Request.wait">[docs]</a>    <span class="k">def</span> <span class="nf">wait</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">timeout</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Start this request if necessary, then wait for it to complete.  Return the request&#39;s result.</span>
+<span class="sd">        </span>
+<span class="sd">        :param timeout: If running within a request, this parameter must be None.</span>
+<span class="sd">                        If running within the context of a foreign (non-request) thread, </span>
+<span class="sd">                        a timeout may be specified in seconds (floating-point).</span>
+<span class="sd">                        If the request does not complete within the timeout period, </span>
+<span class="sd">                        then a Request.TimeoutException is raised.</span>
+<span class="sd">        &quot;&quot;&quot;</span>        
+        <span class="k">assert</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">_cleaned</span><span class="p">,</span> <span class="s2">&quot;Can&#39;t wait() for a request that has already been cleaned.&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_wait</span><span class="p">(</span><span class="n">timeout</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="Request.block"><a class="viewcode-back" href="../../../request.html#lazyflow.request.Request.block">[docs]</a>    <span class="k">def</span> <span class="nf">block</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">timeout</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Like wait, but does not return a result.  Can be used even if the request has already been cleaned.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_wait</span><span class="p">(</span><span class="n">timeout</span><span class="p">)</span> <span class="c1"># No return value. Use wait()</span></div>
+
+    <span class="k">def</span> <span class="nf">_wait</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">timeout</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="c1"># Quick shortcut:</span>
+        <span class="c1"># If there&#39;s no need to wait, just return immediately.</span>
+        <span class="c1"># This avoids some function calls and locks.</span>
+        <span class="c1"># (If we didn&#39;t do this, the code below would still do the right thing.)</span>
+        <span class="c1"># Note that this is only possible because self.execution_complete is set to True </span>
+        <span class="c1">#  AFTER self.cancelled and self.exception have their final values.  See _execute().</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">execution_complete</span> <span class="ow">and</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">cancelled</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">exception</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_result</span>
+        
+        <span class="c1"># Identify the request that is waiting for us (the current context)</span>
+        <span class="n">current_request</span> <span class="o">=</span> <span class="n">Request</span><span class="o">.</span><span class="n">_current_request</span><span class="p">()</span>
+
+        <span class="k">if</span> <span class="n">current_request</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="c1"># &#39;None&#39; means that this thread is not one of the request worker threads.</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_wait_within_foreign_thread</span><span class="p">(</span> <span class="n">timeout</span> <span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">assert</span> <span class="n">timeout</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">,</span> <span class="s2">&quot;The timeout parameter may only be used when wait() is called from a foreign thread.&quot;</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_wait_within_request</span><span class="p">(</span> <span class="n">current_request</span> <span class="p">)</span>
+
+        <span class="k">assert</span> <span class="bp">self</span><span class="o">.</span><span class="n">finished</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_result</span>
+
+    <span class="k">def</span> <span class="nf">_wait_within_foreign_thread</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">timeout</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        This is the implementation of wait() when executed from a foreign (non-worker) thread.</span>
+<span class="sd">        Here, we rely on an ordinary threading.Event primitive: ``self.finished_event``</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># Don&#39;t allow this request to be cancelled, since a real thread is waiting for it.</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">uncancellable</span> <span class="o">=</span> <span class="kc">True</span>
+
+        <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">_lock</span><span class="p">:</span>
+            <span class="n">direct_execute_needed</span> <span class="o">=</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">started</span> <span class="ow">and</span> <span class="p">(</span><span class="n">timeout</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">direct_execute_needed</span><span class="p">:</span>
+                <span class="c1"># This request hasn&#39;t been started yet</span>
+                <span class="c1"># We can execute it directly in the current thread instead of submitting it to the request thread pool (big optimization).</span>
+                <span class="c1"># Mark it as &#39;started&#39; so that no other greenlet can claim it</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_set_started</span><span class="p">()</span>
+
+        <span class="k">if</span> <span class="p">(</span> <span class="n">Request</span><span class="o">.</span><span class="n">global_thread_pool</span><span class="o">.</span><span class="n">num_workers</span> <span class="o">!=</span> <span class="mi">0</span>
+        <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">_current_foreign_thread</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
+        <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">_current_foreign_thread</span> <span class="o">==</span> <span class="n">threading</span><span class="o">.</span><span class="n">current_thread</span><span class="p">()</span> <span class="p">):</span>
+            <span class="c1"># It&#39;s usually nonsense for a request to wait for itself,</span>
+            <span class="c1">#  but we allow it if the request is already &quot;finished&quot;</span>
+            <span class="c1"># (which can happen if the request is calling wait() from within a notify_finished callback)</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">finished</span><span class="p">:</span>
+                <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">exception</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                    <span class="k">raise</span> <span class="bp">self</span><span class="o">.</span><span class="n">exception_info</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="bp">self</span><span class="o">.</span><span class="n">exception_info</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="bp">self</span><span class="o">.</span><span class="n">exception_info</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="k">return</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="n">Request</span><span class="o">.</span><span class="n">CircularWaitException</span><span class="p">()</span>
+
+        <span class="k">if</span> <span class="n">direct_execute_needed</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_current_foreign_thread</span> <span class="o">=</span> <span class="n">threading</span><span class="o">.</span><span class="n">current_thread</span><span class="p">()</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_execute</span><span class="p">()</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">submit</span><span class="p">()</span>
+
+        <span class="c1"># This is a non-worker thread, so just block the old-fashioned way</span>
+        <span class="n">completed</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">finished_event</span><span class="o">.</span><span class="n">wait</span><span class="p">(</span><span class="n">timeout</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">completed</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">Request</span><span class="o">.</span><span class="n">TimeoutException</span><span class="p">()</span>
+        
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">cancelled</span><span class="p">:</span>
+            <span class="c1"># It turns out this request was already cancelled.</span>
+            <span class="k">raise</span> <span class="n">Request</span><span class="o">.</span><span class="n">InvalidRequestException</span><span class="p">()</span>
+        
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">exception</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="bp">self</span><span class="o">.</span><span class="n">exception_info</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="bp">self</span><span class="o">.</span><span class="n">exception_info</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="bp">self</span><span class="o">.</span><span class="n">exception_info</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span>
+
+    <span class="k">def</span> <span class="nf">_wait_within_request</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">current_request</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        This is the implementation of wait() when executed from another request.</span>
+<span class="sd">        If we have to wait, suspend the current request instead of blocking the whole worker thread.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># Before we suspend the current request, check to see if it&#39;s been cancelled since it last blocked</span>
+        <span class="n">Request</span><span class="o">.</span><span class="n">raise_if_cancelled</span><span class="p">()</span>
+
+        <span class="k">if</span> <span class="n">current_request</span> <span class="o">==</span> <span class="bp">self</span><span class="p">:</span>
+            <span class="c1"># It&#39;s usually nonsense for a request to wait for itself,</span>
+            <span class="c1">#  but we allow it if the request is already &quot;finished&quot;</span>
+            <span class="c1"># (which can happen if the request is calling wait() from within a notify_finished callback)</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">finished</span><span class="p">:</span>
+                <span class="k">return</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="n">Request</span><span class="o">.</span><span class="n">CircularWaitException</span><span class="p">()</span>
+
+        <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">_lock</span><span class="p">:</span>
+            <span class="c1"># If the current request isn&#39;t cancelled but we are,</span>
+            <span class="c1"># then the current request is trying to wait for a request (i.e. self) that was spawned elsewhere and already cancelled.</span>
+            <span class="c1"># If they really want it, they&#39;ll have to spawn it themselves.</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">cancelled</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="n">Request</span><span class="o">.</span><span class="n">InvalidRequestException</span><span class="p">()</span>
+            
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">exception</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="c1"># This request was already started and already failed.</span>
+                <span class="c1"># Simply raise the exception back to the current request.</span>
+                <span class="k">raise</span> <span class="bp">self</span><span class="o">.</span><span class="n">exception_info</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="bp">self</span><span class="o">.</span><span class="n">exception_info</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="bp">self</span><span class="o">.</span><span class="n">exception_info</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span>
+
+            <span class="n">direct_execute_needed</span> <span class="o">=</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">started</span>
+            <span class="n">suspend_needed</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">started</span> <span class="ow">and</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">execution_complete</span>
+            <span class="k">if</span> <span class="n">direct_execute_needed</span> <span class="ow">or</span> <span class="n">suspend_needed</span><span class="p">:</span>
+                <span class="n">current_request</span><span class="o">.</span><span class="n">blocking_requests</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">pending_requests</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">current_request</span><span class="p">)</span>
+            
+            <span class="k">if</span> <span class="n">direct_execute_needed</span><span class="p">:</span>
+                <span class="c1"># This request hasn&#39;t been started yet</span>
+                <span class="c1"># We can execute it directly in the current greenlet instead of creating a new greenlet (big optimization)</span>
+                <span class="c1"># Mark it as &#39;started&#39; so that no other greenlet can claim it</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_set_started</span><span class="p">()</span>
+            <span class="k">elif</span> <span class="n">suspend_needed</span><span class="p">:</span>
+                <span class="c1"># This request is already started in some other greenlet.</span>
+                <span class="c1"># We must suspend the current greenlet while we wait for this request to complete.</span>
+                <span class="c1"># Here, we set up a callback so we&#39;ll wake up once this request is complete.</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_sig_execution_complete</span><span class="o">.</span><span class="n">subscribe</span><span class="p">(</span> <span class="n">functools</span><span class="o">.</span><span class="n">partial</span><span class="p">(</span><span class="n">current_request</span><span class="o">.</span><span class="n">_handle_finished_request</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span> <span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">suspend_needed</span><span class="p">:</span>
+            <span class="n">current_request</span><span class="o">.</span><span class="n">_suspend</span><span class="p">()</span>
+        <span class="k">elif</span> <span class="n">direct_execute_needed</span><span class="p">:</span>
+            <span class="c1"># Optimization: Don&#39;t start a new greenlet.  Directly run this request in the current greenlet.</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">greenlet</span> <span class="o">=</span> <span class="n">current_request</span><span class="o">.</span><span class="n">greenlet</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">greenlet</span><span class="o">.</span><span class="n">owning_requests</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_assigned_worker</span> <span class="o">=</span> <span class="n">current_request</span><span class="o">.</span><span class="n">_assigned_worker</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_execute</span><span class="p">()</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">greenlet</span> <span class="o">=</span> <span class="kc">None</span>
+            <span class="n">current_request</span><span class="o">.</span><span class="n">blocking_requests</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">suspend_needed</span> <span class="ow">or</span> <span class="n">direct_execute_needed</span><span class="p">:</span>
+            <span class="c1"># No need to lock here because set.remove is atomic in CPython.</span>
+            <span class="c1">#with self._lock:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">pending_requests</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span> <span class="n">current_request</span> <span class="p">)</span>
+
+        <span class="c1"># Now we&#39;re back (no longer suspended)</span>
+        <span class="c1"># Was the current request cancelled while it was waiting for us?</span>
+        <span class="n">Request</span><span class="o">.</span><span class="n">raise_if_cancelled</span><span class="p">()</span>
+        
+        <span class="c1"># Are we back because we failed?</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">exception</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="bp">self</span><span class="o">.</span><span class="n">exception_info</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="bp">self</span><span class="o">.</span><span class="n">exception_info</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="bp">self</span><span class="o">.</span><span class="n">exception_info</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span>
+
+    <span class="k">def</span> <span class="nf">_handle_finished_request</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">request</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Called when a request that we were waiting for has completed.</span>
+<span class="sd">        Wake ourselves up so we can resume execution.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">_lock</span><span class="p">:</span>
+            <span class="c1"># We&#39;re not waiting for this one any more</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">blocking_requests</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="n">request</span><span class="p">)</span>
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">blocking_requests</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_wake_up</span><span class="p">()</span>
+
+<div class="viewcode-block" id="Request.notify_finished"><a class="viewcode-back" href="../../../request.html#lazyflow.request.Request.notify_finished">[docs]</a>    <span class="k">def</span> <span class="nf">notify_finished</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">fn</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Register a callback function to be called when this request is finished.</span>
+<span class="sd">        If we&#39;re already finished, call it now.</span>
+<span class="sd">        </span>
+<span class="sd">        :param fn: The callback to be notified.  Signature: fn(result)</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">assert</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">_cleaned</span><span class="p">,</span> <span class="s2">&quot;This request has been cleaned() already.&quot;</span>
+        <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">_lock</span><span class="p">:</span>
+            <span class="n">finished</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">finished</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">finished</span><span class="p">:</span>
+                <span class="c1"># Call when we eventually finish</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_sig_finished</span><span class="o">.</span><span class="n">subscribe</span><span class="p">(</span><span class="n">fn</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">finished</span><span class="p">:</span>
+            <span class="c1"># Call immediately</span>
+            <span class="n">fn</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_result</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="Request.notify_cancelled"><a class="viewcode-back" href="../../../request.html#lazyflow.request.Request.notify_cancelled">[docs]</a>    <span class="k">def</span> <span class="nf">notify_cancelled</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">fn</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Register a callback function to be called when this request is finished due to cancellation.</span>
+<span class="sd">        If we&#39;re already finished and cancelled, call it now.</span>
+<span class="sd">        </span>
+<span class="sd">        :param fn: The callback to call if the request is cancelled.  Signature: fn()</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">assert</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">_cleaned</span><span class="p">,</span> <span class="s2">&quot;This request has been cleaned() already.&quot;</span>
+        <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">_lock</span><span class="p">:</span>
+            <span class="n">finished</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">finished</span>
+            <span class="n">cancelled</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">cancelled</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">finished</span><span class="p">:</span>
+                <span class="c1"># Call when we eventually finish</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_sig_cancelled</span><span class="o">.</span><span class="n">subscribe</span><span class="p">(</span><span class="n">fn</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">finished</span> <span class="ow">and</span> <span class="n">cancelled</span><span class="p">:</span>
+            <span class="c1"># Call immediately</span>
+            <span class="n">fn</span><span class="p">()</span></div>
+
+<div class="viewcode-block" id="Request.notify_failed"><a class="viewcode-back" href="../../../request.html#lazyflow.request.Request.notify_failed">[docs]</a>    <span class="k">def</span> <span class="nf">notify_failed</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">fn</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Register a callback function to be called when this request is finished due to failure (an exception was raised).</span>
+<span class="sd">        If we&#39;re already failed, call it now.</span>
+
+<span class="sd">        :param fn: The callback to call if the request fails.  Signature: ``fn(exception, exception_info)``</span>
+<span class="sd">                   exception_info is a tuple of (type, value, traceback). See Python documentation on</span>
+<span class="sd">                   ``sys.exc_info()`` for more documentation.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">assert</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">_cleaned</span><span class="p">,</span> <span class="s2">&quot;This request has been cleaned() already.&quot;</span>
+        <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">_lock</span><span class="p">:</span>
+            <span class="n">finished</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">finished</span>
+            <span class="n">failed</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">exception</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">finished</span><span class="p">:</span>
+                <span class="c1"># Call when we eventually finish</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_sig_failed</span><span class="o">.</span><span class="n">subscribe</span><span class="p">(</span><span class="n">fn</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">finished</span> <span class="ow">and</span> <span class="n">failed</span><span class="p">:</span>
+            <span class="c1"># Call immediately</span>
+            <span class="n">fn</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">exception</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">exception_info</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="Request.cancel"><a class="viewcode-back" href="../../../request.html#lazyflow.request.Request.cancel">[docs]</a>    <span class="k">def</span> <span class="nf">cancel</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Attempt to cancel this request and all requests that it spawned.</span>
+<span class="sd">        No request will be cancelled if other non-cancelled requests are waiting for its results.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># We can only be cancelled if: </span>
+        <span class="c1"># (1) There are no foreign threads blocking for us (flagged via self.uncancellable) AND</span>
+        <span class="c1"># (2) our parent request (if any) is already cancelled AND</span>
+        <span class="c1"># (3) all requests that are pending for this one are already cancelled</span>
+        <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">_lock</span><span class="p">:</span>
+            <span class="n">cancelled</span> <span class="o">=</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">uncancellable</span>
+            <span class="n">cancelled</span> <span class="o">&amp;=</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">parent_request</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="bp">self</span><span class="o">.</span><span class="n">parent_request</span><span class="o">.</span><span class="n">cancelled</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">pending_requests</span><span class="p">:</span>
+                <span class="n">cancelled</span> <span class="o">&amp;=</span> <span class="n">r</span><span class="o">.</span><span class="n">cancelled</span>
+
+            <span class="bp">self</span><span class="o">.</span><span class="n">cancelled</span> <span class="o">=</span> <span class="n">cancelled</span>
+            <span class="k">if</span> <span class="n">cancelled</span><span class="p">:</span>
+                <span class="c1"># Any children added after this point will receive our same cancelled status</span>
+                <span class="n">child_requests</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">child_requests</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">child_requests</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">cancelled</span><span class="p">:</span>
+            <span class="c1"># Cancel all requests that were spawned from this one.</span>
+            <span class="k">for</span> <span class="n">child</span> <span class="ow">in</span> <span class="n">child_requests</span><span class="p">:</span>
+                <span class="n">child</span><span class="o">.</span><span class="n">cancel</span><span class="p">()</span></div>
+    
+    <span class="nd">@classmethod</span>
+    <span class="k">def</span> <span class="nf">_current_request</span><span class="p">(</span><span class="n">cls</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Inspect the current greenlet/thread and return the request object associated with it, if any.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">current_greenlet</span> <span class="o">=</span> <span class="n">greenlet</span><span class="o">.</span><span class="n">getcurrent</span><span class="p">()</span>
+        <span class="c1"># Greenlets in worker threads have a monkey-patched &#39;owning-request&#39; member</span>
+        <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">current_greenlet</span><span class="p">,</span> <span class="s1">&#39;owning_requests&#39;</span><span class="p">):</span>
+            <span class="k">return</span> <span class="n">current_greenlet</span><span class="o">.</span><span class="n">owning_requests</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="c1"># There is no request associated with this greenlet.</span>
+            <span class="c1"># It must be a regular (foreign) thread.</span>
+            <span class="k">return</span> <span class="kc">None</span>
+
+    <span class="nd">@classmethod</span>
+<div class="viewcode-block" id="Request.current_request_is_cancelled"><a class="viewcode-back" href="../../../request.html#lazyflow.request.Request.current_request_is_cancelled">[docs]</a>    <span class="k">def</span> <span class="nf">current_request_is_cancelled</span><span class="p">(</span><span class="n">cls</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Return True if called from within the context of a cancelled request.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">current_request</span> <span class="o">=</span> <span class="n">Request</span><span class="o">.</span><span class="n">_current_request</span><span class="p">()</span>
+        <span class="k">return</span> <span class="n">current_request</span> <span class="ow">and</span> <span class="n">current_request</span><span class="o">.</span><span class="n">cancelled</span></div>
+    
+    <span class="nd">@classmethod</span>
+<div class="viewcode-block" id="Request.raise_if_cancelled"><a class="viewcode-back" href="../../../request.html#lazyflow.request.Request.raise_if_cancelled">[docs]</a>    <span class="k">def</span> <span class="nf">raise_if_cancelled</span><span class="p">(</span><span class="n">cls</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        If called from the context of a cancelled request, raise a CancellationException immediately.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">Request</span><span class="o">.</span><span class="n">current_request_is_cancelled</span><span class="p">():</span>
+            <span class="k">raise</span> <span class="n">Request</span><span class="o">.</span><span class="n">CancellationException</span><span class="p">()</span></div>
+
+    <span class="c1">##########################################</span>
+    <span class="c1">#### Backwards-compatible API support ####</span>
+    <span class="c1">##########################################</span>
+
+    <span class="k">class</span> <span class="nc">_PartialWithAppendedArgs</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Like functools.partial, but any kwargs provided are given last when calling the target.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">fn</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">func</span> <span class="o">=</span> <span class="n">fn</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">args</span> <span class="o">=</span> <span class="n">args</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">kwargs</span> <span class="o">=</span> <span class="n">kwargs</span>
+        
+        <span class="k">def</span> <span class="nf">__call__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">):</span>
+            <span class="n">totalargs</span> <span class="o">=</span> <span class="n">args</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">args</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">func</span><span class="p">(</span> <span class="o">*</span><span class="n">totalargs</span><span class="p">,</span> <span class="o">**</span><span class="bp">self</span><span class="o">.</span><span class="n">kwargs</span><span class="p">)</span>
+    
+    <span class="k">def</span> <span class="nf">writeInto</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">destination</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">fn</span> <span class="o">=</span> <span class="n">Request</span><span class="o">.</span><span class="n">_PartialWithAppendedArgs</span><span class="p">(</span> <span class="bp">self</span><span class="o">.</span><span class="n">fn</span><span class="p">,</span> <span class="n">destination</span><span class="o">=</span><span class="n">destination</span> <span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span>
+
+    <span class="k">def</span> <span class="nf">getResult</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">result</span></div>
+
+<span class="n">Request</span><span class="o">.</span><span class="n">reset_thread_pool</span><span class="p">()</span>
+
+<div class="viewcode-block" id="RequestLock"><a class="viewcode-back" href="../../../request.html#lazyflow.request.RequestLock">[docs]</a><span class="k">class</span> <span class="nc">RequestLock</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Request-aware lock.  Implements the same interface as threading.Lock.</span>
+<span class="sd">    If acquire() is called from a normal thread, the the lock blocks the thread as usual.</span>
+<span class="sd">    If acquire() is called from a Request, then the request is suspended so that another Request can be resumed on the thread.</span>
+<span class="sd">    </span>
+<span class="sd">    Requests and normal threads can *share* access to a RequestLock.</span>
+<span class="sd">    That is, they compete equally for access to the lock.</span>
+<span class="sd">    </span>
+<span class="sd">    Implementation detail:  Depends on the ability to call two *private* Request methods: _suspend() and _wake_up().</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">class</span> <span class="nc">DEBUG_RequestLockQueue</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+        <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_l</span> <span class="o">=</span> <span class="p">[]</span>
+
+        <span class="k">def</span> <span class="nf">__len__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+            <span class="k">return</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_l</span><span class="p">)</span>
+        
+        <span class="k">def</span> <span class="nf">push</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">item</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_l</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">item</span><span class="p">)</span>
+        
+        <span class="k">def</span> <span class="nf">pop</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+            <span class="n">item</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_l</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_l</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_l</span><span class="p">[</span><span class="mi">1</span><span class="p">:]</span>
+            <span class="k">return</span> <span class="n">item</span>
+    
+<div class="viewcode-block" id="RequestLock.RequestLockQueue"><a class="viewcode-back" href="../../../request.html#lazyflow.request.RequestLock.RequestLockQueue">[docs]</a>    <span class="k">class</span> <span class="nc">RequestLockQueue</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        This data structure is a pseudo-priority queue.</span>
+<span class="sd">        If you&#39;re not ready to process the highest-priority item, you can simply push it back.</span>
+<span class="sd">        It will be placed in a secondary queue while you continue to process other items.</span>
+
+<span class="sd">        Two priority queues are maintained: one for pushing, one for popping.</span>
+<span class="sd">        Items are popped from the &#39;popping queue&#39; until it is empty, and then the two</span>
+<span class="sd">        queues are swapped.</span>
+
+<span class="sd">        Suppose you pop an item (the highest priority item), but you discover you&#39;re not</span>
+<span class="sd">        able to use it immediately for some reason (e.g. it&#39;s a request that is still</span>
+<span class="sd">        waiting for a lock). Hence, you simply &#39;push&#39; it back into this data structure.</span>
+<span class="sd">        </span>
+<span class="sd">        If there were only one queue, it would end up a the front of the queue again (it was the</span>
+<span class="sd">        highest priority item, after all).</span>
+<span class="sd">        </span>
+<span class="sd">        That is, you would never make any progress on the queue because you would just pop and</span>
+<span class="sd">        push the same item over and over!</span>
+<span class="sd">        </span>
+<span class="sd">        But since this data structure uses TWO queues, the pushed item will be put on the</span>
+<span class="sd">        &#39;pushing queue&#39; instead and, it won&#39;t be popped again until the popping queue is depleted</span>
+<span class="sd">        (at which point the two queues are swapped).</span>
+
+<span class="sd">        With this scheme, high-priority requests can opt not to monopolize access to a lock if</span>
+<span class="sd">        they need to wait for lower-priority requests to complete before continuing.</span>
+<span class="sd">        This is important for code involving condition variables, for instance.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_pushing_queue</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_popping_queue</span> <span class="o">=</span> <span class="p">[]</span>
+            
+        <span class="k">def</span> <span class="nf">push</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">item</span><span class="p">):</span>
+            <span class="n">heapq</span><span class="o">.</span><span class="n">heappush</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_pushing_queue</span><span class="p">,</span> <span class="n">item</span><span class="p">)</span>
+        
+        <span class="k">def</span> <span class="nf">pop</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">_popping_queue</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_pushing_queue</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_popping_queue</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_popping_queue</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_pushing_queue</span>
+            <span class="k">return</span> <span class="n">heapq</span><span class="o">.</span><span class="n">heappop</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_popping_queue</span><span class="p">)</span>
+
+        <span class="k">def</span> <span class="nf">__len__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+            <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">            Returns the number of waiting threads, but NOT the number of </span>
+<span class="sd">            &quot;&quot;&quot;</span>
+            <span class="k">return</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_pushing_queue</span><span class="p">)</span> <span class="o">+</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_popping_queue</span><span class="p">)</span></div>
+
+    <span class="n">logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="n">__name__</span> <span class="o">+</span> <span class="s2">&quot;.RequestLock&quot;</span><span class="p">)</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">Request</span><span class="o">.</span><span class="n">global_thread_pool</span><span class="o">.</span><span class="n">num_workers</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_debug_mode_init</span><span class="p">()</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="c1"># This member holds the state of this RequestLock</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_modelLock</span> <span class="o">=</span> <span class="n">threading</span><span class="o">.</span><span class="n">Lock</span><span class="p">()</span>
+    
+            <span class="c1"># This member protects the _pendingRequests set from corruption</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_selfProtectLock</span> <span class="o">=</span> <span class="n">threading</span><span class="o">.</span><span class="n">Lock</span><span class="p">()</span>
+            
+            <span class="c1"># This is a list of requests that are currently waiting for the lock.</span>
+            <span class="c1"># Other waiting threads (i.e. non-request &quot;foreign&quot; threads) are each listed as a single &quot;None&quot; item. </span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_pendingRequests</span> <span class="o">=</span> <span class="n">RequestLock</span><span class="o">.</span><span class="n">RequestLockQueue</span><span class="p">()</span>
+
+            <span class="c1"># Native threads have no intrinsic priority, but we generally want to schedule them</span>
+            <span class="c1"># favorably in comparison to requests.</span>
+            <span class="c1"># Instead of pushing them onto the pendingRequests queue, we track the number of</span>
+            <span class="c1"># waiting threads here in this counter.</span>
+            <span class="c1"># When deciding which request or thread to scheudle next, we choose randomly from</span>
+            <span class="c1"># either set.</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">num_waiting_threads</span> <span class="o">=</span> <span class="mi">0</span>
+        
+    <span class="k">def</span> <span class="nf">_debug_mode_init</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        For debug purposes, the user can use an empty threadpool.</span>
+<span class="sd">        In that case, all requests are executing synchronously.</span>
+<span class="sd">        (See Request.submit().)</span>
+<span class="sd">        In this debug mode, this class is simply a stand-in for an </span>
+<span class="sd">        RLock object from the builtin threading module.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># Special debugging scenario:</span>
+        <span class="c1"># If there is no threadpool, just pretend to be an RLock</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_debug_lock</span> <span class="o">=</span> <span class="n">threading</span><span class="o">.</span><span class="n">RLock</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">acquire</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_debug_lock</span><span class="o">.</span><span class="n">acquire</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">release</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_debug_lock</span><span class="o">.</span><span class="n">release</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">__enter__</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_debug_lock</span><span class="o">.</span><span class="n">__enter__</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">__exit__</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_debug_lock</span><span class="o">.</span><span class="n">__exit__</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">locked</span> <span class="o">=</span> <span class="k">lambda</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">_debug_lock</span><span class="o">.</span><span class="n">_RLock__owner</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
+
+<div class="viewcode-block" id="RequestLock.locked"><a class="viewcode-back" href="../../../request.html#lazyflow.request.RequestLock.locked">[docs]</a>    <span class="k">def</span> <span class="nf">locked</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Return True if lock is currently held by some thread or request.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_modelLock</span><span class="o">.</span><span class="n">locked</span><span class="p">()</span></div>
+    
+<div class="viewcode-block" id="RequestLock.acquire"><a class="viewcode-back" href="../../../request.html#lazyflow.request.RequestLock.acquire">[docs]</a>    <span class="k">def</span> <span class="nf">acquire</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">blocking</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Acquire the lock.  If `blocking` is True, block until the lock is available.</span>
+<span class="sd">        If `blocking` is False, don&#39;t wait and return False if the lock couldn&#39;t be acquired immediately.</span>
+<span class="sd">        </span>
+<span class="sd">        :param blocking: Same as in threading.Lock </span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">current_request</span> <span class="o">=</span> <span class="n">Request</span><span class="o">.</span><span class="n">_current_request</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">current_request</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_acquire_from_within_thread</span><span class="p">(</span><span class="n">blocking</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_acquire_from_within_request</span><span class="p">(</span><span class="n">current_request</span><span class="p">,</span> <span class="n">blocking</span><span class="p">)</span></div>
+
+    <span class="k">def</span> <span class="nf">_acquire_from_within_request</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">current_request</span><span class="p">,</span> <span class="n">blocking</span><span class="p">):</span>
+        <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">_selfProtectLock</span><span class="p">:</span>
+            <span class="c1"># Try to get it immediately.</span>
+            <span class="n">got_it</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_modelLock</span><span class="o">.</span><span class="n">acquire</span><span class="p">(</span><span class="kc">False</span><span class="p">)</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">blocking</span><span class="p">:</span>
+                <span class="n">Request</span><span class="o">.</span><span class="n">raise_if_cancelled</span><span class="p">()</span>
+                <span class="k">return</span> <span class="n">got_it</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">got_it</span><span class="p">:</span>
+                <span class="c1"># We have to wait.  Add ourselves to the list of waiters.</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_pendingRequests</span><span class="o">.</span><span class="n">push</span><span class="p">(</span><span class="n">current_request</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">got_it</span><span class="p">:</span>
+            <span class="c1"># Suspend the current request.</span>
+            <span class="c1"># When it is woken, it owns the _modelLock.</span>
+            <span class="n">current_request</span><span class="o">.</span><span class="n">_suspend</span><span class="p">()</span>
+
+            <span class="c1"># Now we&#39;re back (no longer suspended)</span>
+            <span class="c1"># Was the current request cancelled while it was waiting for the lock?</span>
+            <span class="n">Request</span><span class="o">.</span><span class="n">raise_if_cancelled</span><span class="p">()</span>
+
+        <span class="c1"># Guaranteed to own _modelLock now (see release()).</span>
+        <span class="k">return</span> <span class="kc">True</span>
+    
+    <span class="k">def</span> <span class="nf">_acquire_from_within_thread</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">blocking</span><span class="p">):</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">blocking</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_modelLock</span><span class="o">.</span><span class="n">acquire</span><span class="p">(</span><span class="kc">False</span><span class="p">)</span>
+
+        <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">_selfProtectLock</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">num_waiting_threads</span> <span class="o">+=</span> <span class="mi">1</span>
+
+        <span class="c1"># Wait for the internal lock to become free</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_modelLock</span><span class="o">.</span><span class="n">acquire</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span>
+    
+        <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">_selfProtectLock</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">num_waiting_threads</span> <span class="o">-=</span> <span class="mi">1</span>
+
+        <span class="k">return</span> <span class="kc">True</span> <span class="c1"># got it</span>
+
+<div class="viewcode-block" id="RequestLock.release"><a class="viewcode-back" href="../../../request.html#lazyflow.request.RequestLock.release">[docs]</a>    <span class="k">def</span> <span class="nf">release</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Release the lock so that another request or thread can acquire it.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">assert</span> <span class="bp">self</span><span class="o">.</span><span class="n">_modelLock</span><span class="o">.</span><span class="n">locked</span><span class="p">(),</span> <span class="s2">&quot;Can&#39;t release a RequestLock that isn&#39;t already acquired!&quot;</span>
+
+        <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">_selfProtectLock</span><span class="p">:</span>
+            <span class="c1"># This if/else statement could be simplified, but in this</span>
+            <span class="c1"># form it&#39;s easier to comment the explanation for each case.</span>
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_pendingRequests</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">num_waiting_threads</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="c1"># There were no waiting requests or threads, so the lock is free to be acquired again.</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_modelLock</span><span class="o">.</span><span class="n">release</span><span class="p">()</span>
+            <span class="k">elif</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_pendingRequests</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">num_waiting_threads</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="c1"># There are not requests, but there is a waiting thread.</span>
+                <span class="c1"># Release the lock to wake it up (it will decrement the num_waiting_threads member)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_modelLock</span><span class="o">.</span><span class="n">release</span><span class="p">()</span>
+            <span class="k">elif</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_pendingRequests</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">num_waiting_threads</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="c1"># There are no waiting &#39;native&#39; threads, but there is a pending request.</span>
+                <span class="c1"># Instead of releasing the modelLock, just wake up a request that was waiting for it.</span>
+                <span class="c1"># He assumes that the lock is his when he wakes up.</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_pendingRequests</span><span class="o">.</span><span class="n">pop</span><span class="p">()</span><span class="o">.</span><span class="n">_wake_up</span><span class="p">()</span>
+            <span class="k">elif</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_pendingRequests</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">num_waiting_threads</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="c1"># There are both pending requests and native threads</span>
+                <span class="c1"># We generally want to give the threads priority, but not starve out requests.</span>
+                <span class="c1"># Therefore, give threads a 50% chance of getting selected.</span>
+                <span class="c1"># (Generally, there should be only one or two threads waiting on a lock, so 50% odds are quite high.)</span>
+                <span class="k">if</span> <span class="n">randrange</span><span class="p">(</span><span class="mi">2</span><span class="p">):</span>
+                    <span class="c1"># Release the lock to wake it up (he&#39;ll remove the _pendingRequest entry)</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">_modelLock</span><span class="o">.</span><span class="n">release</span><span class="p">()</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="c1"># Instead of releasing the modelLock, just wake up a request that was waiting for it.</span>
+                    <span class="c1"># He assumes that the lock is his when he wakes up.</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">_pendingRequests</span><span class="o">.</span><span class="n">pop</span><span class="p">()</span><span class="o">.</span><span class="n">_wake_up</span><span class="p">()</span></div>
+
+    <span class="k">def</span> <span class="nf">__enter__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">acquire</span><span class="p">()</span>
+        <span class="k">return</span> <span class="bp">self</span>
+    
+    <span class="k">def</span> <span class="nf">__exit__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">release</span><span class="p">()</span></div>
+
+<div class="viewcode-block" id="SimpleRequestCondition"><a class="viewcode-back" href="../../../request.html#lazyflow.request.SimpleRequestCondition">[docs]</a><span class="k">class</span> <span class="nc">SimpleRequestCondition</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    A ``Request``-compatible condition variable that supports a limited</span>
+<span class="sd">    subset of the features implemented by the standard ``threading.Condition``.</span>
+
+<span class="sd">    **Limitations:**</span>
+<span class="sd">    </span>
+<span class="sd">    - Only one request may call :py:meth:`wait()` at a time.</span>
+<span class="sd">    - Likewise, :py:meth:`notify()` doesn&#39;t accept the ``n`` arg.</span>
+<span class="sd">    - Likewise, there is no ``notify_all()`` method.</span>
+<span class="sd">    - :py:meth:`wait()` doesn&#39;t support the ``timeout`` arg.</span>
+<span class="sd">    </span>
+<span class="sd">    .. note:: It would be nice if we could simply use ``threading.Condition( RequestLock() )`` instead of rolling </span>
+<span class="sd">             our own custom condition variable class, but that doesn&#39;t quite work in cases where we need to call </span>
+<span class="sd">             ``wait()`` from a worker thread (a non-foreign thread).</span>
+<span class="sd">             (``threading.Condition`` uses ``threading.Lock()`` as its &#39;waiter&#39; lock, which blocks the entire worker.)</span>
+
+<span class="sd">    **Example:**</span>
+<span class="sd">    </span>
+<span class="sd">    .. code-block:: python</span>
+<span class="sd">        </span>
+<span class="sd">        cond = SimpleRequestCondition()</span>
+
+<span class="sd">        def process_all_data():</span>
+<span class="sd">            with cond:</span>
+<span class="sd">                while not all_finished:</span>
+<span class="sd">                    while not is_data_chunk_ready():</span>
+<span class="sd">                        cond.wait()</span>
+<span class="sd">                    all_finished = process_available_data()</span>
+
+<span class="sd">        def retrieve_some_data():</span>
+<span class="sd">            get_some_data()</span>
+<span class="sd">            with cond:</span>
+<span class="sd">                cond.notify()</span>
+<span class="sd">        </span>
+<span class="sd">        req1 = Request( retrieve_some_data )</span>
+<span class="sd">        req2 = Request( retrieve_some_data )</span>
+<span class="sd">        req3 = Request( retrieve_some_data )</span>
+
+<span class="sd">        req1.submit()</span>
+<span class="sd">        req2.submit()</span>
+<span class="sd">        req3.submit()</span>
+
+<span class="sd">        # Wait for them all to finish...</span>
+<span class="sd">        process_all_data()</span>
+<span class="sd">        </span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="n">__name__</span> <span class="o">+</span> <span class="s2">&quot;.SimpleRequestCondition&quot;</span><span class="p">)</span>
+    
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">Request</span><span class="o">.</span><span class="n">global_thread_pool</span><span class="o">.</span><span class="n">num_workers</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="c1"># Special debug mode.</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_debug_mode_init</span><span class="p">()</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_ownership_lock</span> <span class="o">=</span> <span class="n">RequestLock</span><span class="p">()</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_waiter_lock</span> <span class="o">=</span> <span class="n">RequestLock</span><span class="p">()</span>   <span class="c1"># Only one &quot;waiter&quot;.  </span>
+                                                <span class="c1"># Used to block the current request while we wait to be notify()ed.</span>
+        
+            <span class="c1"># Export the acquire/release methods of the ownership lock</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">acquire</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_ownership_lock</span><span class="o">.</span><span class="n">acquire</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">release</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_ownership_lock</span><span class="o">.</span><span class="n">release</span>
+
+    <span class="k">def</span> <span class="nf">_debug_mode_init</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        For debug purposes, the user can use an empty threadpool.</span>
+<span class="sd">        In that case, all requests are executing synchronously.</span>
+<span class="sd">        (See Request.submit().)</span>
+<span class="sd">        In this debug mode, this class is simply a stand-in for a &#39;real&#39; </span>
+<span class="sd">        condition variable from the builtin threading module.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># Special debug mode initialization: </span>
+        <span class="c1"># Just use a normal condition variable.</span>
+        <span class="n">condition_lock</span> <span class="o">=</span> <span class="n">threading</span><span class="o">.</span><span class="n">RLock</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_debug_condition</span> <span class="o">=</span> <span class="n">threading</span><span class="o">.</span><span class="n">Condition</span><span class="p">(</span><span class="n">condition_lock</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_debug_condition</span><span class="o">.</span><span class="n">locked</span> <span class="o">=</span> <span class="k">lambda</span><span class="p">:</span> <span class="n">condition_lock</span><span class="o">.</span><span class="n">_RLock__count</span> <span class="o">&gt;</span> <span class="mi">0</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">acquire</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_debug_condition</span><span class="o">.</span><span class="n">acquire</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">release</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_debug_condition</span><span class="o">.</span><span class="n">release</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">wait</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_debug_condition</span><span class="o">.</span><span class="n">wait</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">notify</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_debug_condition</span><span class="o">.</span><span class="n">notify</span>
+        
+        <span class="bp">self</span><span class="o">.</span><span class="n">_ownership_lock</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_debug_condition</span>
+        <span class="c1">#self.__enter__ = self._debug_condition.__enter__</span>
+        <span class="c1">#self.__exit__ = self._debug_condition.__exit__        </span>
+
+    <span class="k">def</span> <span class="nf">__enter__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_ownership_lock</span><span class="o">.</span><span class="n">__enter__</span><span class="p">()</span>
+        <span class="k">except</span> <span class="n">Request</span><span class="o">.</span><span class="n">CancellationException</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_notify_nocheck</span><span class="p">()</span>
+            <span class="k">raise</span>
+        
+    <span class="k">def</span> <span class="nf">__exit__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_ownership_lock</span><span class="o">.</span><span class="n">__exit__</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">)</span>
+
+<div class="viewcode-block" id="SimpleRequestCondition.wait"><a class="viewcode-back" href="../../../request.html#lazyflow.request.SimpleRequestCondition.wait">[docs]</a>    <span class="k">def</span> <span class="nf">wait</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Wait for another request to call py:meth:``notify()``.  </span>
+<span class="sd">        The caller **must** own (acquire) the condition before calling this method.</span>
+<span class="sd">        The condition is automatically ``released()`` while this method waits for </span>
+<span class="sd">        ``notify()`` to be called, and automatically ``acquired()`` again before returning.</span>
+
+<span class="sd">        .. note:: Unlike ``threading.Condition``, it is **NOT** valid to call ``wait()`` </span>
+<span class="sd">                  from multiple requests in parallel.  That is, this class supports only </span>
+<span class="sd">                  one &#39;consumer&#39; thread.</span>
+
+<span class="sd">        .. note:: Unlike ``threading.Condition``, no ``timeout`` parameter is accepted here.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># Should start out in the non-waiting state</span>
+        <span class="k">assert</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">_waiter_lock</span><span class="o">.</span><span class="n">locked</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_waiter_lock</span><span class="o">.</span><span class="n">acquire</span><span class="p">()</span>
+        
+        <span class="c1"># Temporarily release the ownership lock while we wait for someone to release the waiter.</span>
+        <span class="k">assert</span> <span class="bp">self</span><span class="o">.</span><span class="n">_ownership_lock</span><span class="o">.</span><span class="n">locked</span><span class="p">(),</span> <span class="s2">&quot;Forbidden to call SimpleRequestCondition.wait() unless you own the condition.&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_ownership_lock</span><span class="o">.</span><span class="n">release</span><span class="p">()</span>
+        
+        <span class="c1"># Try to acquire the lock AGAIN.</span>
+        <span class="c1"># This isn&#39;t possible until someone releases it via notify()</span>
+        <span class="c1"># (Note that RequestLock does NOT have RLock semantics.)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_waiter_lock</span><span class="o">.</span><span class="n">acquire</span><span class="p">()</span>
+        
+        <span class="c1"># Re-acquire</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_ownership_lock</span><span class="o">.</span><span class="n">acquire</span><span class="p">()</span>
+
+        <span class="c1"># Reset for next wait()</span>
+        <span class="c1"># Must check release status here in case someone called notify() in between the previous two lines</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_waiter_lock</span><span class="o">.</span><span class="n">locked</span><span class="p">():</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_waiter_lock</span><span class="o">.</span><span class="n">release</span><span class="p">()</span></div>
+
+<div class="viewcode-block" id="SimpleRequestCondition.notify"><a class="viewcode-back" href="../../../request.html#lazyflow.request.SimpleRequestCondition.notify">[docs]</a>    <span class="k">def</span> <span class="nf">notify</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Notify the condition that it can stop ``wait()``-ing.</span>
+<span class="sd">        The called **must** own (acquire) the condition before calling this method.</span>
+<span class="sd">        Also, the waiting request cannot return from ``wait()`` until the condition is released, </span>
+<span class="sd">        so the caller should generally release the condition shortly after calling this method.</span>
+<span class="sd">        </span>
+<span class="sd">        .. note:: It is okay to call this from more than one request in parallel.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">assert</span> <span class="bp">self</span><span class="o">.</span><span class="n">_ownership_lock</span><span class="o">.</span><span class="n">locked</span><span class="p">(),</span> <span class="s2">&quot;Forbidden to call SimpleRequestCondition.notify() unless you own the condition.&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_notify_nocheck</span><span class="p">()</span></div>
+
+    <span class="k">def</span> <span class="nf">_notify_nocheck</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Notify anyone waiting, without checking that the lock is actually owned.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># Release the waiter for anyone currently waiting</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_waiter_lock</span><span class="o">.</span><span class="n">locked</span><span class="p">():</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_waiter_lock</span><span class="o">.</span><span class="n">release</span><span class="p">()</span></div>
+
+
+<div class="viewcode-block" id="RequestPool"><a class="viewcode-back" href="../../../request.html#lazyflow.request.RequestPool">[docs]</a><span class="k">class</span> <span class="nc">RequestPool</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Class for submitting a batch of requests and waiting until they are all complete.</span>
+<span class="sd">    Requests cannot be added to the pool after it has already started.</span>
+<span class="sd">    Not threadsafe:</span>
+<span class="sd">        - don&#39;t call add() from more than one thread</span>
+<span class="sd">        - don&#39;t call wait() from more than one thread, but you CAN add requests</span>
+<span class="sd">          that are already executing in a different thread to a requestpool</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+<div class="viewcode-block" id="RequestPool.RequestPoolError"><a class="viewcode-back" href="../../../request.html#lazyflow.request.RequestPool.RequestPoolError">[docs]</a>    <span class="k">class</span> <span class="nc">RequestPoolError</span><span class="p">(</span><span class="ne">Exception</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Raised if you attempt to use the Pool in a manner that it isn&#39;t designed for.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">pass</span></div>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">max_active</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        max_active: The number of Requests to launch in parallel.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_started</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_failed</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_finished</span> <span class="o">=</span> <span class="kc">True</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_request_completed_condition</span> <span class="o">=</span> <span class="n">SimpleRequestCondition</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_set_lock</span> <span class="o">=</span> <span class="n">threading</span><span class="o">.</span><span class="n">Lock</span><span class="p">()</span>
+
+        <span class="c1"># Set default max_active here because global_thread_pool might change after startup</span>
+        <span class="c1"># Also, remember that num_workers could be 0 (when debugging)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_max_active</span> <span class="o">=</span> <span class="n">max_active</span> <span class="ow">or</span> <span class="nb">max</span><span class="p">(</span><span class="n">max_active</span><span class="p">,</span> <span class="n">Request</span><span class="o">.</span><span class="n">global_thread_pool</span><span class="o">.</span><span class="n">num_workers</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">clean</span><span class="p">()</span> <span class="c1"># Initialize request sets</span>
+
+<div class="viewcode-block" id="RequestPool.clean"><a class="viewcode-back" href="../../../request.html#lazyflow.request.RequestPool.clean">[docs]</a>    <span class="k">def</span> <span class="nf">clean</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Release our handles to all requests in the pool, for cleanup purposes.</span>
+<span class="sd">        There is no need to call this yourself.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">assert</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">_started</span> <span class="ow">or</span> <span class="bp">self</span><span class="o">.</span><span class="n">_finished</span>
+        <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">_set_lock</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_unsubmitted_requests</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_active_requests</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_finishing_requests</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span></div>
+
+    <span class="k">def</span> <span class="nf">__len__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Returns the number of requests that we haven&#39;t discarded yet</span>
+<span class="sd">        and therefore haven&#39;t completely finished.</span>
+<span class="sd">        </span>
+<span class="sd">        This len will decrease until the RequestPool has completed or failed.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">_set_lock</span><span class="p">:</span>
+            <span class="k">return</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_unsubmitted_requests</span><span class="p">)</span> <span class="o">+</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_active_requests</span><span class="p">)</span> <span class="o">+</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_finishing_requests</span><span class="p">)</span>
+
+<div class="viewcode-block" id="RequestPool.add"><a class="viewcode-back" href="../../../request.html#lazyflow.request.RequestPool.add">[docs]</a>    <span class="k">def</span> <span class="nf">add</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">req</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Add a request to the pool.  The pool must not be submitted yet.  Otherwise, an exception is raised.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">assert</span> <span class="ow">not</span> <span class="n">req</span><span class="o">.</span><span class="n">started</span><span class="p">,</span> <span class="s2">&quot;Can&#39;t submit an already-submitted request.&quot;</span>
+        
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_started</span><span class="p">:</span>
+            <span class="c1"># For now, we forbid this because it would allow some corner cases that we aren&#39;t unit-testing yet.</span>
+            <span class="c1"># If this exception blocks a desirable use case, then change this behavior and provide a unit test.</span>
+            <span class="k">raise</span> <span class="n">RequestPool</span><span class="o">.</span><span class="n">RequestPoolError</span><span class="p">(</span><span class="s2">&quot;Attempted to add a request to a pool that was already started!&quot;</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_unsubmitted_requests</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">req</span><span class="p">)</span>
+        <span class="n">req</span><span class="o">.</span><span class="n">owning_pool</span> <span class="o">=</span> <span class="bp">self</span></div>
+
+<div class="viewcode-block" id="RequestPool.wait"><a class="viewcode-back" href="../../../request.html#lazyflow.request.RequestPool.wait">[docs]</a>    <span class="k">def</span> <span class="nf">wait</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Launch all requests and return after they have all completed, including their callback handlers.</span>
+<span class="sd">        </span>
+<span class="sd">        First, N requests are launched (N=_max_active).</span>
+<span class="sd">        As each one completes, launch a new request to replace it until</span>
+<span class="sd">        there are no unsubmitted requests remaining.</span>
+<span class="sd">        </span>
+<span class="sd">        The block() function is called on every request after it has completed, to ensure</span>
+<span class="sd">        that any exceptions from those requests are re-raised by the RequestPool.</span>
+
+<span class="sd">        (If we didn&#39;t block for &#39;finishing&#39; requests at all, we&#39;d be violating the Request &#39;Callback Timing Guarantee&#39;, </span>
+<span class="sd">        which must hold for *both* Requests and RequestPools.  See Request docs for details.)        </span>
+<span class="sd">        </span>
+<span class="sd">        After that, each request is discarded, so that it&#39;s reference dies immediately</span>
+<span class="sd">        and any memory it consumed is reclaimed.</span>
+<span class="sd">        </span>
+<span class="sd">        So, requests fall into four categories:</span>
+<span class="sd">        </span>
+<span class="sd">        1. unsubmitted</span>
+<span class="sd">            Not started yet.</span>
+
+<span class="sd">        2. active</span>
+<span class="sd">            Currently running their main workload</span>
+
+<span class="sd">        3. finishing</span>
+<span class="sd">            Main workload complete, but might still be running callback handlers.</span>
+<span class="sd">            We will call block() on these to ensure they have finished with callbacks,</span>
+<span class="sd">            and then discard them.</span>
+
+<span class="sd">        4. discarded</span>
+<span class="sd">            After each request is processed in _clear_finishing_requests(), it is removed from the</span>
+<span class="sd">            &#39;finishing&#39; set and the RequestPool retains no references to it any more.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">Request</span><span class="o">.</span><span class="n">global_thread_pool</span><span class="o">.</span><span class="n">num_workers</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="c1"># Simple wait() functionality when using debug mode</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_debug_mode_wait</span><span class="p">()</span>
+            <span class="k">return</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_started</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">RequestPool</span><span class="o">.</span><span class="n">RequestPoolError</span><span class="p">(</span><span class="s2">&quot;Can&#39;t re-start a RequestPool that was already started.&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_started</span> <span class="o">=</span> <span class="kc">True</span>
+
+        <span class="c1"># Edge case: Empty RequestPool</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">_unsubmitted_requests</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_finished</span> <span class="o">=</span> <span class="kc">True</span>
+            <span class="k">return</span>
+
+        <span class="k">try</span><span class="p">:</span>
+            <span class="c1"># Launch the initial batch</span>
+            <span class="n">n_first_batch</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_max_active</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_unsubmitted_requests</span><span class="p">))</span>
+            <span class="k">assert</span> <span class="n">n_first_batch</span> <span class="o">&gt;</span> <span class="mi">0</span>
+            <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">n_first_batch</span><span class="p">):</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_activate_next_request</span><span class="p">()</span>
+            
+            <span class="k">while</span> <span class="kc">True</span><span class="p">:</span>
+                <span class="c1"># Wait for at least one request to finish</span>
+                <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">_request_completed_condition</span><span class="p">:</span>
+                    <span class="k">while</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_active_requests</span><span class="p">)</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">_max_active</span><span class="p">:</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">_request_completed_condition</span><span class="o">.</span><span class="n">wait</span><span class="p">()</span>
+
+                <span class="c1"># Remove it from &#39;finishing&#39; list (and raise an exception if it failed).</span>
+                <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">_request_completed_condition</span><span class="p">:</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">_clear_finishing_requests</span><span class="p">()</span>
+
+                <span class="c1"># Activate more requests until we&#39;re at the max again</span>
+                <span class="k">while</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_active_requests</span><span class="p">)</span> <span class="o">&lt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">_max_active</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">_unsubmitted_requests</span><span class="p">:</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">_activate_next_request</span><span class="p">()</span>
+
+                    <span class="c1"># Clear once per time through this loop, in case the requests are finishing</span>
+                    <span class="c1"># faster than we can add them -- we don&#39;t want them to build up.</span>
+                    <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">_request_completed_condition</span><span class="p">:</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">_clear_finishing_requests</span><span class="p">()</span>
+
+                <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">_unsubmitted_requests</span><span class="p">:</span>
+                    <span class="c1"># There are no more unsubmitted requests to activate</span>
+                    <span class="k">break</span>
+
+            <span class="c1"># Wait for final batch of requests to clear</span>
+            <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">_request_completed_condition</span><span class="p">:</span>
+                <span class="k">while</span> <span class="bp">self</span><span class="o">.</span><span class="n">_active_requests</span><span class="p">:</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">_request_completed_condition</span><span class="o">.</span><span class="n">wait</span><span class="p">()</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">_clear_finishing_requests</span><span class="p">()</span>
+            
+            <span class="c1"># Clear one last time, in case any finished right </span>
+            <span class="c1"># at the end of the final pass through the last loop.</span>
+            <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">_request_completed_condition</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_clear_finishing_requests</span><span class="p">()</span>
+        <span class="k">except</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_failed</span> <span class="o">=</span> <span class="kc">True</span>
+            <span class="k">raise</span>
+        <span class="k">finally</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_finished</span> <span class="o">=</span> <span class="kc">True</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">clean</span><span class="p">()</span></div>
+
+
+    <span class="k">def</span> <span class="nf">_activate_next_request</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">_set_lock</span><span class="p">:</span>
+            <span class="n">req</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_unsubmitted_requests</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_active_requests</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">req</span><span class="p">)</span>
+        <span class="n">req</span><span class="o">.</span><span class="n">notify_finished</span><span class="p">(</span> <span class="n">functools</span><span class="o">.</span><span class="n">partial</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_transfer_request_to_finishing_queue</span><span class="p">,</span> <span class="n">req</span><span class="p">,</span> <span class="s1">&#39;finished&#39;</span> <span class="p">)</span> <span class="p">)</span>
+        <span class="n">req</span><span class="o">.</span><span class="n">notify_failed</span><span class="p">(</span> <span class="n">functools</span><span class="o">.</span><span class="n">partial</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_transfer_request_to_finishing_queue</span><span class="p">,</span> <span class="n">req</span><span class="p">,</span> <span class="s1">&#39;failed&#39;</span> <span class="p">)</span> <span class="p">)</span>
+        <span class="n">req</span><span class="o">.</span><span class="n">notify_cancelled</span><span class="p">(</span> <span class="n">functools</span><span class="o">.</span><span class="n">partial</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_transfer_request_to_finishing_queue</span><span class="p">,</span> <span class="n">req</span><span class="p">,</span> <span class="s1">&#39;cancelled&#39;</span> <span class="p">)</span> <span class="p">)</span>
+        <span class="n">req</span><span class="o">.</span><span class="n">submit</span><span class="p">()</span>
+        <span class="k">del</span> <span class="n">req</span>                    
+            
+<div class="viewcode-block" id="RequestPool.cancel"><a class="viewcode-back" href="../../../request.html#lazyflow.request.RequestPool.cancel">[docs]</a>    <span class="k">def</span> <span class="nf">cancel</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Cancel all requests in the pool.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">for</span> <span class="n">req</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_active_requests</span><span class="p">:</span>
+            <span class="n">req</span><span class="o">.</span><span class="n">cancel</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">clean</span><span class="p">()</span></div>
+
+    <span class="k">def</span> <span class="nf">_transfer_request_to_finishing_queue</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">req</span><span class="p">,</span> <span class="n">reason</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Called (via a callback) when a request is finished executing, </span>
+<span class="sd">        but not yet done with its callbacks.  We mark the state change by </span>
+<span class="sd">        removing it from _active_requests and adding it to _finishing_requests.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">_request_completed_condition</span><span class="p">:</span>
+            <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">_set_lock</span><span class="p">:</span>
+                <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">_failed</span><span class="p">:</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">_active_requests</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="n">req</span><span class="p">)</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">_finishing_requests</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">req</span><span class="p">)</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">_request_completed_condition</span><span class="o">.</span><span class="n">notify</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="nf">_clear_finishing_requests</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Requests execute in two stages: </span>
+<span class="sd">            (1) the main workload, and </span>
+<span class="sd">            (2) the completion callbacks (i.e. the notify_finished handlers)</span>
+<span class="sd">        </span>
+<span class="sd">        Once a request in the pool has completed stage 1, it is added to the </span>
+<span class="sd">        set of &#39;finishing_requests&#39;, which may still be in the middle of stage 2.</span>
+<span class="sd">        </span>
+<span class="sd">        In this function, we block() for all requests that have completed stage 1, and then finally discard them.</span>
+<span class="sd">        This way, any RAM consumed by their results is immediately discarded (if possible).</span>
+<span class="sd">        </span>
+<span class="sd">        We must call block() on every request in the Pool, for two reasons:</span>
+<span class="sd">            (1) RequestPool.wait() should not return until all requests are </span>
+<span class="sd">                complete (unless some failed), INCLUDING the requests&#39; notify_finished callbacks.</span>
+<span class="sd">                (See the &#39;Callback Timing Guarantee&#39; in the Request docs.)</span>
+<span class="sd">            (2) If any requests failed, we want their exception to be raised in our own context.</span>
+<span class="sd">                The proper way to do that is to call Request.block() on the failed request.</span>
+<span class="sd">                Since we call Request.block() on all of our requests, we&#39;ll definitely see the </span>
+<span class="sd">                exception if there was a failed request.</span>
+<span class="sd">        </span>
+<span class="sd">        Note: This function assumes that the current context owns _request_completed_condition.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">_set_lock</span><span class="p">:</span>
+            <span class="k">while</span> <span class="bp">self</span><span class="o">.</span><span class="n">_finishing_requests</span><span class="p">:</span>
+                <span class="k">try</span><span class="p">:</span>
+                    <span class="n">req</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_finishing_requests</span><span class="o">.</span><span class="n">pop</span><span class="p">()</span>
+                <span class="k">except</span> <span class="ne">KeyError</span><span class="p">:</span>
+                    <span class="k">break</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">req</span><span class="o">.</span><span class="n">block</span><span class="p">()</span>
+    
+<div class="viewcode-block" id="RequestPool.request"><a class="viewcode-back" href="../../../request.html#lazyflow.request.RequestPool.request">[docs]</a>    <span class="k">def</span> <span class="nf">request</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">func</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        **Deprecated method**.</span>
+<span class="sd">        Convenience function to construct a request for the given callable and add it to the pool.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">add</span><span class="p">(</span> <span class="n">Request</span><span class="p">(</span><span class="n">func</span><span class="p">)</span> <span class="p">)</span></div>
+    
+    <span class="k">def</span> <span class="nf">_debug_mode_wait</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_started</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">RequestPool</span><span class="o">.</span><span class="n">RequestPoolError</span><span class="p">(</span><span class="s2">&quot;Can&#39;t re-start a RequestPool that was already started.&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_started</span> <span class="o">=</span> <span class="kc">True</span>
+
+        <span class="k">try</span><span class="p">:</span>
+            <span class="k">while</span> <span class="bp">self</span><span class="o">.</span><span class="n">_unsubmitted_requests</span><span class="p">:</span>
+                <span class="n">req</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_unsubmitted_requests</span><span class="o">.</span><span class="n">pop</span><span class="p">()</span>
+                <span class="n">req</span><span class="o">.</span><span class="n">wait</span><span class="p">()</span>
+                <span class="k">del</span> <span class="n">req</span>
+        <span class="k">except</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_failed</span> <span class="o">=</span> <span class="kc">True</span>
+            <span class="k">raise</span>
+        <span class="k">finally</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_finished</span> <span class="o">=</span> <span class="kc">True</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">clean</span><span class="p">()</span></div>
+
+    
+<span class="k">class</span> <span class="nc">RequestPool_SIMPLE</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="c1"># This simplified version doesn&#39;t attempt to be efficient with RAM like the standard version (above).</span>
+    <span class="c1"># It is provided here as a simple reference implementation for comparison and testing purposes.</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Convenience class for submitting a batch of requests and waiting until they are all complete.</span>
+<span class="sd">    Requests can not be added to the pool after it has already started.</span>
+<span class="sd">    Not threadsafe (don&#39;t add requests from more than one thread).</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="n">__name__</span> <span class="o">+</span> <span class="s2">&quot;.RequestPool&quot;</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_requests</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_started</span> <span class="o">=</span> <span class="kc">False</span>
+
+    <span class="k">def</span> <span class="nf">__len__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_requests</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">add</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">req</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Add a request to the pool.  The pool must not be submitted yet.  Otherwise, an exception is raised.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_started</span><span class="p">:</span>
+            <span class="c1"># For now, we forbid this because it would allow some corner cases that we aren&#39;t unit-testing yet.</span>
+            <span class="c1"># If this exception blocks a desirable use case, then change this behavior and provide a unit test.</span>
+            <span class="k">raise</span> <span class="n">RequestPool</span><span class="o">.</span><span class="n">RequestPoolError</span><span class="p">(</span><span class="s2">&quot;Attempted to add a request to a pool that was already started!&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_requests</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">req</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">wait</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        If the pool hasn&#39;t been submitted yet, submit it. </span>
+<span class="sd">        Then wait for all requests in the pool to complete in the simplest way possible.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_started</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">RequestPool</span><span class="o">.</span><span class="n">RequestPoolError</span><span class="p">(</span><span class="s2">&quot;Can&#39;t re-start a RequestPool that was already started.&quot;</span><span class="p">)</span>
+
+        <span class="k">for</span> <span class="n">req</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_requests</span><span class="p">:</span>
+            <span class="n">req</span><span class="o">.</span><span class="n">submit</span><span class="p">()</span>
+
+        <span class="k">for</span> <span class="n">req</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_requests</span><span class="p">:</span>
+            <span class="n">req</span><span class="o">.</span><span class="n">block</span><span class="p">()</span>
+        
+        <span class="bp">self</span><span class="o">.</span><span class="n">_requests</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="nf">cancel</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Cancel all requests in the pool.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">for</span> <span class="n">req</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_requests</span><span class="p">:</span>
+            <span class="n">req</span><span class="o">.</span><span class="n">cancel</span><span class="p">()</span>
+    
+    <span class="k">def</span> <span class="nf">request</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">func</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        **Deprecated method**.  Convenience function to construct a request for the given callable and add it to the pool.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">add</span><span class="p">(</span> <span class="n">Request</span><span class="p">(</span><span class="n">func</span><span class="p">)</span> <span class="p">)</span>
+    
+    <span class="k">def</span> <span class="nf">clean</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Release our handles to all requests in the pool, for cleanup purposes.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_requests</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
+
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../../../search.html" method="get">
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../../index.html">lazyflow 0.1 documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="../../index.html" >Module code</a> &#187;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2012, Christoph Straehle, Bernhard X. Kausler, Thorben Kröger, Ullrich Köthe , Fred A. Hamprecht, Anna Kreshuk, Luca Fiaschi, Stuart Berg.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.4.8.
+    </div>
+  </body>
+</html>

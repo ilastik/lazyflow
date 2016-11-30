@@ -1,0 +1,1393 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>Utilities &#8212; lazyflow 0.1 documentation</title>
+    
+    <link rel="stylesheet" href="_static/classic.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    './',
+        VERSION:     '0.1',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="top" title="lazyflow 0.1 documentation" href="index.html" />
+    <link rel="next" title="Classifiers" href="classifiers.html" />
+    <link rel="prev" title="Lazyflow Request Framework" href="request.html" /> 
+  </head>
+  <body role="document">
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="classifiers.html" title="Classifiers"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="request.html" title="Lazyflow Request Framework"
+             accesskey="P">previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">lazyflow 0.1 documentation</a> &#187;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="utilities">
+<span id="lazyflow-utilities"></span><h1><a class="toc-backref" href="#id1">Utilities</a><a class="headerlink" href="#utilities" title="Permalink to this headline">¶</a></h1>
+<div class="contents topic" id="contents">
+<p class="topic-title first">Contents</p>
+<ul class="simple">
+<li><a class="reference internal" href="#utilities" id="id1">Utilities</a><ul>
+<li><a class="reference internal" href="#general-utilities" id="id2">General Utilities</a><ul>
+<li><a class="reference internal" href="#orderedsignal" id="id3">OrderedSignal</a></li>
+<li><a class="reference internal" href="#trace-logging" id="id4">Trace Logging</a></li>
+<li><a class="reference internal" href="#path-manipulation" id="id5">Path Manipulation</a></li>
+<li><a class="reference internal" href="#module-lazyflow.utility.fileLock" id="id6">FileLock</a></li>
+<li><a class="reference internal" href="#pathcomponents" id="id7">PathComponents</a></li>
+<li><a class="reference internal" href="#json-config-parsing" id="id8">JSON Config Parsing</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#request-batching-utilities" id="id9">Request Batching Utilities</a><ul>
+<li><a class="reference internal" href="#bigrequeststreamer" id="id10">BigRequestStreamer</a></li>
+<li><a class="reference internal" href="#roirequestbatch" id="id11">RoiRequestBatch</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#io-utilities" id="id12">IO Utilities</a><ul>
+<li><a class="reference internal" href="#blockwise-data-format" id="id13">Blockwise Data Format</a></li>
+<li><a class="reference internal" href="#remote-volumes" id="id14">Remote Volumes</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</div>
+<div class="section" id="general-utilities">
+<h2><a class="toc-backref" href="#id2">General Utilities</a><a class="headerlink" href="#general-utilities" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="orderedsignal">
+<h3><a class="toc-backref" href="#id3">OrderedSignal</a><a class="headerlink" href="#orderedsignal" title="Permalink to this headline">¶</a></h3>
+<dl class="class">
+<dt id="lazyflow.utility.OrderedSignal">
+<em class="property">class </em><code class="descclassname">lazyflow.utility.</code><code class="descname">OrderedSignal</code><span class="sig-paren">(</span><em>hide_cancellation_exceptions=False</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/lazyflow/utility/orderedSignal.html#OrderedSignal"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#lazyflow.utility.OrderedSignal" title="Permalink to this definition">¶</a></dt>
+<dd><p>A simple callback mechanism that ensures callbacks occur in the same order as subscription.</p>
+<dl class="method">
+<dt id="lazyflow.utility.OrderedSignal.__call__">
+<code class="descname">__call__</code><span class="sig-paren">(</span><em>*args</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/lazyflow/utility/orderedSignal.html#OrderedSignal.__call__"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#lazyflow.utility.OrderedSignal.__call__" title="Permalink to this definition">¶</a></dt>
+<dd><p>Emit the signal.  Calls each callback in the subscription list, in order, with the specified arguments.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="lazyflow.utility.OrderedSignal.subscribe">
+<code class="descname">subscribe</code><span class="sig-paren">(</span><em>fn</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/lazyflow/utility/orderedSignal.html#OrderedSignal.subscribe"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#lazyflow.utility.OrderedSignal.subscribe" title="Permalink to this definition">¶</a></dt>
+<dd><p>Subscribe the given callable to be called when the signal is fired.
+If the callable is already subscribed to the signal, it is relocated to the end of the callback list.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>fn</strong> &#8211; The callable to add to this signal&#8217;s list of callbacks. Must be hashable.</li>
+<li><strong>kwargs</strong> &#8211; <strong>DEPRECATED</strong>.  Additional parameters to include when the signal calls the function. 
+Instead of using this parameter, consider binding arguments to your callable 
+with <code class="docutils literal"><span class="pre">functools.partial</span></code> or (better) <code class="docutils literal"><span class="pre">ilastik.bind</span></code>.</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="lazyflow.utility.OrderedSignal.unsubscribe">
+<code class="descname">unsubscribe</code><span class="sig-paren">(</span><em>fn</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/lazyflow/utility/orderedSignal.html#OrderedSignal.unsubscribe"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#lazyflow.utility.OrderedSignal.unsubscribe" title="Permalink to this definition">¶</a></dt>
+<dd><p>Unsubscribe the given function from the signal&#8217;s callback list.
+If the callable was not found in the list, this function returns silently.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>fn</strong> &#8211; The callable to remove from the subscription list.</td>
+</tr>
+</tbody>
+</table>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">This relies on the callable&#8217;s <code class="docutils literal"><span class="pre">__eq__</span></code> operator.  
+Note that <code class="docutils literal"><span class="pre">functools.partial</span></code> objects do not implement special support 
+for <code class="docutils literal"><span class="pre">__eq__</span></code>. If your callback is of that type, you must provide the 
+exact instance when unsubscribing.  Note that <code class="docutils literal"><span class="pre">ilastik.bind</span></code> objects 
+ARE equality comparable.  For those callables, it is not necessary to 
+provide the exact instance of the callable that was used for subscription.
+An equivalent <code class="docutils literal"><span class="pre">ilastik.bind</span></code> object (same target and bound args) will suffice.</p>
+</div>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="trace-logging">
+<h3><a class="toc-backref" href="#id4">Trace Logging</a><a class="headerlink" href="#trace-logging" title="Permalink to this headline">¶</a></h3>
+<dl class="class">
+<dt id="lazyflow.utility.Tracer">
+<em class="property">class </em><code class="descclassname">lazyflow.utility.</code><code class="descname">Tracer</code><span class="sig-paren">(</span><em>logger</em>, <em>level=10</em>, <em>msg=''</em>, <em>determine_caller=True</em>, <em>caller_name=''</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/lazyflow/utility/tracer.html#Tracer"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#lazyflow.utility.Tracer" title="Permalink to this definition">¶</a></dt>
+<dd><p>Context manager to simplify function entry/exit logging trace statements.</p>
+<p>Example Usage:</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="c1"># Create a TRACE logger</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">sys</span><span class="o">,</span> <span class="nn">logging</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">traceLogger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="s2">&quot;TRACE.examplemodule1&quot;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">traceLogger</span><span class="o">.</span><span class="n">addHandler</span><span class="p">(</span> <span class="n">logging</span><span class="o">.</span><span class="n">StreamHandler</span><span class="p">(</span><span class="n">sys</span><span class="o">.</span><span class="n">stdout</span><span class="p">)</span> <span class="p">)</span>
+</pre></div>
+</div>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="c1"># Use the context manager</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="k">def</span> <span class="nf">f</span><span class="p">():</span>
+<span class="gp">... </span>    <span class="k">with</span> <span class="n">Tracer</span><span class="p">(</span><span class="n">traceLogger</span><span class="p">):</span>
+<span class="gp">... </span>        <span class="nb">print</span> <span class="s2">&quot;Function f is running...&quot;</span>
+</pre></div>
+</div>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="c1"># If TRACE logging isn&#39;t enabled, there&#39;s no extra output</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">f</span><span class="p">()</span>
+<span class="go">Function f is running...</span>
+</pre></div>
+</div>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="c1"># Enable TRACE logging to see enter/exit log statements.</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">traceLogger</span><span class="o">.</span><span class="n">setLevel</span><span class="p">(</span><span class="n">logging</span><span class="o">.</span><span class="n">DEBUG</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">f</span><span class="p">()</span>
+<span class="go">(enter) f </span>
+<span class="go">Function f is running...</span>
+<span class="go">(exit) f</span>
+</pre></div>
+</div>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="c1"># Disable TRACE logging by setting the level above DEBUG.</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">traceLogger</span><span class="o">.</span><span class="n">setLevel</span><span class="p">(</span><span class="n">logging</span><span class="o">.</span><span class="n">INFO</span><span class="p">)</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="function">
+<dt id="lazyflow.utility.traceLogged">
+<code class="descclassname">lazyflow.utility.</code><code class="descname">traceLogged</code><span class="sig-paren">(</span><em>logger</em>, <em>level=10</em>, <em>msg=''</em>, <em>caller_name=''</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/lazyflow/utility/tracer.html#traceLogged"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#lazyflow.utility.traceLogged" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns a decorator that logs the entry and exit of its target function.
+Uses the the <a class="reference internal" href="#lazyflow.utility.Tracer" title="lazyflow.utility.Tracer"><code class="xref py py-class docutils literal"><span class="pre">Tracer</span></code></a> context manager internally.</p>
+<p>Example Usage:</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="c1"># Create a TRACE logger</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">sys</span><span class="o">,</span> <span class="nn">logging</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">traceLogger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="s2">&quot;TRACE.examplemodule2&quot;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">traceLogger</span><span class="o">.</span><span class="n">addHandler</span><span class="p">(</span> <span class="n">logging</span><span class="o">.</span><span class="n">StreamHandler</span><span class="p">(</span><span class="n">sys</span><span class="o">.</span><span class="n">stdout</span><span class="p">)</span> <span class="p">)</span>
+</pre></div>
+</div>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="c1"># Decorate a function to allow entry/exit trace logging.</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nd">@traceLogged</span><span class="p">(</span><span class="n">traceLogger</span><span class="p">)</span>
+<span class="gp">... </span><span class="k">def</span> <span class="nf">f</span><span class="p">():</span>
+<span class="gp">... </span>    <span class="nb">print</span> <span class="s2">&quot;Function f is running...&quot;</span>
+</pre></div>
+</div>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="c1"># If TRACE logging isn&#39;t enabled, there&#39;s no extra output</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">f</span><span class="p">()</span>
+<span class="go">Function f is running...</span>
+</pre></div>
+</div>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="c1"># Enable TRACE logging to see enter/exit log statements.</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">traceLogger</span><span class="o">.</span><span class="n">setLevel</span><span class="p">(</span><span class="n">logging</span><span class="o">.</span><span class="n">DEBUG</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">f</span><span class="p">()</span>
+<span class="go">(enter) f </span>
+<span class="go">Function f is running...</span>
+<span class="go">(exit) f</span>
+</pre></div>
+</div>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="c1"># Disable TRACE logging by setting the level above DEBUG.</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">traceLogger</span><span class="o">.</span><span class="n">setLevel</span><span class="p">(</span><span class="n">logging</span><span class="o">.</span><span class="n">INFO</span><span class="p">)</span>
+</pre></div>
+</div>
+</dd></dl>
+
+</div>
+<div class="section" id="path-manipulation">
+<h3><a class="toc-backref" href="#id5">Path Manipulation</a><a class="headerlink" href="#path-manipulation" title="Permalink to this headline">¶</a></h3>
+<dl class="class">
+<dt id="lazyflow.utility.PathComponents">
+<em class="property">class </em><code class="descclassname">lazyflow.utility.</code><code class="descname">PathComponents</code><span class="sig-paren">(</span><em>totalPath</em>, <em>cwd=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/lazyflow/utility/pathHelpers.html#PathComponents"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#lazyflow.utility.PathComponents" title="Permalink to this definition">¶</a></dt>
+<dd><p>Provides a convenient access to path components of a combined external/internal path to a dataset.
+Also, each of the properties listed below is writable, in which case ALL properties are updated accordingly.</p>
+<dl class="method">
+<dt id="lazyflow.utility.PathComponents.__init__">
+<code class="descname">__init__</code><span class="sig-paren">(</span><em>totalPath</em>, <em>cwd=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/lazyflow/utility/pathHelpers.html#PathComponents.__init__"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#lazyflow.utility.PathComponents.__init__" title="Permalink to this definition">¶</a></dt>
+<dd><p>Initialize the path components.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>totalPath</strong> &#8211; The entire path to the dataset, including any internal path (e.g. the path to an hdf5 dataset).
+For example, <code class="docutils literal"><span class="pre">totalPath='/some/path/to/file.h5/with/internal/dataset'</span></code></li>
+<li><strong>cwd</strong> &#8211; If provided, relative paths will be converted to absolute paths using this arg as the working directory.</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="lazyflow.utility.PathComponents.extension">
+<code class="descname">extension</code><a class="headerlink" href="#lazyflow.utility.PathComponents.extension" title="Permalink to this definition">¶</a></dt>
+<dd><p>Example: <code class="docutils literal"><span class="pre">.h5</span></code></p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="lazyflow.utility.PathComponents.externalDirectory">
+<code class="descname">externalDirectory</code><a class="headerlink" href="#lazyflow.utility.PathComponents.externalDirectory" title="Permalink to this definition">¶</a></dt>
+<dd><p>Example: <code class="docutils literal"><span class="pre">/some/path/to</span></code></p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="lazyflow.utility.PathComponents.externalPath">
+<code class="descname">externalPath</code><a class="headerlink" href="#lazyflow.utility.PathComponents.externalPath" title="Permalink to this definition">¶</a></dt>
+<dd><p>Example: <code class="docutils literal"><span class="pre">/some/path/to/file.h5</span></code></p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="lazyflow.utility.PathComponents.filename">
+<code class="descname">filename</code><a class="headerlink" href="#lazyflow.utility.PathComponents.filename" title="Permalink to this definition">¶</a></dt>
+<dd><p>Example: <code class="docutils literal"><span class="pre">file.h5</span></code></p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="lazyflow.utility.PathComponents.filenameBase">
+<code class="descname">filenameBase</code><a class="headerlink" href="#lazyflow.utility.PathComponents.filenameBase" title="Permalink to this definition">¶</a></dt>
+<dd><p>Example: <code class="docutils literal"><span class="pre">file</span></code></p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="lazyflow.utility.PathComponents.internalDatasetName">
+<code class="descname">internalDatasetName</code><a class="headerlink" href="#lazyflow.utility.PathComponents.internalDatasetName" title="Permalink to this definition">¶</a></dt>
+<dd><p>Example: <code class="docutils literal"><span class="pre">/dataset</span></code></p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="lazyflow.utility.PathComponents.internalDirectory">
+<code class="descname">internalDirectory</code><a class="headerlink" href="#lazyflow.utility.PathComponents.internalDirectory" title="Permalink to this definition">¶</a></dt>
+<dd><p>Example: <code class="docutils literal"><span class="pre">/with/internal</span></code></p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="lazyflow.utility.PathComponents.internalPath">
+<code class="descname">internalPath</code><a class="headerlink" href="#lazyflow.utility.PathComponents.internalPath" title="Permalink to this definition">¶</a></dt>
+<dd><p>Example: <code class="docutils literal"><span class="pre">/with/internal/dataset</span></code></p>
+</dd></dl>
+
+<dl class="method">
+<dt id="lazyflow.utility.PathComponents.totalPath">
+<code class="descname">totalPath</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/lazyflow/utility/pathHelpers.html#PathComponents.totalPath"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#lazyflow.utility.PathComponents.totalPath" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return the (reconstructed) totalPath to the dataset.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="function">
+<dt id="lazyflow.utility.getPathVariants">
+<code class="descclassname">lazyflow.utility.</code><code class="descname">getPathVariants</code><span class="sig-paren">(</span><em>originalPath</em>, <em>workingDirectory</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/lazyflow/utility/pathHelpers.html#getPathVariants"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#lazyflow.utility.getPathVariants" title="Permalink to this definition">¶</a></dt>
+<dd><p>Take the given filePath (which can be absolute or relative, and may include an internal path suffix),
+and return a tuple of the absolute and relative paths to the file.</p>
+</dd></dl>
+
+</div>
+<div class="section" id="module-lazyflow.utility.fileLock">
+<span id="filelock"></span><h3><a class="toc-backref" href="#id6">FileLock</a><a class="headerlink" href="#module-lazyflow.utility.fileLock" title="Permalink to this headline">¶</a></h3>
+<p>Implementation of a simple cross-platform file locking mechanism.
+This is a modified version of code retrieved on 2013-01-01 from 
+<a class="reference external" href="http://www.evanfosmark.com/2009/01/cross-platform-file-locking-support-in-python">http://www.evanfosmark.com/2009/01/cross-platform-file-locking-support-in-python</a>.
+(The original code was released under the BSD License.  See below for details.)</p>
+<dl class="docutils">
+<dt>Modifications in this version:</dt>
+<dd><ul class="first last simple">
+<li>Tweak docstrings for sphinx.</li>
+<li>Accept an absolute path for the protected file (instead of a file name relative to cwd).</li>
+<li>Allow timeout to be None.</li>
+<li>Fixed a bug that caused the original code to be NON-threadsafe when the same FileLock instance was shared by multiple threads in one process.
+(The original was safe for multiple processes, but not multiple threads in a single process.  This version is safe for both cases.)</li>
+<li>Added <code class="docutils literal"><span class="pre">purge()</span></code> function.</li>
+<li>Added <code class="docutils literal"><span class="pre">available()</span></code> function.</li>
+<li>Expanded API to mimic <code class="docutils literal"><span class="pre">threading.Lock</span> <span class="pre">interface</span></code>:
+- <code class="docutils literal"><span class="pre">__enter__</span></code> always calls <code class="docutils literal"><span class="pre">acquire()</span></code>, and therefore blocks if <code class="docutils literal"><span class="pre">acquire()</span></code> was called previously.
+- <code class="docutils literal"><span class="pre">__exit__</span></code> always calls <code class="docutils literal"><span class="pre">release()</span></code>.  It is therefore a bug to call <code class="docutils literal"><span class="pre">release()</span></code> from within a context manager.
+- Added <code class="docutils literal"><span class="pre">locked()</span></code> function. 
+- Added blocking parameter to <code class="docutils literal"><span class="pre">acquire()</span></code> method</li>
+</ul>
+</dd>
+<dt>WARNINGS: </dt>
+<dd><ul class="first last simple">
+<li>The locking mechanism used here may need to be changed to support old NFS filesystems:
+<a class="reference external" href="http://lwn.net/Articles/251004">http://lwn.net/Articles/251004</a>
+(Newer versions of NFS should be okay, e.g. NFSv3 with Linux kernel 2.6. Check the open(2) man page for details about O_EXCL.)</li>
+<li>This code has not been thoroughly tested on Windows, and there has been one report of incorrect results on Windows XP and Windows 7.
+The locking mechanism used in this class should (in theory) be cross-platform, but use at your own risk.</li>
+</ul>
+</dd>
+</dl>
+<p>ORIGINAL LICENSE:</p>
+<p>The original code did not properly include license text.
+(It merely said &#8220;License: BSD&#8221;.)
+Therefore, we&#8217;ll attach the following generic BSD License terms to this file.
+Those who extract this file from the lazyflow code base (LGPL) for their own use
+are therefore bound by the terms of both the Simplified BSD License below AND the LGPL.</p>
+<p>Copyright (c) 2013, Evan Fosmark and others.
+All rights reserved.</p>
+<p>Redistribution and use in source and binary forms, with or without
+modification, are permitted provided that the following conditions are met:</p>
+<ol class="arabic simple">
+<li>Redistributions of source code must retain the above copyright notice, this
+list of conditions and the following disclaimer.</li>
+<li>Redistributions in binary form must reproduce the above copyright notice,
+this list of conditions and the following disclaimer in the documentation
+and/or other materials provided with the distribution.</li>
+</ol>
+<p>THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS &#8220;AS IS&#8221; AND
+ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR
+ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+(INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
+ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.</p>
+<p>The views and conclusions contained in the software and documentation are those
+of the authors and should not be interpreted as representing official policies,
+either expressed or implied, of the FreeBSD Project.</p>
+<dl class="class">
+<dt id="lazyflow.utility.fileLock.FileLock">
+<em class="property">class </em><code class="descclassname">lazyflow.utility.fileLock.</code><code class="descname">FileLock</code><span class="sig-paren">(</span><em>protected_file_path</em>, <em>timeout=None</em>, <em>delay=1</em>, <em>lock_file_contents=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/lazyflow/utility/fileLock.html#FileLock"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#lazyflow.utility.fileLock.FileLock" title="Permalink to this definition">¶</a></dt>
+<dd><p>A file locking mechanism that has context-manager support so 
+you can use it in a <code class="docutils literal"><span class="pre">with</span></code> statement. This should be relatively cross
+compatible as it doesn&#8217;t rely on <code class="docutils literal"><span class="pre">msvcrt</span></code> or <code class="docutils literal"><span class="pre">fcntl</span></code> for the locking.</p>
+<dl class="method">
+<dt id="lazyflow.utility.fileLock.FileLock.__init__">
+<code class="descname">__init__</code><span class="sig-paren">(</span><em>protected_file_path</em>, <em>timeout=None</em>, <em>delay=1</em>, <em>lock_file_contents=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/lazyflow/utility/fileLock.html#FileLock.__init__"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#lazyflow.utility.fileLock.FileLock.__init__" title="Permalink to this definition">¶</a></dt>
+<dd><p>Prepare the file locker. Specify the file to lock and optionally
+the maximum timeout and the delay between each attempt to lock.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="lazyflow.utility.fileLock.FileLock.acquire">
+<code class="descname">acquire</code><span class="sig-paren">(</span><em>blocking=True</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/lazyflow/utility/fileLock.html#FileLock.acquire"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#lazyflow.utility.fileLock.FileLock.acquire" title="Permalink to this definition">¶</a></dt>
+<dd><p>Acquire the lock, if possible. If the lock is in use, and <cite>blocking</cite> is False, return False.
+Otherwise, check again every <cite>self.delay</cite> seconds until it either gets the lock or
+exceeds <cite>timeout</cite> number of seconds, in which case it raises an exception.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="lazyflow.utility.fileLock.FileLock.available">
+<code class="descname">available</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/lazyflow/utility/fileLock.html#FileLock.available"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#lazyflow.utility.fileLock.FileLock.available" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns True iff the file is currently available to be locked.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="lazyflow.utility.fileLock.FileLock.locked">
+<code class="descname">locked</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/lazyflow/utility/fileLock.html#FileLock.locked"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#lazyflow.utility.fileLock.FileLock.locked" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns True iff the file is owned by THIS FileLock instance.
+(Even if this returns false, the file could be owned by another FileLock instance, possibly in a different thread or process).</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="lazyflow.utility.fileLock.FileLock.purge">
+<code class="descname">purge</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/lazyflow/utility/fileLock.html#FileLock.purge"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#lazyflow.utility.fileLock.FileLock.purge" title="Permalink to this definition">¶</a></dt>
+<dd><p>For debug purposes only.  Removes the lock file from the hard disk.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="lazyflow.utility.fileLock.FileLock.release">
+<code class="descname">release</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/lazyflow/utility/fileLock.html#FileLock.release"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#lazyflow.utility.fileLock.FileLock.release" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get rid of the lock by deleting the lockfile. 
+When working in a <cite>with</cite> statement, this gets automatically 
+called at the end.</p>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="pathcomponents">
+<h3><a class="toc-backref" href="#id7">PathComponents</a><a class="headerlink" href="#pathcomponents" title="Permalink to this headline">¶</a></h3>
+</div>
+<div class="section" id="json-config-parsing">
+<h3><a class="toc-backref" href="#id8">JSON Config Parsing</a><a class="headerlink" href="#json-config-parsing" title="Permalink to this headline">¶</a></h3>
+<p>Some lazyflow components rely on a special JSON config file format.  The <cite>JsonConfigParser</cite> class handles parsing such files.</p>
+<dl class="class">
+<dt id="lazyflow.utility.jsonConfig.JsonConfigParser">
+<em class="property">class </em><code class="descclassname">lazyflow.utility.jsonConfig.</code><code class="descname">JsonConfigParser</code><span class="sig-paren">(</span><em>fields</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/lazyflow/utility/jsonConfig.html#JsonConfigParser"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#lazyflow.utility.jsonConfig.JsonConfigParser" title="Permalink to this definition">¶</a></dt>
+<dd><p>Parser for json config files that match a specific schema.
+Currently, only a very small set of json is supported.
+The schema fields must be a dictionary of name : type (or pseudo-type) pairs.</p>
+<p>A schema dict is also allowed as a pseudo-type value, which permits nested schemas.</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="c1"># Specify schema as a dict</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">SchemaFields</span> <span class="o">=</span> <span class="p">{</span>
+<span class="gp">...</span>
+<span class="gp">... </span>  <span class="s2">&quot;_schema_name&quot;</span> <span class="p">:</span> <span class="s2">&quot;example-schema&quot;</span><span class="p">,</span>
+<span class="gp">... </span>  <span class="s2">&quot;_schema_version&quot;</span> <span class="p">:</span> <span class="mf">1.0</span><span class="p">,</span>
+<span class="gp">... </span>
+<span class="gp">... </span>  <span class="s2">&quot;shoe size&quot;</span> <span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+<span class="gp">... </span>  <span class="s2">&quot;color&quot;</span> <span class="p">:</span> <span class="nb">str</span>
+<span class="gp">... </span><span class="p">}</span>
+<span class="gp">&gt;&gt;&gt; </span>
+<span class="gp">&gt;&gt;&gt; </span><span class="c1"># Write a config file to disk for this example.</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">example_file_str</span> <span class="o">=</span> \
+<span class="gp">... </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="gp">... </span><span class="sd">{</span>
+<span class="gp">... </span><span class="sd">  &quot;_schema_name&quot; : &quot;example-schema&quot;,</span>
+<span class="gp">... </span><span class="sd">  &quot;_schema_version&quot; : 1.0,</span>
+<span class="gp">... </span><span class="sd"></span>
+<span class="gp">... </span><span class="sd">  &quot;shoe size&quot; : 12,</span>
+<span class="gp">... </span><span class="sd">  &quot;color&quot; : &quot;red&quot;,</span>
+<span class="gp">... </span><span class="sd">  &quot;ignored_field&quot; : &quot;Fields that are unrecognized by the schema are ignored.&quot;</span>
+<span class="gp">... </span><span class="sd">}</span>
+<span class="gp">... </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="s1">&#39;/tmp/example_config.json&#39;</span><span class="p">,</span> <span class="s1">&#39;w&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+<span class="gp">... </span>  <span class="n">f</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">example_file_str</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span>
+<span class="gp">&gt;&gt;&gt; </span><span class="c1"># Create a parser that understands your schema</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">parser</span> <span class="o">=</span> <span class="n">JsonConfigParser</span><span class="p">(</span> <span class="n">SchemaFields</span> <span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span>
+<span class="gp">&gt;&gt;&gt; </span><span class="c1"># Parse the config file</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">parsedFields</span> <span class="o">=</span> <span class="n">parser</span><span class="o">.</span><span class="n">parseConfigFile</span><span class="p">(</span><span class="s1">&#39;/tmp/example_config.json&#39;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span> <span class="n">parsedFields</span><span class="o">.</span><span class="n">color</span>
+<span class="go">red</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="c1"># Whitespace in field names is replaced with underscores in the Namespace member.</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span> <span class="n">parsedFields</span><span class="o">.</span><span class="n">shoe_size</span>
+<span class="go">12</span>
+</pre></div>
+</div>
+<dl class="method">
+<dt id="lazyflow.utility.jsonConfig.JsonConfigParser.__init__">
+<code class="descname">__init__</code><span class="sig-paren">(</span><em>fields</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/lazyflow/utility/jsonConfig.html#JsonConfigParser.__init__"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#lazyflow.utility.jsonConfig.JsonConfigParser.__init__" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="lazyflow.utility.jsonConfig.JsonConfigParser.parseConfigFile">
+<code class="descname">parseConfigFile</code><span class="sig-paren">(</span><em>configFilePath</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/lazyflow/utility/jsonConfig.html#JsonConfigParser.parseConfigFile"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#lazyflow.utility.jsonConfig.JsonConfigParser.parseConfigFile" title="Permalink to this definition">¶</a></dt>
+<dd><p>Parse the JSON file at the given path into a <a class="reference internal" href="#lazyflow.utility.jsonConfig.Namespace" title="lazyflow.utility.jsonConfig.Namespace"><code class="xref py py-class docutils literal"><span class="pre">Namespace</span></code></a> object that provides easy access to the config contents.
+Fields are converted from default JSON types into the types specified by the schema.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="lazyflow.utility.jsonConfig.JsonConfigParser.writeConfigFile">
+<code class="descname">writeConfigFile</code><span class="sig-paren">(</span><em>configFilePath</em>, <em>configNamespace</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/lazyflow/utility/jsonConfig.html#JsonConfigParser.writeConfigFile"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#lazyflow.utility.jsonConfig.JsonConfigParser.writeConfigFile" title="Permalink to this definition">¶</a></dt>
+<dd><p>Simply write the given object to a json file as a dict, 
+but check it for errors first by parsing each field with the schema.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="lazyflow.utility.jsonConfig.Namespace">
+<em class="property">class </em><code class="descclassname">lazyflow.utility.jsonConfig.</code><code class="descname">Namespace</code><a class="reference internal" href="_modules/lazyflow/utility/jsonConfig.html#Namespace"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#lazyflow.utility.jsonConfig.Namespace" title="Permalink to this definition">¶</a></dt>
+<dd><p>Provides the same functionality as:</p>
+<div class="highlight-python"><div class="highlight"><pre><span></span><span class="k">class</span> <span class="nc">Namespace</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="k">pass</span>
+</pre></div>
+</div>
+<p>except that <code class="docutils literal"><span class="pre">self.__dict__</span></code> is replaced with an instance of collections.OrderedDict</p>
+</dd></dl>
+
+</div>
+</div>
+<div class="section" id="request-batching-utilities">
+<h2><a class="toc-backref" href="#id9">Request Batching Utilities</a><a class="headerlink" href="#request-batching-utilities" title="Permalink to this headline">¶</a></h2>
+<p>These utilities provide convenient mechanisms for issuing a set of requests with
+controlled (specifically limited) parallelism and handling the result of each
+request in a serial callback.</p>
+<div class="section" id="bigrequeststreamer">
+<h3><a class="toc-backref" href="#id10">BigRequestStreamer</a><a class="headerlink" href="#bigrequeststreamer" title="Permalink to this headline">¶</a></h3>
+<p>Use the <a class="reference internal" href="#lazyflow.utility.bigRequestStreamer.BigRequestStreamer" title="lazyflow.utility.bigRequestStreamer.BigRequestStreamer"><code class="xref py py-class docutils literal"><span class="pre">BigRequestStreamer</span></code></a> if you want to retrieve a single large chunk of
+output data, but you want that big request broken up into many smaller blocks.</p>
+<dl class="class">
+<dt id="lazyflow.utility.bigRequestStreamer.BigRequestStreamer">
+<em class="property">class </em><code class="descclassname">lazyflow.utility.bigRequestStreamer.</code><code class="descname">BigRequestStreamer</code><span class="sig-paren">(</span><em>outputSlot</em>, <em>roi</em>, <em>blockshape=None</em>, <em>batchSize=None</em>, <em>blockAlignment='absolute'</em>, <em>allowParallelResults=False</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/lazyflow/utility/bigRequestStreamer.html#BigRequestStreamer"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#lazyflow.utility.bigRequestStreamer.BigRequestStreamer" title="Permalink to this definition">¶</a></dt>
+<dd><p>Execute a big request by breaking it up into smaller requests.</p>
+<p>This class encapsulates the logic for dividing big rois into smaller ones to be executed separately.
+It relies on a <a class="reference internal" href="#lazyflow.utility.roiRequestBatch.RoiRequestBatch" title="lazyflow.utility.roiRequestBatch.RoiRequestBatch"><code class="xref py py-class docutils literal"><span class="pre">RoiRequestBatch</span></code></a> object,
+which is responsible for creating and scheduling the request for each roi.</p>
+<p>Example:</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">sys</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">vigra</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">lazyflow.graph</span> <span class="k">import</span> <span class="n">Graph</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">lazyflow.operators.operators</span> <span class="k">import</span> <span class="n">OpArrayCache</span>
+</pre></div>
+</div>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="c1"># Example data</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">data</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">indices</span><span class="p">(</span> <span class="p">(</span><span class="mi">100</span><span class="p">,</span><span class="mi">100</span><span class="p">)</span> <span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">data</span> <span class="o">=</span> <span class="n">vigra</span><span class="o">.</span><span class="n">taggedView</span><span class="p">(</span> <span class="n">data</span><span class="p">,</span> <span class="n">vigra</span><span class="o">.</span><span class="n">defaultAxistags</span><span class="p">(</span><span class="s1">&#39;xy&#39;</span><span class="p">)</span> <span class="p">)</span>
+</pre></div>
+</div>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">op</span> <span class="o">=</span> <span class="n">OpArrayCache</span><span class="p">(</span> <span class="n">graph</span><span class="o">=</span><span class="n">Graph</span><span class="p">()</span> <span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">op</span><span class="o">.</span><span class="n">Input</span><span class="o">.</span><span class="n">setValue</span><span class="p">(</span> <span class="n">data</span> <span class="p">)</span>
+</pre></div>
+</div>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">total_roi</span> <span class="o">=</span> <span class="p">[(</span><span class="mi">25</span><span class="p">,</span> <span class="mi">65</span><span class="p">),</span> <span class="p">(</span><span class="mi">45</span><span class="p">,</span> <span class="mi">95</span><span class="p">)]</span>
+</pre></div>
+</div>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="c1"># Init with our output slot and roi to request.</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="c1"># batchSize indicates the number of requests to spawn in parallel.</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">streamer</span> <span class="o">=</span> <span class="n">BigRequestStreamer</span><span class="p">(</span> <span class="n">op</span><span class="o">.</span><span class="n">Output</span><span class="p">,</span> <span class="n">total_roi</span><span class="p">,</span> <span class="p">(</span><span class="mi">10</span><span class="p">,</span><span class="mi">10</span><span class="p">),</span> <span class="n">batchSize</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">blockAlignment</span><span class="o">=</span><span class="s1">&#39;relative&#39;</span> <span class="p">)</span>
+</pre></div>
+</div>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="c1"># Use a callback to handle sub-results one at a time.</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">result_count</span> <span class="o">=</span> <span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">result_total_sum</span> <span class="o">=</span> <span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="k">def</span> <span class="nf">handle_block_result</span><span class="p">(</span><span class="n">roi</span><span class="p">,</span> <span class="n">result</span><span class="p">):</span>
+<span class="gp">... </span>    <span class="c1"># No need for locking here if allowParallelResults=True.</span>
+<span class="gp">... </span>    <span class="n">result_count</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">+=</span> <span class="mi">1</span>
+<span class="gp">... </span>    <span class="n">result_total_sum</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">+=</span> <span class="n">result</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">streamer</span><span class="o">.</span><span class="n">resultSignal</span><span class="o">.</span><span class="n">subscribe</span><span class="p">(</span> <span class="n">handle_block_result</span> <span class="p">)</span>
+</pre></div>
+</div>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="c1"># Optional: Subscribe to progress updates</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="k">def</span> <span class="nf">handle_progress</span><span class="p">(</span><span class="n">progress</span><span class="p">):</span>
+<span class="gp">... </span>    <span class="k">if</span> <span class="n">progress</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+<span class="gp">... </span>        <span class="n">sys</span><span class="o">.</span><span class="n">stdout</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s2">&quot;Progress: &quot;</span><span class="p">)</span>
+<span class="gp">... </span>    <span class="n">sys</span><span class="o">.</span><span class="n">stdout</span><span class="o">.</span><span class="n">write</span><span class="p">(</span> <span class="s2">&quot;</span><span class="si">{}</span><span class="s2"> &quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span> <span class="n">progress</span> <span class="p">)</span> <span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">streamer</span><span class="o">.</span><span class="n">progressSignal</span><span class="o">.</span><span class="n">subscribe</span><span class="p">(</span> <span class="n">handle_progress</span> <span class="p">)</span>
+</pre></div>
+</div>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="c1"># Execute the batch of requests, and block for the result.</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">streamer</span><span class="o">.</span><span class="n">execute</span><span class="p">()</span>
+<span class="go">Progress: 0 16 33 50 66 83 100 100 </span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span> <span class="s2">&quot;Processed </span><span class="si">{}</span><span class="s2"> result blocks with a total sum of: </span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span> <span class="n">result_count</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">result_total_sum</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="p">)</span>
+<span class="go">Processed 6 result blocks with a total sum of: 68400</span>
+</pre></div>
+</div>
+<blockquote>
+<div><dl class="method">
+<dt id="lazyflow.utility.bigRequestStreamer.BigRequestStreamer.__init__">
+<code class="descname">__init__</code><span class="sig-paren">(</span><em>outputSlot</em>, <em>roi</em>, <em>blockshape=None</em>, <em>batchSize=None</em>, <em>blockAlignment='absolute'</em>, <em>allowParallelResults=False</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/lazyflow/utility/bigRequestStreamer.html#BigRequestStreamer.__init__"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#lazyflow.utility.bigRequestStreamer.BigRequestStreamer.__init__" title="Permalink to this definition">¶</a></dt>
+<dd><p>Constructor.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>outputSlot</strong> &#8211; The slot to request data from.</li>
+<li><strong>roi</strong> &#8211; The roi <cite>(start, stop)</cite> of interest.  Will be broken up and requested via smaller requests.</li>
+<li><strong>blockshape</strong> &#8211; The amount of data to request in each request. If omitted, a default blockshape is chosen by inspecting the metadata of the given slot.</li>
+<li><strong>batchSize</strong> &#8211; The maximum number of requests to launch in parallel.  This should not be necessary if the blockshape is small enough that you won&#8217;t run out of RAM.</li>
+<li><strong>blockAlignment</strong> &#8211; Determines how block the requests. Choices are &#8216;absolute&#8217; or &#8216;relative&#8217;.</li>
+<li><strong>allowParallelResults</strong> &#8211; If False, The resultSignal will not be called in parallel.
+In that case, your handler function has no need for locks.</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</div></blockquote>
+<dl class="method">
+<dt id="lazyflow.utility.bigRequestStreamer.BigRequestStreamer.execute">
+<code class="descname">execute</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/lazyflow/utility/bigRequestStreamer.html#BigRequestStreamer.execute"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#lazyflow.utility.bigRequestStreamer.BigRequestStreamer.execute" title="Permalink to this definition">¶</a></dt>
+<dd><p>Request the data for the entire roi by breaking it up into many smaller requests,
+and wait for all of them to complete.
+A batch of N requests is launched, and subsequent requests are 
+launched one-by-one as the earlier requests complete.  Thus, there 
+will be N requests executing in parallel at all times.</p>
+<p>This method returns <code class="docutils literal"><span class="pre">None</span></code>.  All results must be handled via the 
+<a class="reference internal" href="#lazyflow.utility.bigRequestStreamer.BigRequestStreamer.resultSignal" title="lazyflow.utility.bigRequestStreamer.BigRequestStreamer.resultSignal"><code class="xref py py-obj docutils literal"><span class="pre">resultSignal</span></code></a>.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="lazyflow.utility.bigRequestStreamer.BigRequestStreamer.progressSignal">
+<code class="descname">progressSignal</code><a class="headerlink" href="#lazyflow.utility.bigRequestStreamer.BigRequestStreamer.progressSignal" title="Permalink to this definition">¶</a></dt>
+<dd><p>Progress Signal Signature: <code class="docutils literal"><span class="pre">f(progress_percent)</span></code></p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="lazyflow.utility.bigRequestStreamer.BigRequestStreamer.resultSignal">
+<code class="descname">resultSignal</code><a class="headerlink" href="#lazyflow.utility.bigRequestStreamer.BigRequestStreamer.resultSignal" title="Permalink to this definition">¶</a></dt>
+<dd><p>Results signal. Signature: <code class="docutils literal"><span class="pre">f(roi,</span> <span class="pre">result)</span></code>.
+Guaranteed not to be called from multiple threads in parallel.</p>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="roirequestbatch">
+<h3><a class="toc-backref" href="#id11">RoiRequestBatch</a><a class="headerlink" href="#roirequestbatch" title="Permalink to this headline">¶</a></h3>
+<p>If you have an image-like slot and a set of rois you&#8217;re interested in retrieving,
+use <a class="reference internal" href="#lazyflow.utility.roiRequestBatch.RoiRequestBatch" title="lazyflow.utility.roiRequestBatch.RoiRequestBatch"><code class="xref py py-class docutils literal"><span class="pre">RoiRequestBatch</span></code></a> to request the whole set with a custom level of parallelism.</p>
+<dl class="class">
+<dt id="lazyflow.utility.roiRequestBatch.RoiRequestBatch">
+<em class="property">class </em><code class="descclassname">lazyflow.utility.roiRequestBatch.</code><code class="descname">RoiRequestBatch</code><span class="sig-paren">(</span><em>outputSlot</em>, <em>roiIterator</em>, <em>totalVolume=None</em>, <em>batchSize=2</em>, <em>allowParallelResults=False</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/lazyflow/utility/roiRequestBatch.html#RoiRequestBatch"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#lazyflow.utility.roiRequestBatch.RoiRequestBatch" title="Permalink to this definition">¶</a></dt>
+<dd><p>A simple utility for requesting a list of rois from an output slot.
+The number of rois requested in parallel is throttled by the batch size given to the constructor.
+The result of each requested roi is provided as a signal, which the user should subscribe() to.</p>
+<p>Example usage:</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">sys</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">vigra</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">lazyflow.graph</span> <span class="k">import</span> <span class="n">Graph</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">lazyflow.operators.operators</span> <span class="k">import</span> <span class="n">OpArrayCache</span>
+</pre></div>
+</div>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="c1"># Example data</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">data</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">indices</span><span class="p">(</span> <span class="p">(</span><span class="mi">100</span><span class="p">,</span><span class="mi">100</span><span class="p">)</span> <span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">data</span> <span class="o">=</span> <span class="n">vigra</span><span class="o">.</span><span class="n">taggedView</span><span class="p">(</span> <span class="n">data</span><span class="p">,</span> <span class="n">vigra</span><span class="o">.</span><span class="n">defaultAxistags</span><span class="p">(</span><span class="s1">&#39;xy&#39;</span><span class="p">)</span> <span class="p">)</span>
+</pre></div>
+</div>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">op</span> <span class="o">=</span> <span class="n">OpArrayCache</span><span class="p">(</span> <span class="n">graph</span><span class="o">=</span><span class="n">Graph</span><span class="p">()</span> <span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">op</span><span class="o">.</span><span class="n">Input</span><span class="o">.</span><span class="n">setValue</span><span class="p">(</span> <span class="n">data</span> <span class="p">)</span>
+</pre></div>
+</div>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="c1"># Create a list of rois to iterate through.</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="c1"># Typically you&#39;ll want to automate this</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="c1">#  with e.g. lazyflow.roi.getIntersectingBlocks</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">rois</span> <span class="o">=</span> <span class="p">[]</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">rois</span><span class="o">.</span><span class="n">append</span><span class="p">(</span> <span class="p">(</span> <span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span> <span class="p">(</span><span class="mi">10</span><span class="p">,</span><span class="mi">10</span><span class="p">)</span> <span class="p">)</span> <span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">rois</span><span class="o">.</span><span class="n">append</span><span class="p">(</span> <span class="p">(</span> <span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="mi">10</span><span class="p">),</span> <span class="p">(</span><span class="mi">10</span><span class="p">,</span><span class="mi">20</span><span class="p">)</span> <span class="p">)</span> <span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">rois</span><span class="o">.</span><span class="n">append</span><span class="p">(</span> <span class="p">(</span> <span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="mi">20</span><span class="p">),</span> <span class="p">(</span><span class="mi">10</span><span class="p">,</span><span class="mi">30</span><span class="p">)</span> <span class="p">)</span> <span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">rois</span><span class="o">.</span><span class="n">append</span><span class="p">(</span> <span class="p">(</span> <span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="mi">30</span><span class="p">),</span> <span class="p">(</span><span class="mi">10</span><span class="p">,</span><span class="mi">40</span><span class="p">)</span> <span class="p">)</span> <span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">rois</span><span class="o">.</span><span class="n">append</span><span class="p">(</span> <span class="p">(</span> <span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="mi">40</span><span class="p">),</span> <span class="p">(</span><span class="mi">10</span><span class="p">,</span><span class="mi">50</span><span class="p">)</span> <span class="p">)</span> <span class="p">)</span>
+</pre></div>
+</div>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="c1"># Init with our output slot and list of rois to request.</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="c1"># `batchSize` indicates the number of requests to spawn in parallel.</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="c1"># Provide `totalVolume` if you want progress reporting.</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">batch_requester</span> <span class="o">=</span> <span class="n">RoiRequestBatch</span><span class="p">(</span> <span class="n">op</span><span class="o">.</span><span class="n">Output</span><span class="p">,</span> <span class="nb">iter</span><span class="p">(</span><span class="n">rois</span><span class="p">),</span> <span class="n">totalVolume</span><span class="o">=</span><span class="mi">500</span><span class="p">,</span> <span class="n">batchSize</span><span class="o">=</span><span class="mi">2</span> <span class="p">)</span>
+</pre></div>
+</div>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="c1"># Use a callback to handle sub-results one at a time.</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">result_count</span> <span class="o">=</span> <span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">result_total_sum</span> <span class="o">=</span> <span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="k">def</span> <span class="nf">handle_block_result</span><span class="p">(</span><span class="n">roi</span><span class="p">,</span> <span class="n">result</span><span class="p">):</span>
+<span class="gp">... </span>    <span class="c1"># No need for locking here if allowParallelResults=True.</span>
+<span class="gp">... </span>    <span class="n">result_count</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">+=</span> <span class="mi">1</span>
+<span class="gp">... </span>    <span class="n">result_total_sum</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">+=</span> <span class="n">result</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">batch_requester</span><span class="o">.</span><span class="n">resultSignal</span><span class="o">.</span><span class="n">subscribe</span><span class="p">(</span> <span class="n">handle_block_result</span> <span class="p">)</span>
+</pre></div>
+</div>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="c1"># Optional: Subscribe to progress updates</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="k">def</span> <span class="nf">handle_progress</span><span class="p">(</span><span class="n">progress</span><span class="p">):</span>
+<span class="gp">... </span>    <span class="k">if</span> <span class="n">progress</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+<span class="gp">... </span>        <span class="n">sys</span><span class="o">.</span><span class="n">stdout</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s2">&quot;Progress: &quot;</span><span class="p">)</span>
+<span class="gp">... </span>    <span class="n">sys</span><span class="o">.</span><span class="n">stdout</span><span class="o">.</span><span class="n">write</span><span class="p">(</span> <span class="s2">&quot;</span><span class="si">{}</span><span class="s2"> &quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span> <span class="n">progress</span> <span class="p">)</span> <span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">batch_requester</span><span class="o">.</span><span class="n">progressSignal</span><span class="o">.</span><span class="n">subscribe</span><span class="p">(</span> <span class="n">handle_progress</span> <span class="p">)</span>
+</pre></div>
+</div>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="c1"># Execute the batch of requests, and block for the result.</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">batch_requester</span><span class="o">.</span><span class="n">execute</span><span class="p">()</span>
+<span class="go">Progress: 0 20 40 60 80 100 100 </span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span> <span class="s2">&quot;Processed </span><span class="si">{}</span><span class="s2"> result blocks with a total sum of: </span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span> <span class="n">result_count</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">result_total_sum</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="p">)</span>
+<span class="go">Processed 5 result blocks with a total sum of: 14500</span>
+</pre></div>
+</div>
+<blockquote>
+<div><dl class="method">
+<dt id="lazyflow.utility.roiRequestBatch.RoiRequestBatch.__init__">
+<code class="descname">__init__</code><span class="sig-paren">(</span><em>outputSlot</em>, <em>roiIterator</em>, <em>totalVolume=None</em>, <em>batchSize=2</em>, <em>allowParallelResults=False</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/lazyflow/utility/roiRequestBatch.html#RoiRequestBatch.__init__"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#lazyflow.utility.roiRequestBatch.RoiRequestBatch.__init__" title="Permalink to this definition">¶</a></dt>
+<dd><p>Constructor.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>outputSlot</strong> &#8211; The slot to request data from.</li>
+<li><strong>roiIterator</strong> &#8211; An iterator providing new rois.</li>
+<li><strong>totalVolume</strong> &#8211; The total volume to be processed.  
+Used to provide the progress reporting signal. 
+If not provided, then no intermediate progress will be signaled.</li>
+<li><strong>batchSize</strong> &#8211; The maximum number of requests to launch in parallel.</li>
+<li><strong>allowParallelResults</strong> &#8211; If False, The resultSignal will not be called in parallel.
+In that case, your handler function has no need for locks.</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</div></blockquote>
+<dl class="method">
+<dt id="lazyflow.utility.roiRequestBatch.RoiRequestBatch.execute">
+<code class="descname">execute</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/lazyflow/utility/roiRequestBatch.html#RoiRequestBatch.execute"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#lazyflow.utility.roiRequestBatch.RoiRequestBatch.execute" title="Permalink to this definition">¶</a></dt>
+<dd><p>Execute the batch of requests and wait for all of them to complete.
+A batch of N requests is launched, and subsequent requests are 
+launched one-by-one as the earlier requests complete.  Thus, there 
+will be N requests executing in parallel at all times.</p>
+<p>This method returns <code class="docutils literal"><span class="pre">None</span></code>.  All results must be handled via the 
+<a class="reference internal" href="#lazyflow.utility.roiRequestBatch.RoiRequestBatch.resultSignal" title="lazyflow.utility.roiRequestBatch.RoiRequestBatch.resultSignal"><code class="xref py py-obj docutils literal"><span class="pre">resultSignal</span></code></a>.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="lazyflow.utility.roiRequestBatch.RoiRequestBatch.progressSignal">
+<code class="descname">progressSignal</code><a class="headerlink" href="#lazyflow.utility.roiRequestBatch.RoiRequestBatch.progressSignal" title="Permalink to this definition">¶</a></dt>
+<dd><p>Progress Signal Signature: <code class="docutils literal"><span class="pre">f(progress_percent)</span></code></p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="lazyflow.utility.roiRequestBatch.RoiRequestBatch.resultSignal">
+<code class="descname">resultSignal</code><a class="headerlink" href="#lazyflow.utility.roiRequestBatch.RoiRequestBatch.resultSignal" title="Permalink to this definition">¶</a></dt>
+<dd><p>Results signal. Signature: <code class="docutils literal"><span class="pre">f(roi,</span> <span class="pre">result)</span></code>.
+Guaranteed not to be called from multiple threads in parallel.</p>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+</div>
+<div class="section" id="io-utilities">
+<h2><a class="toc-backref" href="#id12">IO Utilities</a><a class="headerlink" href="#io-utilities" title="Permalink to this headline">¶</a></h2>
+<p>These utilities provide access to special data formats supported by lazyflow.</p>
+<div class="section" id="blockwise-data-format">
+<h3><a class="toc-backref" href="#id13">Blockwise Data Format</a><a class="headerlink" href="#blockwise-data-format" title="Permalink to this headline">¶</a></h3>
+<p>For big datasets, lazyflow supports a special input/output format that is based on blocks
+of data stored as hdf5 files in a special directory tree structure.  The dataset is described by a special json file.</p>
+<p>A small example explains the basics.  Consider a dataset with axes x-y-z and
+shape 300x100x100.  Suppose it is stored on disk in blocks of size 100x50x50.
+Let&#8217;s start by inspecting the dataset description file:</p>
+<div class="highlight-bash"><div class="highlight"><pre><span></span>$ ls
+data_description_params.json  my_dataset_blocks
+$
+$ cat data_description_params.json
+<span class="o">{</span>
+    <span class="s2">&quot;_schema_name&quot;</span> : <span class="s2">&quot;blockwise-fileset-description&quot;</span>,
+    <span class="s2">&quot;_schema_version&quot;</span> : 1.0,
+
+    <span class="s2">&quot;name&quot;</span> : <span class="s2">&quot;example_data&quot;</span>,
+    <span class="s2">&quot;format&quot;</span> : <span class="s2">&quot;hdf5&quot;</span>,
+    <span class="s2">&quot;axes&quot;</span> : <span class="s2">&quot;xyz&quot;</span>,
+    <span class="s2">&quot;shape&quot;</span> : <span class="o">[</span>300,100,100<span class="o">]</span>,
+    <span class="s2">&quot;dtype&quot;</span> : <span class="s2">&quot;numpy.uint8&quot;</span>,
+    <span class="s2">&quot;block_shape&quot;</span> : <span class="o">[</span>100, 50, 50<span class="o">]</span>,
+    <span class="s2">&quot;dataset_root_dir&quot;</span> : <span class="s2">&quot;./my_dataset_blocks&quot;</span>,
+    <span class="s2">&quot;block_file_name_format&quot;</span> : <span class="s2">&quot;blockFile-{roiString}.h5/volume/data&quot;</span>
+<span class="o">}</span>
+</pre></div>
+</div>
+<p>This listing shows how the directory tree is structured:</p>
+<div class="highlight-bash"><div class="highlight"><pre><span></span>$ ls my_dataset_blocks/*/*/*/*.h5
+my_dataset_blocks/x_00000000/y_00000000/z_00000000/blockFile-<span class="o">([</span>0, 0, 0<span class="o">]</span>, <span class="o">[</span>100, 50, 50<span class="o">])</span>.h5
+my_dataset_blocks/x_00000000/y_00000000/z_00000050/blockFile-<span class="o">([</span>0, 0, 50<span class="o">]</span>, <span class="o">[</span>100, 50, 100<span class="o">])</span>.h5
+my_dataset_blocks/x_00000000/y_00000050/z_00000000/blockFile-<span class="o">([</span>0, 50, 0<span class="o">]</span>, <span class="o">[</span>100, 100, 50<span class="o">])</span>.h5
+my_dataset_blocks/x_00000000/y_00000050/z_00000050/blockFile-<span class="o">([</span>0, 50, 50<span class="o">]</span>, <span class="o">[</span>100, 100, 100<span class="o">])</span>.h5
+my_dataset_blocks/x_00000100/y_00000000/z_00000000/blockFile-<span class="o">([</span>100, 0, 0<span class="o">]</span>, <span class="o">[</span>200, 50, 50<span class="o">])</span>.h5
+my_dataset_blocks/x_00000100/y_00000000/z_00000050/blockFile-<span class="o">([</span>100, 0, 50<span class="o">]</span>, <span class="o">[</span>200, 50, 100<span class="o">])</span>.h5
+my_dataset_blocks/x_00000100/y_00000050/z_00000000/blockFile-<span class="o">([</span>100, 50, 0<span class="o">]</span>, <span class="o">[</span>200, 100, 50<span class="o">])</span>.h5
+my_dataset_blocks/x_00000100/y_00000050/z_00000050/blockFile-<span class="o">([</span>100, 50, 50<span class="o">]</span>, <span class="o">[</span>200, 100, 100<span class="o">])</span>.h5
+my_dataset_blocks/x_00000200/y_00000000/z_00000000/blockFile-<span class="o">([</span>200, 0, 0<span class="o">]</span>, <span class="o">[</span>300, 50, 50<span class="o">])</span>.h5
+my_dataset_blocks/x_00000200/y_00000000/z_00000050/blockFile-<span class="o">([</span>200, 0, 50<span class="o">]</span>, <span class="o">[</span>300, 50, 100<span class="o">])</span>.h5
+my_dataset_blocks/x_00000200/y_00000050/z_00000000/blockFile-<span class="o">([</span>200, 50, 0<span class="o">]</span>, <span class="o">[</span>300, 100, 50<span class="o">])</span>.h5
+my_dataset_blocks/x_00000200/y_00000050/z_00000050/blockFile-<span class="o">([</span>200, 50, 50<span class="o">]</span>, <span class="o">[</span>300, 100, 100<span class="o">])</span>.h5
+</pre></div>
+</div>
+<p>But you shouldn&#8217;t really have to worry too much about how the data is stored.
+The <a class="reference internal" href="#lazyflow.utility.io_util.BlockwiseFileset" title="lazyflow.utility.io_util.BlockwiseFileset"><code class="xref py py-class docutils literal"><span class="pre">BlockwiseFileset</span></code></a> and <a class="reference internal" href="#lazyflow.utility.io_util.RESTfulBlockwiseFileset" title="lazyflow.utility.io_util.RESTfulBlockwiseFileset"><code class="xref py py-class docutils literal"><span class="pre">RESTfulBlockwiseFileset</span></code></a> classes
+provide a high-level API for reading and writing such datasets.
+See the documentation of those classes for details.</p>
+<dl class="class">
+<dt id="lazyflow.utility.io_util.BlockwiseFileset">
+<em class="property">class </em><code class="descclassname">lazyflow.utility.io_util.</code><code class="descname">BlockwiseFileset</code><span class="sig-paren">(</span><em>descriptionFilePath</em>, <em>mode='r'</em>, <em>preparsedDescription=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/lazyflow/utility/io_util/blockwiseFileset.html#BlockwiseFileset"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#lazyflow.utility.io_util.BlockwiseFileset" title="Permalink to this definition">¶</a></dt>
+<dd><p>This class handles writing and reading a &#8216;blockwise file set&#8217;.
+A &#8216;blockwise file set&#8217; is a directory with a particular structure, which contains the entire dataset broken up into blocks.
+Important parameters (e.g. shape, dtype, blockshape) are specified in a JSON file, which must match the schema given by <a class="reference internal" href="#lazyflow.utility.io_util.BlockwiseFileset.DescriptionFields" title="lazyflow.utility.io_util.BlockwiseFileset.DescriptionFields"><code class="xref py py-data docutils literal"><span class="pre">BlockwiseFileset.DescriptionFields</span></code></a>.
+The parent directory of the description file is considered to be the top-most directory in the blockwise dataset hierarchy.</p>
+<ul class="simple">
+<li>Simultaneous reads are threadsafe.</li>
+<li>NOT threadsafe for reading and writing simultaneously (or writing and writing).</li>
+<li>NOT threadsafe for closing.  Do not call close() while reading or writing.</li>
+</ul>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">See the unit tests in <code class="docutils literal"><span class="pre">tests/testBlockwiseFileset.py</span></code> for example usage.</p>
+</div>
+<dl class="method">
+<dt id="lazyflow.utility.io_util.BlockwiseFileset.__init__">
+<code class="descname">__init__</code><span class="sig-paren">(</span><em>descriptionFilePath</em>, <em>mode='r'</em>, <em>preparsedDescription=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/lazyflow/utility/io_util/blockwiseFileset.html#BlockwiseFileset.__init__"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#lazyflow.utility.io_util.BlockwiseFileset.__init__" title="Permalink to this definition">¶</a></dt>
+<dd><p>Constructor.  Uses <cite>readDescription</cite> interally.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>descriptionFilePath</strong> &#8211; The path to the .json file that describes the dataset.</li>
+<li><strong>mode</strong> &#8211; Set to <code class="docutils literal"><span class="pre">'r'</span></code> if the fileset should be read-only.</li>
+<li><strong>preparsedDescription</strong> &#8211; (Optional) Provide pre-parsed description fields, in which case the provided description file will not be parsed.</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="exception">
+<dt id="lazyflow.utility.io_util.BlockwiseFileset.BlockNotReadyError">
+<em class="property">exception </em><code class="descname">BlockNotReadyError</code><span class="sig-paren">(</span><em>block_start</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/lazyflow/utility/io_util/blockwiseFileset.html#BlockwiseFileset.BlockNotReadyError"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#lazyflow.utility.io_util.BlockwiseFileset.BlockNotReadyError" title="Permalink to this definition">¶</a></dt>
+<dd><p>This exception is raised if <cite>readData()</cite> is called for data that isn&#8217;t available on disk.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="lazyflow.utility.io_util.BlockwiseFileset.DescriptionFields">
+<code class="descclassname">BlockwiseFileset.</code><code class="descname">DescriptionFields</code><em class="property"> = {'view_origin': &lt;lazyflow.utility.jsonConfig.AutoEval object&gt;, 'name': &lt;type 'str'&gt;, 'block_file_name_format': &lt;lazyflow.utility.jsonConfig.FormattedField object&gt;, 'format': &lt;type 'str'&gt;, 'dtype': &lt;lazyflow.utility.jsonConfig.AutoEval object&gt;, 'axes': &lt;type 'str'&gt;, 'drange': &lt;lazyflow.utility.jsonConfig.AutoEval object&gt;, 'dataset_root_dir': &lt;type 'str'&gt;, '_schema_version': 1.1, 'shape': &lt;lazyflow.utility.jsonConfig.AutoEval object&gt;, '_schema_name': 'blockwise-fileset-description', 'block_shape': &lt;lazyflow.utility.jsonConfig.AutoEval object&gt;, 'view_shape': &lt;lazyflow.utility.jsonConfig.AutoEval object&gt;, 'chunks': &lt;lazyflow.utility.jsonConfig.AutoEval object&gt;, 'hash_id': &lt;type 'str'&gt;, 'compression_opts': &lt;lazyflow.utility.jsonConfig.AutoEval object&gt;, 'sub_block_shape': &lt;lazyflow.utility.jsonConfig.AutoEval object&gt;, 'compression': &lt;type 'str'&gt;}</em><a class="headerlink" href="#lazyflow.utility.io_util.BlockwiseFileset.DescriptionFields" title="Permalink to this definition">¶</a></dt>
+<dd><p>These fields describe the schema of the description file.
+See the source code comments for a description of each field.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="lazyflow.utility.io_util.BlockwiseFileset.close">
+<code class="descclassname">BlockwiseFileset.</code><code class="descname">close</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/lazyflow/utility/io_util/blockwiseFileset.html#BlockwiseFileset.close"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#lazyflow.utility.io_util.BlockwiseFileset.close" title="Permalink to this definition">¶</a></dt>
+<dd><p>Close all open block files.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="lazyflow.utility.io_util.BlockwiseFileset.description">
+<code class="descclassname">BlockwiseFileset.</code><code class="descname">description</code><a class="headerlink" href="#lazyflow.utility.io_util.BlockwiseFileset.description" title="Permalink to this definition">¶</a></dt>
+<dd><p>The <code class="xref py py-class docutils literal"><span class="pre">jsonConfig.Namespace</span></code> object that describes this dataset.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="lazyflow.utility.io_util.BlockwiseFileset.exportRoiToHdf5">
+<code class="descclassname">BlockwiseFileset.</code><code class="descname">exportRoiToHdf5</code><span class="sig-paren">(</span><em>roi</em>, <em>exportDirectory</em>, <em>use_view_coordinates=True</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/lazyflow/utility/io_util/blockwiseFileset.html#BlockwiseFileset.exportRoiToHdf5"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#lazyflow.utility.io_util.BlockwiseFileset.exportRoiToHdf5" title="Permalink to this definition">¶</a></dt>
+<dd><p>Export an arbitrary roi to a single hdf5 file.
+The file will be placed in the given exportDirectory,
+and will be named according to the exported roi.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>roi</strong> &#8211; The roi to export</li>
+<li><strong>exportDirectory</strong> &#8211; The directory in which the result should be placed.</li>
+<li><strong>use_view_coordinates</strong> &#8211; If True, assume the roi was given relative to the view start.
+Otherwise, assume it was given relative to the on-disk coordinates.</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="lazyflow.utility.io_util.BlockwiseFileset.exportSubset">
+<code class="descclassname">BlockwiseFileset.</code><code class="descname">exportSubset</code><span class="sig-paren">(</span><em>roi</em>, <em>exportDirectory</em>, <em>use_view_coordinates=True</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/lazyflow/utility/io_util/blockwiseFileset.html#BlockwiseFileset.exportSubset"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#lazyflow.utility.io_util.BlockwiseFileset.exportSubset" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create a new blockwise fileset by copying a subset of this blockwise fileset.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>roi</strong> &#8211; The portion to export.  Must be along block boundaries, in ABSOLUTE coordinates.</li>
+<li><strong>exportDirectory</strong> &#8211; The directory to copy the new blockwise fileset to.</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="lazyflow.utility.io_util.BlockwiseFileset.getAllBlockRois">
+<code class="descclassname">BlockwiseFileset.</code><code class="descname">getAllBlockRois</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/lazyflow/utility/io_util/blockwiseFileset.html#BlockwiseFileset.getAllBlockRois"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#lazyflow.utility.io_util.BlockwiseFileset.getAllBlockRois" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return the list of rois for all VIEWED blocks in the dataset.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="lazyflow.utility.io_util.BlockwiseFileset.getBlockStatus">
+<code class="descclassname">BlockwiseFileset.</code><code class="descname">getBlockStatus</code><span class="sig-paren">(</span><em>blockstart</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/lazyflow/utility/io_util/blockwiseFileset.html#BlockwiseFileset.getBlockStatus"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#lazyflow.utility.io_util.BlockwiseFileset.getBlockStatus" title="Permalink to this definition">¶</a></dt>
+<dd><p>Check a block&#8217;s status.
+(Just because a block file exists doesn&#8217;t mean that it has valid data.)
+Returns a status code of either <code class="docutils literal"><span class="pre">BlockwiseFileset.BLOCK_AVAILABLE</span></code> or <code class="docutils literal"><span class="pre">BlockwiseFileset.BLOCK_NOT_AVAILABLE</span></code>.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="lazyflow.utility.io_util.BlockwiseFileset.getDatasetDirectory">
+<code class="descclassname">BlockwiseFileset.</code><code class="descname">getDatasetDirectory</code><span class="sig-paren">(</span><em>blockstart</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/lazyflow/utility/io_util/blockwiseFileset.html#BlockwiseFileset.getDatasetDirectory"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#lazyflow.utility.io_util.BlockwiseFileset.getDatasetDirectory" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return the directory that contains the block that starts at the given coordinates.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="lazyflow.utility.io_util.BlockwiseFileset.getDatasetPathComponents">
+<code class="descclassname">BlockwiseFileset.</code><code class="descname">getDatasetPathComponents</code><span class="sig-paren">(</span><em>block_start</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/lazyflow/utility/io_util/blockwiseFileset.html#BlockwiseFileset.getDatasetPathComponents"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#lazyflow.utility.io_util.BlockwiseFileset.getDatasetPathComponents" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return a PathComponents object for the block file that corresponds to the given block start coordinate.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="lazyflow.utility.io_util.BlockwiseFileset.getEntireBlockRoi">
+<code class="descclassname">BlockwiseFileset.</code><code class="descname">getEntireBlockRoi</code><span class="sig-paren">(</span><em>block_start</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/lazyflow/utility/io_util/blockwiseFileset.html#BlockwiseFileset.getEntireBlockRoi"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#lazyflow.utility.io_util.BlockwiseFileset.getEntireBlockRoi" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return the roi for the entire block that starts at the given coordinate.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="lazyflow.utility.io_util.BlockwiseFileset.getOpenHdf5FileForBlock">
+<code class="descclassname">BlockwiseFileset.</code><code class="descname">getOpenHdf5FileForBlock</code><span class="sig-paren">(</span><em>block_start</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/lazyflow/utility/io_util/blockwiseFileset.html#BlockwiseFileset.getOpenHdf5FileForBlock"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#lazyflow.utility.io_util.BlockwiseFileset.getOpenHdf5FileForBlock" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns a handle to a file in this dataset.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="lazyflow.utility.io_util.BlockwiseFileset.isBlockLocked">
+<code class="descclassname">BlockwiseFileset.</code><code class="descname">isBlockLocked</code><span class="sig-paren">(</span><em>blockstart</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/lazyflow/utility/io_util/blockwiseFileset.html#BlockwiseFileset.isBlockLocked"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#lazyflow.utility.io_util.BlockwiseFileset.isBlockLocked" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return True if the block is locked for writing.
+Note that both &#8216;available&#8217; and &#8216;not available&#8217; blocks might be locked.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="lazyflow.utility.io_util.BlockwiseFileset.purgeAllLocks">
+<code class="descclassname">BlockwiseFileset.</code><code class="descname">purgeAllLocks</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/lazyflow/utility/io_util/blockwiseFileset.html#BlockwiseFileset.purgeAllLocks"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#lazyflow.utility.io_util.BlockwiseFileset.purgeAllLocks" title="Permalink to this definition">¶</a></dt>
+<dd><p>Clears all .lock files from the local blockwise fileset.
+This may be necessary if previous processes crashed or were killed while some blocks were downloading.
+You must ensure that this is NOT called while more than one process (or thread) has access to the fileset.
+For example, in a master/worker situation, call this only from the master, before the workers have been started.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="lazyflow.utility.io_util.BlockwiseFileset.readData">
+<code class="descclassname">BlockwiseFileset.</code><code class="descname">readData</code><span class="sig-paren">(</span><em>roi</em>, <em>out_array=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/lazyflow/utility/io_util/blockwiseFileset.html#BlockwiseFileset.readData"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#lazyflow.utility.io_util.BlockwiseFileset.readData" title="Permalink to this definition">¶</a></dt>
+<dd><p>Read data from the fileset.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>roi</strong> &#8211; The region of interest to read from the dataset.  Must be a tuple of iterables: (start, stop).</li>
+<li><strong>out_array</strong> &#8211; The location to store the read data.  Must be the correct size for the given roi.  If not provided, an array is created for you.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">The requested data.  If out_array was provided, returns out_array.</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="classmethod">
+<dt id="lazyflow.utility.io_util.BlockwiseFileset.readDescription">
+<em class="property">classmethod </em><code class="descclassname">BlockwiseFileset.</code><code class="descname">readDescription</code><span class="sig-paren">(</span><em>descriptionFilePath</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/lazyflow/utility/io_util/blockwiseFileset.html#BlockwiseFileset.readDescription"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#lazyflow.utility.io_util.BlockwiseFileset.readDescription" title="Permalink to this definition">¶</a></dt>
+<dd><p>Parse the description file at the given path and return a 
+<code class="xref py py-class docutils literal"><span class="pre">jsonConfig.Namespace</span></code> object with the description parameters.
+The file will be parsed according to the schema given by <a class="reference internal" href="#lazyflow.utility.io_util.BlockwiseFileset.DescriptionFields" title="lazyflow.utility.io_util.BlockwiseFileset.DescriptionFields"><code class="xref py py-data docutils literal"><span class="pre">BlockwiseFileset.DescriptionFields</span></code></a>.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>descriptionFilePath</strong> &#8211; The path to the description file to parse.</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="lazyflow.utility.io_util.BlockwiseFileset.setBlockStatus">
+<code class="descclassname">BlockwiseFileset.</code><code class="descname">setBlockStatus</code><span class="sig-paren">(</span><em>blockstart</em>, <em>status</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/lazyflow/utility/io_util/blockwiseFileset.html#BlockwiseFileset.setBlockStatus"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#lazyflow.utility.io_util.BlockwiseFileset.setBlockStatus" title="Permalink to this definition">¶</a></dt>
+<dd><p>Set a block status on disk.
+We use a simple convention: If the status file exists, the block is available.  Otherwise, it ain&#8217;t.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>status</strong> &#8211; Must be either <code class="docutils literal"><span class="pre">BlockwiseFileset.BLOCK_AVAILABLE</span></code> or <code class="docutils literal"><span class="pre">BlockwiseFileset.BLOCK_NOT_AVAILABLE</span></code>.</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="lazyflow.utility.io_util.BlockwiseFileset.writeData">
+<code class="descclassname">BlockwiseFileset.</code><code class="descname">writeData</code><span class="sig-paren">(</span><em>roi</em>, <em>data</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/lazyflow/utility/io_util/blockwiseFileset.html#BlockwiseFileset.writeData"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#lazyflow.utility.io_util.BlockwiseFileset.writeData" title="Permalink to this definition">¶</a></dt>
+<dd><p>Write data to the fileset.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>roi</strong> &#8211; The region of interest to write the data to.  Must be a tuple of iterables: (start, stop).</li>
+<li><strong>data</strong> &#8211; The data to write.  Must be the correct size for the given roi.</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="classmethod">
+<dt id="lazyflow.utility.io_util.BlockwiseFileset.writeDescription">
+<em class="property">classmethod </em><code class="descclassname">BlockwiseFileset.</code><code class="descname">writeDescription</code><span class="sig-paren">(</span><em>descriptionFilePath</em>, <em>descriptionFields</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/lazyflow/utility/io_util/blockwiseFileset.html#BlockwiseFileset.writeDescription"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#lazyflow.utility.io_util.BlockwiseFileset.writeDescription" title="Permalink to this definition">¶</a></dt>
+<dd><p>Write a <code class="xref py py-class docutils literal"><span class="pre">jsonConfig.Namespace</span></code> object to the given path.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>descriptionFilePath</strong> &#8211; The path to overwrite with the description fields.</li>
+<li><strong>descriptionFields</strong> &#8211; The fields to write.</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="remote-volumes">
+<h3><a class="toc-backref" href="#id14">Remote Volumes</a><a class="headerlink" href="#remote-volumes" title="Permalink to this headline">¶</a></h3>
+<dl class="class">
+<dt id="lazyflow.utility.io_util.RESTfulVolume">
+<em class="property">class </em><code class="descclassname">lazyflow.utility.io_util.</code><code class="descname">RESTfulVolume</code><span class="sig-paren">(</span><em>descriptionFilePath=None</em>, <em>preparsedDescription=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/lazyflow/utility/io_util/RESTfulVolume.html#RESTfulVolume"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#lazyflow.utility.io_util.RESTfulVolume" title="Permalink to this definition">¶</a></dt>
+<dd><p>This class provides access to data obtained via a RESTful API (e.g. from <a class="reference external" href="http://openconnecto.me">http://openconnecto.me</a>).
+A description of the remote volume must be provided via a JSON file, 
+whose schema is specified by <a class="reference internal" href="#lazyflow.utility.io_util.RESTfulVolume.DescriptionFields" title="lazyflow.utility.io_util.RESTfulVolume.DescriptionFields"><code class="xref py py-data docutils literal"><span class="pre">RESTfulVolume.DescriptionFields</span></code></a>.</p>
+<p>See the unit tests in <code class="docutils literal"><span class="pre">tests/testRESTfulVolume.py</span></code> for example usage.</p>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">This class does not keep track of the data you&#8217;ve already downloaded.  
+Every call to <a class="reference internal" href="#lazyflow.utility.io_util.RESTfulVolume.downloadSubVolume" title="lazyflow.utility.io_util.RESTfulVolume.downloadSubVolume"><code class="xref py py-func docutils literal"><span class="pre">downloadSubVolume()</span></code></a> results in a new download.
+For automatic blockwise local caching of remote datasets, see <a class="reference internal" href="#lazyflow.utility.io_util.RESTfulBlockwiseFileset" title="lazyflow.utility.io_util.RESTfulBlockwiseFileset"><code class="xref py py-class docutils literal"><span class="pre">RESTfulBlockwiseFileset</span></code></a>.</p>
+</div>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">See the unit tests in <code class="docutils literal"><span class="pre">tests/testRESTfulVolume.py</span></code> for example usage.</p>
+</div>
+<dl class="method">
+<dt id="lazyflow.utility.io_util.RESTfulVolume.__init__">
+<code class="descname">__init__</code><span class="sig-paren">(</span><em>descriptionFilePath=None</em>, <em>preparsedDescription=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/lazyflow/utility/io_util/RESTfulVolume.html#RESTfulVolume.__init__"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#lazyflow.utility.io_util.RESTfulVolume.__init__" title="Permalink to this definition">¶</a></dt>
+<dd><p>Constructor.  Uses <cite>readDescription</cite> interally.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>descriptionFilePath</strong> &#8211; The path to the .json file that describes the remote volume.</li>
+<li><strong>preparsedDescription</strong> &#8211; (Optional) Provide pre-parsed description fields, in which 
+case the provided description file will not be parsed.</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="lazyflow.utility.io_util.RESTfulVolume.DescriptionFields">
+<code class="descname">DescriptionFields</code><em class="property"> = {'format': &lt;type 'str'&gt;, 'dtype': &lt;lazyflow.utility.jsonConfig.AutoEval object&gt;, 'hdf5_dataset': &lt;type 'str'&gt;, '_schema_version': 1.0, 'shape': &lt;lazyflow.utility.jsonConfig.AutoEval object&gt;, 'name': &lt;type 'str'&gt;, 'axes': &lt;type 'str'&gt;, 'bounds': &lt;lazyflow.utility.jsonConfig.AutoEval object&gt;, '_schema_name': 'RESTful-volume-description', 'origin_offset': &lt;lazyflow.utility.jsonConfig.AutoEval object&gt;, 'url_format': &lt;lazyflow.utility.jsonConfig.FormattedField object&gt;}</em><a class="headerlink" href="#lazyflow.utility.io_util.RESTfulVolume.DescriptionFields" title="Permalink to this definition">¶</a></dt>
+<dd><p>These fields describe the schema of the description file.
+See the source code comments for a description of each field.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="lazyflow.utility.io_util.RESTfulVolume.downloadSubVolume">
+<code class="descname">downloadSubVolume</code><span class="sig-paren">(</span><em>roi</em>, <em>outputDatasetPath</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/lazyflow/utility/io_util/RESTfulVolume.html#RESTfulVolume.downloadSubVolume"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#lazyflow.utility.io_util.RESTfulVolume.downloadSubVolume" title="Permalink to this definition">¶</a></dt>
+<dd><p>Download a cutout volume from the remote dataset.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>roi</strong> &#8211; The subset of the volume to download, specified as a tuple of coordinates: <code class="docutils literal"><span class="pre">(start,</span> <span class="pre">stop)</span></code></li>
+<li><strong>outputDatasetPath</strong> &#8211; The path to overwrite with the downloaded hdf5 file.</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="classmethod">
+<dt id="lazyflow.utility.io_util.RESTfulVolume.readDescription">
+<em class="property">classmethod </em><code class="descname">readDescription</code><span class="sig-paren">(</span><em>descriptionFilePath</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/lazyflow/utility/io_util/RESTfulVolume.html#RESTfulVolume.readDescription"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#lazyflow.utility.io_util.RESTfulVolume.readDescription" title="Permalink to this definition">¶</a></dt>
+<dd><p>Parse the description file at the given path and return a 
+<code class="xref py py-class docutils literal"><span class="pre">jsonConfig.Namespace</span></code> object with the description parameters.
+The file will be parsed according to the schema given by <a class="reference internal" href="#lazyflow.utility.io_util.RESTfulVolume.DescriptionFields" title="lazyflow.utility.io_util.RESTfulVolume.DescriptionFields"><code class="xref py py-data docutils literal"><span class="pre">RESTfulVolume.DescriptionFields</span></code></a>.
+Any optional parameters not provided by the user are filled in automatically.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>descriptionFilePath</strong> &#8211; The path to the description file to parse.</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="classmethod">
+<dt id="lazyflow.utility.io_util.RESTfulVolume.updateDescription">
+<em class="property">classmethod </em><code class="descname">updateDescription</code><span class="sig-paren">(</span><em>description</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/lazyflow/utility/io_util/RESTfulVolume.html#RESTfulVolume.updateDescription"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#lazyflow.utility.io_util.RESTfulVolume.updateDescription" title="Permalink to this definition">¶</a></dt>
+<dd><p>Some description fields are optional.
+If they aren&#8217;t provided in the description JSON file, then this function provides 
+them with default values, based on the other description fields.</p>
+</dd></dl>
+
+<dl class="classmethod">
+<dt id="lazyflow.utility.io_util.RESTfulVolume.writeDescription">
+<em class="property">classmethod </em><code class="descname">writeDescription</code><span class="sig-paren">(</span><em>descriptionFilePath</em>, <em>descriptionFields</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/lazyflow/utility/io_util/RESTfulVolume.html#RESTfulVolume.writeDescription"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#lazyflow.utility.io_util.RESTfulVolume.writeDescription" title="Permalink to this definition">¶</a></dt>
+<dd><p>Write a <code class="xref py py-class docutils literal"><span class="pre">jsonConfig.Namespace</span></code> object to the given path.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>descriptionFilePath</strong> &#8211; The path to overwrite with the description fields.</li>
+<li><strong>descriptionFields</strong> &#8211; The fields to write.</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="lazyflow.utility.io_util.RESTfulBlockwiseFileset">
+<em class="property">class </em><code class="descclassname">lazyflow.utility.io_util.</code><code class="descname">RESTfulBlockwiseFileset</code><span class="sig-paren">(</span><em>compositeDescriptionPath</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/lazyflow/utility/io_util/RESTfulBlockwiseFileset.html#RESTfulBlockwiseFileset"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#lazyflow.utility.io_util.RESTfulBlockwiseFileset" title="Permalink to this definition">¶</a></dt>
+<dd><p>This class combines the functionality of <a class="reference internal" href="#lazyflow.utility.io_util.RESTfulVolume" title="lazyflow.utility.io_util.RESTfulVolume"><code class="xref py py-class docutils literal"><span class="pre">RESTfulVolume</span></code></a> and <a class="reference internal" href="#lazyflow.utility.io_util.BlockwiseFileset" title="lazyflow.utility.io_util.BlockwiseFileset"><code class="xref py py-class docutils literal"><span class="pre">BlockwiseFileset</span></code></a>
+to provide access to a remote dataset (e.g. from <a class="reference external" href="http://openconnecto.me">http://openconnecto.me</a>), with all downloaded data 
+cached locally as blocks stored in a directory tree of hdf5 files.</p>
+<p>This class must be constructed with a description of both the remote dataset and the local 
+storage format, provided in a JSON file with a composite schema specified by 
+<a class="reference internal" href="#lazyflow.utility.io_util.RESTfulBlockwiseFileset.DescriptionFields" title="lazyflow.utility.io_util.RESTfulBlockwiseFileset.DescriptionFields"><code class="xref py py-data docutils literal"><span class="pre">RESTfulBlockwiseFileset.DescriptionFields</span></code></a>.</p>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">See the unit tests in <code class="docutils literal"><span class="pre">tests/testRESTfulBlockwiseFileset.py</span></code> for example usage.</p>
+</div>
+<p>Here&#8217;s an example description file.</p>
+<div class="highlight-json"><div class="highlight"><pre><span></span><span class="p">{</span>
+    <span class="nt">&quot;_schema_name&quot;</span> <span class="p">:</span> <span class="s2">&quot;RESTful-blockwise-fileset-description&quot;</span><span class="p">,</span>
+    <span class="nt">&quot;_schema_version&quot;</span> <span class="p">:</span> <span class="mf">1.0</span><span class="p">,</span>
+
+    <span class="nt">&quot;remote_description&quot;</span> <span class="p">:</span> 
+    <span class="p">{</span>
+        <span class="nt">&quot;_schema_name&quot;</span> <span class="p">:</span> <span class="s2">&quot;RESTful-volume-description&quot;</span><span class="p">,</span>
+        <span class="nt">&quot;_schema_version&quot;</span> <span class="p">:</span> <span class="mf">1.0</span><span class="p">,</span>
+    
+        <span class="nt">&quot;name&quot;</span> <span class="p">:</span> <span class="s2">&quot;Bock11-level0&quot;</span><span class="p">,</span>
+        <span class="nt">&quot;format&quot;</span> <span class="p">:</span> <span class="s2">&quot;hdf5&quot;</span><span class="p">,</span>
+        <span class="nt">&quot;axes&quot;</span> <span class="p">:</span> <span class="s2">&quot;zyx&quot;</span><span class="p">,</span>
+
+        <span class="nt">&quot;## NOTE&quot;</span><span class="p">:</span> <span class="s2">&quot;The origin offset determines how coordinates are translated when converted to a url.&quot;</span><span class="p">,</span>
+        <span class="nt">&quot;## NOTE&quot;</span><span class="p">:</span> <span class="s2">&quot;The origin_offset for the bock11 dataset must be at least 2917, because for some reason that&#39;s where it starts.&quot;</span><span class="p">,</span>
+        <span class="nt">&quot;origin_offset&quot;</span> <span class="p">:</span> <span class="p">[</span><span class="mi">2917</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span>
+
+        <span class="nt">&quot;## NOTE&quot;</span><span class="p">:</span> <span class="s2">&quot;The website says that the data goes up to plane 4156, but it actually errors out past 4150&quot;</span><span class="p">,</span>
+        <span class="nt">&quot;bounds&quot;</span> <span class="p">:</span> <span class="p">[</span><span class="mi">4150</span><span class="p">,</span> <span class="mi">135424</span><span class="p">,</span> <span class="mi">119808</span><span class="p">],</span>
+        <span class="nt">&quot;dtype&quot;</span> <span class="p">:</span> <span class="s2">&quot;numpy.uint8&quot;</span><span class="p">,</span>
+        <span class="nt">&quot;url_format&quot;</span> <span class="p">:</span> <span class="s2">&quot;http://openconnecto.me/emca/bock11/hdf5/0/{x_start},{x_stop}/{y_start},{y_stop}/{z_start},{z_stop}/&quot;</span><span class="p">,</span>
+        <span class="nt">&quot;hdf5_dataset&quot;</span> <span class="p">:</span> <span class="s2">&quot;cube&quot;</span>
+    <span class="p">},</span>
+
+    <span class="nt">&quot;local_description&quot;</span> <span class="p">:</span>
+    <span class="p">{</span>
+        <span class="nt">&quot;_schema_name&quot;</span> <span class="p">:</span> <span class="s2">&quot;blockwise-fileset-description&quot;</span><span class="p">,</span>
+        <span class="nt">&quot;_schema_version&quot;</span> <span class="p">:</span> <span class="mf">1.0</span><span class="p">,</span>
+
+        <span class="nt">&quot;name&quot;</span> <span class="p">:</span> <span class="s2">&quot;bock11-blocks&quot;</span><span class="p">,</span>
+        <span class="nt">&quot;format&quot;</span> <span class="p">:</span> <span class="s2">&quot;hdf5&quot;</span><span class="p">,</span>
+        <span class="nt">&quot;axes&quot;</span> <span class="p">:</span> <span class="s2">&quot;zyx&quot;</span><span class="p">,</span>
+        <span class="nt">&quot;shape&quot;</span> <span class="p">:</span> <span class="s2">&quot;[ 4150-2917, 135424, 119808 ]&quot;</span><span class="p">,</span>
+        <span class="nt">&quot;dtype&quot;</span> <span class="p">:</span> <span class="s2">&quot;numpy.uint8&quot;</span><span class="p">,</span>
+        <span class="nt">&quot;block_shape&quot;</span> <span class="p">:</span> <span class="p">[</span><span class="mi">32</span><span class="p">,</span> <span class="mi">256</span><span class="p">,</span> <span class="mi">256</span><span class="p">],</span>
+        <span class="nt">&quot;block_file_name_format&quot;</span> <span class="p">:</span> <span class="s2">&quot;block-{roiString}.h5/cube&quot;</span><span class="p">,</span>
+        <span class="nt">&quot;dataset_root_dir&quot;</span> <span class="p">:</span> <span class="s2">&quot;blocks-256x256x32&quot;</span><span class="p">,</span>
+
+        <span class="nt">&quot;## NOTE&quot;</span><span class="p">:</span><span class="s2">&quot;These optional parameters tell ilastik to view only a portion of the on-disk dataset.&quot;</span><span class="p">,</span>
+        <span class="nt">&quot;## NOTE&quot;</span><span class="p">:</span><span class="s2">&quot;view_origin MUST be aligned to a block start corner.&quot;</span><span class="p">,</span>
+        <span class="nt">&quot;## NOTE&quot;</span><span class="p">:</span><span class="s2">&quot;view_shape is optional, but recommended because volumina slows down when there are 1000s of tiles.&quot;</span><span class="p">,</span>
+        <span class="nt">&quot;view_origin&quot;</span> <span class="p">:</span> <span class="s2">&quot;[0, 50*1024, 50*1024]&quot;</span><span class="p">,</span>
+        <span class="nt">&quot;view_shape&quot;</span> <span class="p">:</span> <span class="s2">&quot;[4150-2917, 10*256, 10*256]&quot;</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<dl class="method">
+<dt id="lazyflow.utility.io_util.RESTfulBlockwiseFileset.__init__">
+<code class="descname">__init__</code><span class="sig-paren">(</span><em>compositeDescriptionPath</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/lazyflow/utility/io_util/RESTfulBlockwiseFileset.html#RESTfulBlockwiseFileset.__init__"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#lazyflow.utility.io_util.RESTfulBlockwiseFileset.__init__" title="Permalink to this definition">¶</a></dt>
+<dd><p>Constructor.  Uses <cite>readDescription</cite> interally.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>compositeDescriptionPath</strong> &#8211; The path to a JSON file that describes both the remote 
+volume and local storage structure.  The JSON file schema is specified by 
+<a class="reference internal" href="#lazyflow.utility.io_util.RESTfulBlockwiseFileset.DescriptionFields" title="lazyflow.utility.io_util.RESTfulBlockwiseFileset.DescriptionFields"><code class="xref py py-data docutils literal"><span class="pre">RESTfulBlockwiseFileset.DescriptionFields</span></code></a>.</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="lazyflow.utility.io_util.RESTfulBlockwiseFileset.DescriptionFields">
+<code class="descname">DescriptionFields</code><em class="property"> = {'_schema_version': 1.0, 'local_description': &lt;lazyflow.utility.jsonConfig.JsonConfigParser object&gt;, '_schema_name': 'RESTful-blockwise-fileset-description', 'remote_description': &lt;lazyflow.utility.jsonConfig.JsonConfigParser object&gt;}</em><a class="headerlink" href="#lazyflow.utility.io_util.RESTfulBlockwiseFileset.DescriptionFields" title="Permalink to this definition">¶</a></dt>
+<dd><p>This member specifies the schema of the description file.
+It is merely a composite of two nested schemas: one that describes the remote volume,
+and another that describes the local storage format.  See the source code to see the field names.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="lazyflow.utility.io_util.RESTfulBlockwiseFileset.downloadAllBlocks">
+<code class="descname">downloadAllBlocks</code><span class="sig-paren">(</span><em>max_parallel</em>, <em>skip_preparation=False</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/lazyflow/utility/io_util/RESTfulBlockwiseFileset.html#RESTfulBlockwiseFileset.downloadAllBlocks"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#lazyflow.utility.io_util.RESTfulBlockwiseFileset.downloadAllBlocks" title="Permalink to this definition">¶</a></dt>
+<dd><p>Download all blocks in the local view.
+This is used in utility scripts for downloading an entire volume at once.
+This function is NOT intended to be used by multiple threads in parallel
+(i.e. it doesn&#8217;t protect against downloading the same block twice.)</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="lazyflow.utility.io_util.RESTfulBlockwiseFileset.readData">
+<code class="descname">readData</code><span class="sig-paren">(</span><em>roi</em>, <em>out_array=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/lazyflow/utility/io_util/RESTfulBlockwiseFileset.html#RESTfulBlockwiseFileset.readData"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#lazyflow.utility.io_util.RESTfulBlockwiseFileset.readData" title="Permalink to this definition">¶</a></dt>
+<dd><p>Read data from the fileset.  If any of the requested data is not yet available locally, download it first.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>roi</strong> &#8211; The region of interest to read from the dataset.  Must be a tuple of iterables: (start, stop).</li>
+<li><strong>out_array</strong> &#8211; The location to store the read data.  Must be the correct size for the given roi.  If not provided, an array is created for you.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">The requested data.  If out_array was provided, returns out_array.</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="classmethod">
+<dt id="lazyflow.utility.io_util.RESTfulBlockwiseFileset.readDescription">
+<em class="property">classmethod </em><code class="descname">readDescription</code><span class="sig-paren">(</span><em>descriptionFilePath</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/lazyflow/utility/io_util/RESTfulBlockwiseFileset.html#RESTfulBlockwiseFileset.readDescription"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#lazyflow.utility.io_util.RESTfulBlockwiseFileset.readDescription" title="Permalink to this definition">¶</a></dt>
+<dd><p>Parse the description file at the given path and return a 
+<code class="xref py py-class docutils literal"><span class="pre">jsonConfig.Namespace</span></code> object with the description parameters.
+The file will be parsed according to the schema given by <a class="reference internal" href="#lazyflow.utility.io_util.RESTfulBlockwiseFileset.DescriptionFields" title="lazyflow.utility.io_util.RESTfulBlockwiseFileset.DescriptionFields"><code class="xref py py-data docutils literal"><span class="pre">RESTfulBlockwiseFileset.DescriptionFields</span></code></a>.
+Any optional parameters not provided by the user are filled in automatically.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>descriptionFilePath</strong> &#8211; The path to the description file to parse.</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="classmethod">
+<dt id="lazyflow.utility.io_util.RESTfulBlockwiseFileset.writeDescription">
+<em class="property">classmethod </em><code class="descname">writeDescription</code><span class="sig-paren">(</span><em>descriptionFilePath</em>, <em>descriptionFields</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/lazyflow/utility/io_util/RESTfulBlockwiseFileset.html#RESTfulBlockwiseFileset.writeDescription"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#lazyflow.utility.io_util.RESTfulBlockwiseFileset.writeDescription" title="Permalink to this definition">¶</a></dt>
+<dd><p>Write a <code class="xref py py-class docutils literal"><span class="pre">jsonConfig.Namespace</span></code> object to the given path.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>descriptionFilePath</strong> &#8211; The path to overwrite with the description fields.</li>
+<li><strong>descriptionFields</strong> &#8211; The fields to write.</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">Utilities</a><ul>
+<li><a class="reference internal" href="#general-utilities">General Utilities</a><ul>
+<li><a class="reference internal" href="#orderedsignal">OrderedSignal</a></li>
+<li><a class="reference internal" href="#trace-logging">Trace Logging</a></li>
+<li><a class="reference internal" href="#path-manipulation">Path Manipulation</a></li>
+<li><a class="reference internal" href="#module-lazyflow.utility.fileLock">FileLock</a></li>
+<li><a class="reference internal" href="#pathcomponents">PathComponents</a></li>
+<li><a class="reference internal" href="#json-config-parsing">JSON Config Parsing</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#request-batching-utilities">Request Batching Utilities</a><ul>
+<li><a class="reference internal" href="#bigrequeststreamer">BigRequestStreamer</a></li>
+<li><a class="reference internal" href="#roirequestbatch">RoiRequestBatch</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#io-utilities">IO Utilities</a><ul>
+<li><a class="reference internal" href="#blockwise-data-format">Blockwise Data Format</a></li>
+<li><a class="reference internal" href="#remote-volumes">Remote Volumes</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="request.html"
+                        title="previous chapter">Lazyflow Request Framework</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="classifiers.html"
+                        title="next chapter">Classifiers</a></p>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="_sources/utilities.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="search.html" method="get">
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="classifiers.html" title="Classifiers"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="request.html" title="Lazyflow Request Framework"
+             >previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">lazyflow 0.1 documentation</a> &#187;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2012, Christoph Straehle, Bernhard X. Kausler, Thorben Kröger, Ullrich Köthe , Fred A. Hamprecht, Anna Kreshuk, Luca Fiaschi, Stuart Berg.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.4.8.
+    </div>
+  </body>
+</html>

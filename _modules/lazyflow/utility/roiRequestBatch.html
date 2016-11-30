@@ -1,0 +1,356 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>lazyflow.utility.roiRequestBatch &#8212; lazyflow 0.1 documentation</title>
+    
+    <link rel="stylesheet" href="../../../_static/classic.css" type="text/css" />
+    <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../../',
+        VERSION:     '0.1',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../_static/doctools.js"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" />
+    <link rel="top" title="lazyflow 0.1 documentation" href="../../../index.html" />
+    <link rel="up" title="Module code" href="../../index.html" /> 
+  </head>
+  <body role="document">
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../../index.html">lazyflow 0.1 documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="../../index.html" accesskey="U">Module code</a> &#187;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for lazyflow.utility.roiRequestBatch</h1><div class="highlight"><pre>
+<span></span><span class="c1">###############################################################################</span>
+<span class="c1">#   lazyflow: data flow based lazy parallel computation framework</span>
+<span class="c1">#</span>
+<span class="c1">#       Copyright (C) 2011-2014, the ilastik developers</span>
+<span class="c1">#                                &lt;team@ilastik.org&gt;</span>
+<span class="c1">#</span>
+<span class="c1"># This program is free software; you can redistribute it and/or</span>
+<span class="c1"># modify it under the terms of the Lesser GNU General Public License</span>
+<span class="c1"># as published by the Free Software Foundation; either version 2.1</span>
+<span class="c1"># of the License, or (at your option) any later version.</span>
+<span class="c1">#</span>
+<span class="c1"># This program is distributed in the hope that it will be useful,</span>
+<span class="c1"># but WITHOUT ANY WARRANTY; without even the implied warranty of</span>
+<span class="c1"># MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the</span>
+<span class="c1"># GNU Lesser General Public License for more details.</span>
+<span class="c1">#</span>
+<span class="c1"># See the files LICENSE.lgpl2 and LICENSE.lgpl3 for full text of the</span>
+<span class="c1"># GNU Lesser General Public License version 2.1 and 3 respectively.</span>
+<span class="c1"># This information is also available on the ilastik web site at:</span>
+<span class="c1">#		   http://ilastik.org/license/</span>
+<span class="c1">###############################################################################</span>
+<span class="kn">from</span> <span class="nn">__future__</span> <span class="k">import</span> <span class="n">division</span>
+<span class="kn">import</span> <span class="nn">sys</span>
+<span class="kn">from</span> <span class="nn">functools</span> <span class="k">import</span> <span class="n">partial</span>
+
+<span class="kn">import</span> <span class="nn">numpy</span>
+
+<span class="kn">import</span> <span class="nn">lazyflow.stype</span>
+<span class="kn">from</span> <span class="nn">lazyflow.utility</span> <span class="k">import</span> <span class="n">OrderedSignal</span>
+<span class="kn">from</span> <span class="nn">lazyflow.request</span> <span class="k">import</span> <span class="n">Request</span><span class="p">,</span> <span class="n">SimpleRequestCondition</span><span class="p">,</span> <span class="n">log_exception</span>
+
+
+<span class="kn">import</span> <span class="nn">logging</span>
+<span class="n">logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="n">__name__</span><span class="p">)</span>
+
+<div class="viewcode-block" id="RoiRequestBatch"><a class="viewcode-back" href="../../../utilities.html#lazyflow.utility.roiRequestBatch.RoiRequestBatch">[docs]</a><span class="k">class</span> <span class="nc">RoiRequestBatch</span><span class="p">(</span> <span class="nb">object</span> <span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    A simple utility for requesting a list of rois from an output slot.</span>
+<span class="sd">    The number of rois requested in parallel is throttled by the batch size given to the constructor.</span>
+<span class="sd">    The result of each requested roi is provided as a signal, which the user should subscribe() to.</span>
+
+<span class="sd">    Example usage:</span>
+<span class="sd">    </span>
+<span class="sd">    &gt;&gt;&gt; import sys</span>
+<span class="sd">    &gt;&gt;&gt; import vigra</span>
+<span class="sd">    &gt;&gt;&gt; from lazyflow.graph import Graph</span>
+<span class="sd">    &gt;&gt;&gt; from lazyflow.operators.operators import OpArrayCache</span>
+
+<span class="sd">    &gt;&gt;&gt; # Example data</span>
+<span class="sd">    &gt;&gt;&gt; data = numpy.indices( (100,100) ).sum(0)</span>
+<span class="sd">    &gt;&gt;&gt; data = vigra.taggedView( data, vigra.defaultAxistags(&#39;xy&#39;) )</span>
+
+<span class="sd">    &gt;&gt;&gt; op = OpArrayCache( graph=Graph() )</span>
+<span class="sd">    &gt;&gt;&gt; op.Input.setValue( data )</span>
+
+<span class="sd">    &gt;&gt;&gt; # Create a list of rois to iterate through.</span>
+<span class="sd">    &gt;&gt;&gt; # Typically you&#39;ll want to automate this</span>
+<span class="sd">    &gt;&gt;&gt; #  with e.g. lazyflow.roi.getIntersectingBlocks</span>
+<span class="sd">    &gt;&gt;&gt; rois = []</span>
+<span class="sd">    &gt;&gt;&gt; rois.append( ( (0, 0), (10,10) ) )</span>
+<span class="sd">    &gt;&gt;&gt; rois.append( ( (0,10), (10,20) ) )</span>
+<span class="sd">    &gt;&gt;&gt; rois.append( ( (0,20), (10,30) ) )</span>
+<span class="sd">    &gt;&gt;&gt; rois.append( ( (0,30), (10,40) ) )</span>
+<span class="sd">    &gt;&gt;&gt; rois.append( ( (0,40), (10,50) ) )</span>
+
+<span class="sd">    &gt;&gt;&gt; # Init with our output slot and list of rois to request.</span>
+<span class="sd">    &gt;&gt;&gt; # `batchSize` indicates the number of requests to spawn in parallel.</span>
+<span class="sd">    &gt;&gt;&gt; # Provide `totalVolume` if you want progress reporting.</span>
+<span class="sd">    &gt;&gt;&gt; batch_requester = RoiRequestBatch( op.Output, iter(rois), totalVolume=500, batchSize=2 )</span>
+
+<span class="sd">    &gt;&gt;&gt; # Use a callback to handle sub-results one at a time.</span>
+<span class="sd">    &gt;&gt;&gt; result_count = [0]</span>
+<span class="sd">    &gt;&gt;&gt; result_total_sum = [0]</span>
+<span class="sd">    &gt;&gt;&gt; def handle_block_result(roi, result):</span>
+<span class="sd">    ...     # No need for locking here if allowParallelResults=True.</span>
+<span class="sd">    ...     result_count[0] += 1</span>
+<span class="sd">    ...     result_total_sum[0] += result.sum()</span>
+<span class="sd">    &gt;&gt;&gt; batch_requester.resultSignal.subscribe( handle_block_result )</span>
+
+<span class="sd">    &gt;&gt;&gt; # Optional: Subscribe to progress updates</span>
+<span class="sd">    &gt;&gt;&gt; def handle_progress(progress):</span>
+<span class="sd">    ...     if progress == 0:</span>
+<span class="sd">    ...         sys.stdout.write(&quot;Progress: &quot;)</span>
+<span class="sd">    ...     sys.stdout.write( &quot;{} &quot;.format( progress ) )</span>
+<span class="sd">    &gt;&gt;&gt; batch_requester.progressSignal.subscribe( handle_progress )</span>
+
+<span class="sd">    &gt;&gt;&gt; # Execute the batch of requests, and block for the result.</span>
+<span class="sd">    &gt;&gt;&gt; batch_requester.execute()</span>
+<span class="sd">    Progress: 0 20 40 60 80 100 100 </span>
+<span class="sd">    &gt;&gt;&gt; print &quot;Processed {} result blocks with a total sum of: {}&quot;.format( result_count[0], result_total_sum[0] )</span>
+<span class="sd">    Processed 5 result blocks with a total sum of: 14500</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+<div class="viewcode-block" id="RoiRequestBatch.__init__"><a class="viewcode-back" href="../../../utilities.html#lazyflow.utility.roiRequestBatch.RoiRequestBatch.__init__">[docs]</a>    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span> <span class="bp">self</span><span class="p">,</span> <span class="n">outputSlot</span><span class="p">,</span> <span class="n">roiIterator</span><span class="p">,</span> <span class="n">totalVolume</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">batchSize</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">allowParallelResults</span><span class="o">=</span><span class="kc">False</span> <span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Constructor.</span>
+
+<span class="sd">        :param outputSlot: The slot to request data from.</span>
+<span class="sd">        :param roiIterator: An iterator providing new rois.</span>
+<span class="sd">        :param totalVolume: The total volume to be processed.  </span>
+<span class="sd">                            Used to provide the progress reporting signal. </span>
+<span class="sd">                            If not provided, then no intermediate progress will be signaled.</span>
+<span class="sd">        :param batchSize: The maximum number of requests to launch in parallel.</span>
+<span class="sd">        :param allowParallelResults: If False, The resultSignal will not be called in parallel.</span>
+<span class="sd">                                     In that case, your handler function has no need for locks.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_resultSignal</span> <span class="o">=</span> <span class="n">OrderedSignal</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_progressSignal</span> <span class="o">=</span> <span class="n">OrderedSignal</span><span class="p">()</span>
+
+        <span class="k">assert</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">outputSlot</span><span class="o">.</span><span class="n">stype</span><span class="p">,</span> <span class="n">lazyflow</span><span class="o">.</span><span class="n">stype</span><span class="o">.</span><span class="n">ArrayLike</span><span class="p">),</span> \
+            <span class="s2">&quot;Only Array-like slots supported.&quot;</span> <span class="c1"># Because progress reporting depends on the roi shape</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_outputSlot</span> <span class="o">=</span> <span class="n">outputSlot</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_roiIter</span> <span class="o">=</span> <span class="n">roiIterator</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_batchSize</span> <span class="o">=</span> <span class="n">batchSize</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_allowParallelResults</span> <span class="o">=</span> <span class="n">allowParallelResults</span>
+        
+        <span class="bp">self</span><span class="o">.</span><span class="n">_condition</span> <span class="o">=</span> <span class="n">SimpleRequestCondition</span><span class="p">()</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_activated_count</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_completed_count</span> <span class="o">=</span> <span class="mi">0</span>
+        
+        <span class="bp">self</span><span class="o">.</span><span class="n">_failure_excinfo</span> <span class="o">=</span> <span class="kc">None</span>
+
+        <span class="c1"># Progress bookkeeping</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_totalVolume</span> <span class="o">=</span> <span class="n">totalVolume</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_processedVolume</span> <span class="o">=</span> <span class="mi">0</span></div>
+    
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">resultSignal</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Results signal. Signature: ``f(roi, result)``.</span>
+<span class="sd">        Guaranteed not to be called from multiple threads in parallel.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_resultSignal</span>
+    
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">progressSignal</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Progress Signal Signature: ``f(progress_percent)``</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_progressSignal</span>
+    
+<div class="viewcode-block" id="RoiRequestBatch.execute"><a class="viewcode-back" href="../../../utilities.html#lazyflow.utility.roiRequestBatch.RoiRequestBatch.execute">[docs]</a>    <span class="k">def</span> <span class="nf">execute</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Execute the batch of requests and wait for all of them to complete.</span>
+<span class="sd">        A batch of N requests is launched, and subsequent requests are </span>
+<span class="sd">        launched one-by-one as the earlier requests complete.  Thus, there </span>
+<span class="sd">        will be N requests executing in parallel at all times.</span>
+
+<span class="sd">        This method returns ``None``.  All results must be handled via the </span>
+<span class="sd">        :py:obj:`resultSignal`.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">progressSignal</span><span class="p">(</span> <span class="mi">0</span> <span class="p">)</span>
+
+        <span class="c1">## In the lines below, we acquire/release self._condition with high frequency,</span>
+        <span class="c1">## to allow finishing requests to be handled in _handleCompletedRequest as soon as possible,</span>
+        <span class="c1">## instead of forcing them to wait for the entire batch to be launched before the first </span>
+        <span class="c1">## finished request can be handled and discarded.</span>
+
+        <span class="k">try</span><span class="p">:</span>
+            <span class="c1"># Start by activating a batch of N requests</span>
+            <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_batchSize</span><span class="p">):</span>
+                <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">_condition</span><span class="p">:</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">_activateNewRequest</span><span class="p">()</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">_activated_count</span> <span class="o">+=</span> <span class="mi">1</span>
+
+            <span class="c1"># Loop until StopIteration</span>
+            <span class="k">while</span> <span class="kc">True</span><span class="p">:</span>
+                <span class="c1"># Wait for at least one active request to finish</span>
+                <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">_condition</span><span class="p">:</span>
+                    <span class="k">while</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">_failure_excinfo</span> <span class="ow">and</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_activated_count</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">_completed_count</span><span class="p">)</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">_batchSize</span><span class="p">:</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">_condition</span><span class="o">.</span><span class="n">wait</span><span class="p">()</span>
+
+                <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_failure_excinfo</span><span class="p">:</span>
+                    <span class="k">raise</span> <span class="bp">self</span><span class="o">.</span><span class="n">_failure_excinfo</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="bp">self</span><span class="o">.</span><span class="n">_failure_excinfo</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="bp">self</span><span class="o">.</span><span class="n">_failure_excinfo</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span>
+
+                <span class="c1"># Launch new requests until we have the correct number of active requests</span>
+                <span class="k">while</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">_failure_excinfo</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">_activated_count</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">_completed_count</span> <span class="o">&lt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">_batchSize</span><span class="p">:</span>
+                    <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">_condition</span><span class="p">:</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">_activateNewRequest</span><span class="p">()</span> <span class="c1"># Eventually raises StopIteration</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">_activated_count</span> <span class="o">+=</span> <span class="mi">1</span>
+
+                <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_failure_excinfo</span><span class="p">:</span>
+                    <span class="k">raise</span> <span class="bp">self</span><span class="o">.</span><span class="n">_failure_excinfo</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="bp">self</span><span class="o">.</span><span class="n">_failure_excinfo</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="bp">self</span><span class="o">.</span><span class="n">_failure_excinfo</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span>
+
+        <span class="k">except</span> <span class="ne">StopIteration</span><span class="p">:</span>
+            <span class="c1"># We&#39;ve run out of requests to launch.</span>
+            <span class="c1"># Wait for the remaining active requests to finish.</span>
+            <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">_condition</span><span class="p">:</span>
+                <span class="k">while</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">_failure_excinfo</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">_completed_count</span> <span class="o">&lt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">_activated_count</span><span class="p">:</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">_condition</span><span class="o">.</span><span class="n">wait</span><span class="p">()</span>
+
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_failure_excinfo</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="bp">self</span><span class="o">.</span><span class="n">_failure_excinfo</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="bp">self</span><span class="o">.</span><span class="n">_failure_excinfo</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="bp">self</span><span class="o">.</span><span class="n">_failure_excinfo</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">progressSignal</span><span class="p">(</span> <span class="mi">100</span> <span class="p">)</span></div>
+
+    <span class="k">def</span> <span class="nf">_activateNewRequest</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Creates and activates a new request if there are more rois to process.</span>
+<span class="sd">        Otherwise, raises StopIteration</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># This could raise StopIteration</span>
+        <span class="n">roi</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_roiIter</span><span class="o">.</span><span class="n">next</span><span class="p">()</span>
+        <span class="n">req</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_outputSlot</span><span class="p">(</span> <span class="n">roi</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">roi</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="p">)</span>
+        
+        <span class="c1"># We have to make sure that we didn&#39;t get a so-called &quot;ValueRequest&quot;</span>
+        <span class="c1"># because those don&#39;t work the same way.</span>
+        <span class="c1"># (This can happen if array data was given to a slot via setValue().)</span>
+        <span class="k">assert</span> <span class="nb">isinstance</span><span class="p">(</span> <span class="n">req</span><span class="p">,</span> <span class="n">Request</span> <span class="p">),</span> \
+            <span class="s2">&quot;Can&#39;t use RoiRequestBatch with non-standard requests.  See comment above.&quot;</span>
+        
+        <span class="n">req</span><span class="o">.</span><span class="n">notify_finished</span><span class="p">(</span> <span class="n">partial</span><span class="p">(</span> <span class="bp">self</span><span class="o">.</span><span class="n">_handleCompletedRequest</span><span class="p">,</span> <span class="n">roi</span> <span class="p">)</span> <span class="p">)</span>
+        <span class="n">req</span><span class="o">.</span><span class="n">notify_failed</span><span class="p">(</span> <span class="n">partial</span><span class="p">(</span> <span class="bp">self</span><span class="o">.</span><span class="n">_handleFailedRequest</span><span class="p">,</span> <span class="n">roi</span> <span class="p">)</span> <span class="p">)</span>
+        <span class="n">req</span><span class="o">.</span><span class="n">notify_cancelled</span><span class="p">(</span> <span class="n">partial</span><span class="p">(</span> <span class="bp">self</span><span class="o">.</span><span class="n">_handleCancelledRequest</span><span class="p">,</span> <span class="n">roi</span> <span class="p">)</span> <span class="p">)</span>
+        <span class="n">req</span><span class="o">.</span><span class="n">submit</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="nf">_handleCompletedRequest</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">roi</span><span class="p">,</span> <span class="n">result</span><span class="p">):</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_allowParallelResults</span><span class="p">:</span>
+                <span class="c1"># Signal the user with the result before the critical section</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">resultSignal</span><span class="p">(</span><span class="n">roi</span><span class="p">,</span> <span class="n">result</span><span class="p">)</span>
+        <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
+            <span class="c1"># Always notify.</span>
+            <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">_condition</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_failure_excinfo</span> <span class="o">=</span> <span class="n">sys</span><span class="o">.</span><span class="n">exc_info</span><span class="p">()</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_condition</span><span class="o">.</span><span class="n">notify</span><span class="p">()</span>
+            <span class="k">raise</span>
+
+        <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">_condition</span><span class="p">:</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">_allowParallelResults</span><span class="p">:</span>
+                    <span class="c1"># Signal here, inside the critical section.</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">resultSignal</span><span class="p">(</span><span class="n">roi</span><span class="p">,</span> <span class="n">result</span><span class="p">)</span>
+    
+                <span class="c1"># Report progress (if possible)</span>
+                <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_totalVolume</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">_processedVolume</span> <span class="o">+=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">prod</span><span class="p">(</span> <span class="n">numpy</span><span class="o">.</span><span class="n">subtract</span><span class="p">(</span><span class="n">roi</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">roi</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span> <span class="p">)</span>
+                    <span class="n">progress</span> <span class="o">=</span> <span class="mi">100</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">_processedVolume</span> <span class="o">//</span> <span class="bp">self</span><span class="o">.</span><span class="n">_totalVolume</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">progressSignal</span><span class="p">(</span> <span class="n">progress</span> <span class="p">)</span>
+
+                <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;Request completed for roi: </span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">roi</span><span class="p">))</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_completed_count</span> <span class="o">+=</span> <span class="mi">1</span>
+            <span class="k">finally</span><span class="p">:</span>
+                <span class="c1"># Always notify in this finally section, </span>
+                <span class="c1">#  even if the client result/progress handler raised.</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_condition</span><span class="o">.</span><span class="n">notify</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="nf">_handleFailedRequest</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">roi</span><span class="p">,</span> <span class="n">exc</span><span class="p">,</span> <span class="n">exc_info</span><span class="p">):</span>
+        <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">_condition</span><span class="p">:</span>
+            <span class="n">msg</span> <span class="o">=</span> <span class="s2">&quot;Encountered exception while processing roi: </span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span> <span class="n">roi</span> <span class="p">)</span>
+            <span class="n">log_exception</span><span class="p">(</span> <span class="n">logger</span><span class="p">,</span> <span class="n">msg</span><span class="p">,</span> <span class="n">exc_info</span> <span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_failure_excinfo</span> <span class="o">=</span> <span class="n">exc_info</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_condition</span><span class="o">.</span><span class="n">notify</span><span class="p">()</span>
+    
+    <span class="k">def</span> <span class="nf">_handleCancelledRequest</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">roi</span><span class="p">):</span>
+        <span class="c1"># I can&#39;t think of a use-case for cancelling our child requests independent of our </span>
+        <span class="k">assert</span> <span class="n">Request</span><span class="o">.</span><span class="n">current_request_is_cancelled</span><span class="p">(),</span> \
+            <span class="s2">&quot;You can cancel the parent request of this batch request action,&quot;</span>\
+            <span class="s2">&quot; but you can&#39;t cancel the child requests independently.&quot;</span>
+        <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">_condition</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_condition</span><span class="o">.</span><span class="n">notify</span><span class="p">()</span></div>
+
+<span class="k">if</span> <span class="n">__name__</span> <span class="o">==</span> <span class="s2">&quot;__main__&quot;</span><span class="p">:</span>
+    <span class="kn">import</span> <span class="nn">doctest</span>
+    <span class="n">doctest</span><span class="o">.</span><span class="n">testmod</span><span class="p">()</span>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../../../search.html" method="get">
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../../index.html">lazyflow 0.1 documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="../../index.html" >Module code</a> &#187;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2012, Christoph Straehle, Bernhard X. Kausler, Thorben Kröger, Ullrich Köthe , Fred A. Hamprecht, Anna Kreshuk, Luca Fiaschi, Stuart Berg.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.4.8.
+    </div>
+  </body>
+</html>

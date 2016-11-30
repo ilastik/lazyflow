@@ -1,0 +1,321 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>lazyflow.utility.fileLock &#8212; lazyflow 0.1 documentation</title>
+    
+    <link rel="stylesheet" href="../../../_static/classic.css" type="text/css" />
+    <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../../',
+        VERSION:     '0.1',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../_static/doctools.js"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" />
+    <link rel="top" title="lazyflow 0.1 documentation" href="../../../index.html" />
+    <link rel="up" title="Module code" href="../../index.html" /> 
+  </head>
+  <body role="document">
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../../index.html">lazyflow 0.1 documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="../../index.html" accesskey="U">Module code</a> &#187;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for lazyflow.utility.fileLock</h1><div class="highlight"><pre>
+<span></span><span class="c1">###############################################################################</span>
+<span class="c1">#   lazyflow: data flow based lazy parallel computation framework</span>
+<span class="c1">#</span>
+<span class="c1">#       Copyright (C) 2011-2014, the ilastik developers</span>
+<span class="c1">#                                &lt;team@ilastik.org&gt;</span>
+<span class="c1">#</span>
+<span class="c1"># This program is free software; you can redistribute it and/or</span>
+<span class="c1"># modify it under the terms of the Lesser GNU General Public License</span>
+<span class="c1"># as published by the Free Software Foundation; either version 2.1</span>
+<span class="c1"># of the License, or (at your option) any later version.</span>
+<span class="c1">#</span>
+<span class="c1"># This program is distributed in the hope that it will be useful,</span>
+<span class="c1"># but WITHOUT ANY WARRANTY; without even the implied warranty of</span>
+<span class="c1"># MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the</span>
+<span class="c1"># GNU Lesser General Public License for more details.</span>
+<span class="c1">#</span>
+<span class="c1"># See the files LICENSE.lgpl2 and LICENSE.lgpl3 for full text of the</span>
+<span class="c1"># GNU Lesser General Public License version 2.1 and 3 respectively.</span>
+<span class="c1"># This information is also available on the ilastik web site at:</span>
+<span class="c1">#		   http://ilastik.org/license/</span>
+<span class="c1">###############################################################################</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">Implementation of a simple cross-platform file locking mechanism.</span>
+<span class="sd">This is a modified version of code retrieved on 2013-01-01 from </span>
+<span class="sd">http://www.evanfosmark.com/2009/01/cross-platform-file-locking-support-in-python.</span>
+<span class="sd">(The original code was released under the BSD License.  See below for details.)</span>
+
+<span class="sd">Modifications in this version:</span>
+<span class="sd"> - Tweak docstrings for sphinx.</span>
+<span class="sd"> - Accept an absolute path for the protected file (instead of a file name relative to cwd).</span>
+<span class="sd"> - Allow timeout to be None.</span>
+<span class="sd"> - Fixed a bug that caused the original code to be NON-threadsafe when the same FileLock instance was shared by multiple threads in one process.</span>
+<span class="sd">   (The original was safe for multiple processes, but not multiple threads in a single process.  This version is safe for both cases.)</span>
+<span class="sd"> - Added ``purge()`` function.</span>
+<span class="sd"> - Added ``available()`` function.</span>
+<span class="sd"> - Expanded API to mimic ``threading.Lock interface``:</span>
+<span class="sd">   - ``__enter__`` always calls ``acquire()``, and therefore blocks if ``acquire()`` was called previously.</span>
+<span class="sd">   - ``__exit__`` always calls ``release()``.  It is therefore a bug to call ``release()`` from within a context manager.</span>
+<span class="sd">   - Added ``locked()`` function. </span>
+<span class="sd">   - Added blocking parameter to ``acquire()`` method</span>
+
+<span class="sd">WARNINGS: </span>
+<span class="sd"> - The locking mechanism used here may need to be changed to support old NFS filesystems:</span>
+<span class="sd">   http://lwn.net/Articles/251004</span>
+<span class="sd">   (Newer versions of NFS should be okay, e.g. NFSv3 with Linux kernel 2.6. Check the open(2) man page for details about O_EXCL.)</span>
+<span class="sd"> - This code has not been thoroughly tested on Windows, and there has been one report of incorrect results on Windows XP and Windows 7.</span>
+<span class="sd">   The locking mechanism used in this class should (in theory) be cross-platform, but use at your own risk.</span>
+
+<span class="sd">ORIGINAL LICENSE:</span>
+
+<span class="sd">The original code did not properly include license text.</span>
+<span class="sd">(It merely said &quot;License: BSD&quot;.)</span>
+<span class="sd">Therefore, we&#39;ll attach the following generic BSD License terms to this file.</span>
+<span class="sd">Those who extract this file from the lazyflow code base (LGPL) for their own use</span>
+<span class="sd">are therefore bound by the terms of both the Simplified BSD License below AND the LGPL.</span>
+
+<span class="sd">Copyright (c) 2013, Evan Fosmark and others.</span>
+<span class="sd">All rights reserved.</span>
+
+<span class="sd">Redistribution and use in source and binary forms, with or without</span>
+<span class="sd">modification, are permitted provided that the following conditions are met:</span>
+
+<span class="sd">1. Redistributions of source code must retain the above copyright notice, this</span>
+<span class="sd">   list of conditions and the following disclaimer.</span>
+<span class="sd">2. Redistributions in binary form must reproduce the above copyright notice,</span>
+<span class="sd">   this list of conditions and the following disclaimer in the documentation</span>
+<span class="sd">   and/or other materials provided with the distribution.</span>
+
+<span class="sd">THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS &quot;AS IS&quot; AND</span>
+<span class="sd">ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED</span>
+<span class="sd">WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE</span>
+<span class="sd">DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR</span>
+<span class="sd">ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES</span>
+<span class="sd">(INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;</span>
+<span class="sd">LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND</span>
+<span class="sd">ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT</span>
+<span class="sd">(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS</span>
+<span class="sd">SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.</span>
+
+<span class="sd">The views and conclusions contained in the software and documentation are those</span>
+<span class="sd">of the authors and should not be interpreted as representing official policies,</span>
+<span class="sd">either expressed or implied, of the FreeBSD Project.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">import</span> <span class="nn">sys</span>
+<span class="kn">import</span> <span class="nn">time</span>
+<span class="kn">import</span> <span class="nn">errno</span>
+
+<div class="viewcode-block" id="FileLock"><a class="viewcode-back" href="../../../utilities.html#lazyflow.utility.fileLock.FileLock">[docs]</a><span class="k">class</span> <span class="nc">FileLock</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; A file locking mechanism that has context-manager support so </span>
+<span class="sd">        you can use it in a ``with`` statement. This should be relatively cross</span>
+<span class="sd">        compatible as it doesn&#39;t rely on ``msvcrt`` or ``fcntl`` for the locking.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+ 
+    <span class="k">class</span> <span class="nc">FileLockException</span><span class="p">(</span><span class="ne">Exception</span><span class="p">):</span>
+        <span class="k">pass</span>
+ 
+<div class="viewcode-block" id="FileLock.__init__"><a class="viewcode-back" href="../../../utilities.html#lazyflow.utility.fileLock.FileLock.__init__">[docs]</a>    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">protected_file_path</span><span class="p">,</span> <span class="n">timeout</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">delay</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">lock_file_contents</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Prepare the file locker. Specify the file to lock and optionally</span>
+<span class="sd">            the maximum timeout and the delay between each attempt to lock.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">is_locked</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">lockfile</span> <span class="o">=</span> <span class="n">protected_file_path</span> <span class="o">+</span> <span class="s2">&quot;.lock&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">timeout</span> <span class="o">=</span> <span class="n">timeout</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">delay</span> <span class="o">=</span> <span class="n">delay</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_lock_file_contents</span> <span class="o">=</span> <span class="n">lock_file_contents</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_lock_file_contents</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_lock_file_contents</span> <span class="o">=</span> <span class="s2">&quot;Owning process args:</span><span class="se">\n</span><span class="s2">&quot;</span>
+            <span class="k">for</span> <span class="n">arg</span> <span class="ow">in</span> <span class="n">sys</span><span class="o">.</span><span class="n">argv</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_lock_file_contents</span> <span class="o">+=</span> <span class="n">arg</span> <span class="o">+</span> <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span></div>
+            
+<div class="viewcode-block" id="FileLock.locked"><a class="viewcode-back" href="../../../utilities.html#lazyflow.utility.fileLock.FileLock.locked">[docs]</a>    <span class="k">def</span> <span class="nf">locked</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Returns True iff the file is owned by THIS FileLock instance.</span>
+<span class="sd">        (Even if this returns false, the file could be owned by another FileLock instance, possibly in a different thread or process).</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">is_locked</span></div>
+    
+<div class="viewcode-block" id="FileLock.available"><a class="viewcode-back" href="../../../utilities.html#lazyflow.utility.fileLock.FileLock.available">[docs]</a>    <span class="k">def</span> <span class="nf">available</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Returns True iff the file is currently available to be locked.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">lockfile</span><span class="p">)</span></div>
+ 
+<div class="viewcode-block" id="FileLock.acquire"><a class="viewcode-back" href="../../../utilities.html#lazyflow.utility.fileLock.FileLock.acquire">[docs]</a>    <span class="k">def</span> <span class="nf">acquire</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">blocking</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Acquire the lock, if possible. If the lock is in use, and `blocking` is False, return False.</span>
+<span class="sd">            Otherwise, check again every `self.delay` seconds until it either gets the lock or</span>
+<span class="sd">            exceeds `timeout` number of seconds, in which case it raises an exception.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">start_time</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
+        <span class="k">while</span> <span class="kc">True</span><span class="p">:</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="c1"># Attempt to create the lockfile.</span>
+                <span class="c1"># These flags cause os.open to raise an OSError if the file already exists.</span>
+                <span class="n">fd</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">open</span><span class="p">(</span> <span class="bp">self</span><span class="o">.</span><span class="n">lockfile</span><span class="p">,</span> <span class="n">os</span><span class="o">.</span><span class="n">O_CREAT</span> <span class="o">|</span> <span class="n">os</span><span class="o">.</span><span class="n">O_EXCL</span> <span class="o">|</span> <span class="n">os</span><span class="o">.</span><span class="n">O_RDWR</span> <span class="p">)</span>
+                <span class="k">with</span> <span class="n">os</span><span class="o">.</span><span class="n">fdopen</span><span class="p">(</span> <span class="n">fd</span><span class="p">,</span> <span class="s1">&#39;a&#39;</span> <span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+                    <span class="c1"># Print some info about the current process as debug info for anyone who bothers to look.</span>
+                    <span class="n">f</span><span class="o">.</span><span class="n">write</span><span class="p">(</span> <span class="bp">self</span><span class="o">.</span><span class="n">_lock_file_contents</span> <span class="p">)</span>
+                <span class="k">break</span><span class="p">;</span>
+            <span class="k">except</span> <span class="ne">OSError</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">e</span><span class="o">.</span><span class="n">errno</span> <span class="o">!=</span> <span class="n">errno</span><span class="o">.</span><span class="n">EEXIST</span><span class="p">:</span>
+                    <span class="k">raise</span> 
+                <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">timeout</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="p">(</span><span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span> <span class="o">-</span> <span class="n">start_time</span><span class="p">)</span> <span class="o">&gt;=</span> <span class="bp">self</span><span class="o">.</span><span class="n">timeout</span><span class="p">:</span>
+                    <span class="k">raise</span> <span class="n">FileLock</span><span class="o">.</span><span class="n">FileLockException</span><span class="p">(</span><span class="s2">&quot;Timeout occurred.&quot;</span><span class="p">)</span>
+                <span class="k">if</span> <span class="ow">not</span> <span class="n">blocking</span><span class="p">:</span>
+                    <span class="k">return</span> <span class="kc">False</span>
+                <span class="n">time</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">delay</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">is_locked</span> <span class="o">=</span> <span class="kc">True</span>
+        <span class="k">return</span> <span class="kc">True</span></div>
+ 
+<div class="viewcode-block" id="FileLock.release"><a class="viewcode-back" href="../../../utilities.html#lazyflow.utility.fileLock.FileLock.release">[docs]</a>    <span class="k">def</span> <span class="nf">release</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Get rid of the lock by deleting the lockfile. </span>
+<span class="sd">            When working in a `with` statement, this gets automatically </span>
+<span class="sd">            called at the end.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">is_locked</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="n">os</span><span class="o">.</span><span class="n">unlink</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">lockfile</span><span class="p">)</span></div>
+
+ 
+    <span class="k">def</span> <span class="nf">__enter__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Activated when used in the with statement. </span>
+<span class="sd">            Should automatically acquire a lock to be used in the with block.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">acquire</span><span class="p">()</span>
+        <span class="k">return</span> <span class="bp">self</span>
+ 
+ 
+    <span class="k">def</span> <span class="nf">__exit__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="nb">type</span><span class="p">,</span> <span class="n">value</span><span class="p">,</span> <span class="n">traceback</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Activated at the end of the with statement.</span>
+<span class="sd">            It automatically releases the lock if it isn&#39;t locked.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">release</span><span class="p">()</span>
+ 
+ 
+    <span class="k">def</span> <span class="nf">__del__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Make sure this ``FileLock`` instance doesn&#39;t leave a .lock file</span>
+<span class="sd">            lying around.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">is_locked</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">release</span><span class="p">()</span>
+    
+<div class="viewcode-block" id="FileLock.purge"><a class="viewcode-back" href="../../../utilities.html#lazyflow.utility.fileLock.FileLock.purge">[docs]</a>    <span class="k">def</span> <span class="nf">purge</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        For debug purposes only.  Removes the lock file from the hard disk.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">lockfile</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">release</span><span class="p">()</span>
+            <span class="k">return</span> <span class="kc">True</span>
+        <span class="k">return</span> <span class="kc">False</span></div></div>
+    
+<span class="k">if</span> <span class="n">__name__</span> <span class="o">==</span> <span class="s2">&quot;__main__&quot;</span><span class="p">:</span>
+    <span class="kn">import</span> <span class="nn">sys</span>
+    <span class="kn">import</span> <span class="nn">functools</span>
+    <span class="kn">import</span> <span class="nn">threading</span>
+    <span class="kn">import</span> <span class="nn">tempfile</span>
+    <span class="n">temp_dir</span> <span class="o">=</span> <span class="n">tempfile</span><span class="o">.</span><span class="n">mkdtemp</span><span class="p">()</span>
+    <span class="n">protected_filepath</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span> <span class="n">temp_dir</span><span class="p">,</span> <span class="s2">&quot;somefile.txt&quot;</span> <span class="p">)</span>
+    <span class="nb">print</span> <span class="s2">&quot;Protecting file: </span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span> <span class="n">protected_filepath</span> <span class="p">)</span>
+    <span class="n">fl</span> <span class="o">=</span> <span class="n">FileLock</span><span class="p">(</span> <span class="n">protected_filepath</span> <span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">writeLines</span><span class="p">(</span><span class="n">line</span><span class="p">,</span> <span class="n">repeat</span><span class="o">=</span><span class="mi">10</span><span class="p">):</span>
+        <span class="k">with</span> <span class="n">fl</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">repeat</span><span class="p">):</span>
+                <span class="k">with</span> <span class="nb">open</span><span class="p">(</span> <span class="n">protected_filepath</span><span class="p">,</span> <span class="s1">&#39;a&#39;</span> <span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+                    <span class="n">f</span><span class="o">.</span><span class="n">write</span><span class="p">(</span> <span class="n">line</span> <span class="o">+</span> <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span> <span class="p">)</span>
+                    <span class="n">f</span><span class="o">.</span><span class="n">flush</span><span class="p">()</span>
+    
+    <span class="n">th1</span> <span class="o">=</span> <span class="n">threading</span><span class="o">.</span><span class="n">Thread</span><span class="p">(</span><span class="n">target</span><span class="o">=</span><span class="n">functools</span><span class="o">.</span><span class="n">partial</span><span class="p">(</span> <span class="n">writeLines</span><span class="p">,</span> <span class="s2">&quot;1111111111111111111111111111111&quot;</span> <span class="p">)</span> <span class="p">)</span>
+    <span class="n">th2</span> <span class="o">=</span> <span class="n">threading</span><span class="o">.</span><span class="n">Thread</span><span class="p">(</span><span class="n">target</span><span class="o">=</span><span class="n">functools</span><span class="o">.</span><span class="n">partial</span><span class="p">(</span> <span class="n">writeLines</span><span class="p">,</span> <span class="s2">&quot;2222222222222222222222222222222&quot;</span> <span class="p">)</span> <span class="p">)</span>
+    <span class="n">th3</span> <span class="o">=</span> <span class="n">threading</span><span class="o">.</span><span class="n">Thread</span><span class="p">(</span><span class="n">target</span><span class="o">=</span><span class="n">functools</span><span class="o">.</span><span class="n">partial</span><span class="p">(</span> <span class="n">writeLines</span><span class="p">,</span> <span class="s2">&quot;3333333333333333333333333333333&quot;</span> <span class="p">)</span> <span class="p">)</span>
+    <span class="n">th4</span> <span class="o">=</span> <span class="n">threading</span><span class="o">.</span><span class="n">Thread</span><span class="p">(</span><span class="n">target</span><span class="o">=</span><span class="n">functools</span><span class="o">.</span><span class="n">partial</span><span class="p">(</span> <span class="n">writeLines</span><span class="p">,</span> <span class="s2">&quot;4444444444444444444444444444444&quot;</span> <span class="p">)</span> <span class="p">)</span>
+    
+    <span class="n">th1</span><span class="o">.</span><span class="n">start</span><span class="p">()</span>
+    <span class="n">th2</span><span class="o">.</span><span class="n">start</span><span class="p">()</span>
+    <span class="n">th3</span><span class="o">.</span><span class="n">start</span><span class="p">()</span>
+    <span class="n">th4</span><span class="o">.</span><span class="n">start</span><span class="p">()</span>
+    
+    <span class="n">th1</span><span class="o">.</span><span class="n">join</span><span class="p">()</span>
+    <span class="n">th2</span><span class="o">.</span><span class="n">join</span><span class="p">()</span>
+    <span class="n">th3</span><span class="o">.</span><span class="n">join</span><span class="p">()</span>
+    <span class="n">th4</span><span class="o">.</span><span class="n">join</span><span class="p">()</span>
+    
+    <span class="k">assert</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span> <span class="n">fl</span><span class="o">.</span><span class="n">lockfile</span> <span class="p">),</span> <span class="s2">&quot;The lock file wasn&#39;t cleaned up!&quot;</span>
+    
+    <span class="c1"># Print the contents of the file.</span>
+    <span class="c1"># Please manually inspect the output.  Does it look like the operations were atomic?</span>
+    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span> <span class="n">protected_filepath</span><span class="p">,</span> <span class="s1">&#39;r&#39;</span> <span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+        <span class="n">sys</span><span class="o">.</span><span class="n">stdout</span><span class="o">.</span><span class="n">write</span><span class="p">(</span> <span class="n">f</span><span class="o">.</span><span class="n">read</span><span class="p">()</span> <span class="p">)</span>
+        
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../../../search.html" method="get">
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../../index.html">lazyflow 0.1 documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="../../index.html" >Module code</a> &#187;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2012, Christoph Straehle, Bernhard X. Kausler, Thorben Kröger, Ullrich Köthe , Fred A. Hamprecht, Anna Kreshuk, Luca Fiaschi, Stuart Berg.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.4.8.
+    </div>
+  </body>
+</html>

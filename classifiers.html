@@ -1,0 +1,325 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>Classifiers &#8212; lazyflow 0.1 documentation</title>
+    
+    <link rel="stylesheet" href="_static/classic.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    './',
+        VERSION:     '0.1',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="top" title="lazyflow 0.1 documentation" href="index.html" />
+    <link rel="prev" title="Utilities" href="utilities.html" /> 
+  </head>
+  <body role="document">
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="utilities.html" title="Utilities"
+             accesskey="P">previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">lazyflow 0.1 documentation</a> &#187;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="classifiers">
+<span id="lazyflow-classifiers"></span><h1>Classifiers<a class="headerlink" href="#classifiers" title="Permalink to this headline">¶</a></h1>
+<p>Lazyflow includes some predefined operators for training a classifier and predicting results with it.
+These operators are defined in <code class="docutils literal"><span class="pre">lazyflow.operators.classifierOperators.py</span></code>.
+Most applications should use the high-level operators <code class="docutils literal"><span class="pre">OpTrainClassifierBlocked</span></code> and <code class="docutils literal"><span class="pre">OpClassifierPredict</span></code>,
+which instantiate internal pipelines for retrieving blocks of image data, caching it, and using it with the classifier.</p>
+<p>The lazyflow classifiers operators support two families of classifiers:</p>
+<p>1. Most classifiers are so-called &#8220;vectorwise&#8221; classifiers, which can be trained with a simple feature matrix.
+When training these classifiers, the features for each label can be extracted from the input images and cached in a small feature matrix.</p>
+<p>2. But some classifiers require the training data in its full 2D or 3D context, in which case it is trained with full 2D/3D feature images.
+In lazyflow, these are called &#8220;pixelwise&#8221; classifiers.</p>
+<p>The classifier operators are made to be agnostic with respect to the particular type of classifier you want to use (e.g. RandomForest, SVM, etc.)
+Any type of classifier can be used as long as it is made to adhere to two special abstract interfaces: a
+&#8216;classifier factory&#8217; interface and a &#8216;classifier&#8217; interface.</p>
+<p>To add support for a new classifier in lazyflow, you must define two classes:</p>
+<ol class="arabic simple">
+<li>A &#8220;classifier factory&#8221;, which inherits from either <code class="docutils literal"><span class="pre">LazyflowVectorwiseClassifierFactoryABC</span></code> or <code class="docutils literal"><span class="pre">LazyflowPixelwiseClassifierFactoryABC</span></code></li>
+<li>A &#8220;classifier&#8221; which inherits from either <code class="docutils literal"><span class="pre">LazyflowVectorwiseClassifierABC</span></code> or <cite>LazyflowPixelwiseClassifierABC`</cite></li>
+</ol>
+<p>The factory is used to create and train a classifier.  The factory must be pickle-able and the classifier must be serializable in hdf5.</p>
+<p>For clear example implementations of vectorwise and pixelwise classifiers, see <a class="reference external" href="https://github.com/ilastik/lazyflow/blob/master/lazyflow/classifiers/vigraRfLazyflowClassifier.py">vigraRfLazyflowClassifier.py</a> and <a class="reference external" href="https://github.com/ilastik/lazyflow/blob/master/lazyflow/classifiers/vigraRfPixelwiseClassifier.py">vigraRfPixelwiseClassifier.py</a>.
+A slightly more complicated &#8220;production&#8221; classifier can be found in <a class="reference external" href="https://github.com/ilastik/lazyflow/blob/master/lazyflow/classifiers/parallelVigraRfLazyflowClassifier.py">parallelVigraRfLazyflowClassifier.py</a>.</p>
+<p>Finally, most classifiers used in <code class="docutils literal"><span class="pre">sklearn</span></code> can be used in lazyflow via the classes implemented in <a class="reference external" href="https://github.com/ilastik/lazyflow/blob/master/lazyflow/classifiers/sklearnLazyflowClassifier.py">sklearnLazyflowClassifier.py</a>.</p>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">In the ilastik pixel classification workflow, the classifier type can be changed via the &#8220;Advanced&#8221; menu,
+which is only visible in &#8220;debug&#8221; mode.</p>
+</div>
+<div class="section" id="reference-classifier-abcs">
+<h2>Reference: Classifier ABCs<a class="headerlink" href="#reference-classifier-abcs" title="Permalink to this headline">¶</a></h2>
+<dl class="class">
+<dt id="lazyflow.classifiers.lazyflowClassifier.LazyflowVectorwiseClassifierFactoryABC">
+<em class="property">class </em><code class="descclassname">lazyflow.classifiers.lazyflowClassifier.</code><code class="descname">LazyflowVectorwiseClassifierFactoryABC</code><a class="reference internal" href="_modules/lazyflow/classifiers/lazyflowClassifier.html#LazyflowVectorwiseClassifierFactoryABC"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#lazyflow.classifiers.lazyflowClassifier.LazyflowVectorwiseClassifierFactoryABC" title="Permalink to this definition">¶</a></dt>
+<dd><p>Defines an interface for vector-wise classifier &#8216;factory&#8217; objects, 
+which lazyflow classifier operators use to construct new vector-wise classifiers.
+A &#8220;vector-wise&#8221; classifier is trained with a 2D feature matrix and a 1D label vector.</p>
+<dl class="method">
+<dt id="lazyflow.classifiers.lazyflowClassifier.LazyflowVectorwiseClassifierFactoryABC.create_and_train">
+<code class="descname">create_and_train</code><span class="sig-paren">(</span><em>X</em>, <em>y</em>, <em>feature_names=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/lazyflow/classifiers/lazyflowClassifier.html#LazyflowVectorwiseClassifierFactoryABC.create_and_train"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#lazyflow.classifiers.lazyflowClassifier.LazyflowVectorwiseClassifierFactoryABC.create_and_train" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create a new classifier and train it with the feature matrix X and label vector y.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="lazyflow.classifiers.lazyflowClassifier.LazyflowVectorwiseClassifierFactoryABC.description">
+<code class="descname">description</code><a class="headerlink" href="#lazyflow.classifiers.lazyflowClassifier.LazyflowVectorwiseClassifierFactoryABC.description" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return a human-readable description of this classifier.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="lazyflow.classifiers.lazyflowClassifier.LazyflowVectorwiseClassifierFactoryABC.estimated_ram_usage_per_requested_predictionchannel">
+<code class="descname">estimated_ram_usage_per_requested_predictionchannel</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/lazyflow/classifiers/lazyflowClassifier.html#LazyflowVectorwiseClassifierFactoryABC.estimated_ram_usage_per_requested_predictionchannel"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#lazyflow.classifiers.lazyflowClassifier.LazyflowVectorwiseClassifierFactoryABC.estimated_ram_usage_per_requested_predictionchannel" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return the RAM (in bytes) needed by the classifier to run classification.
+The amount of RAM should be relative to the number of output channels (label classes).</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="lazyflow.classifiers.lazyflowClassifier.LazyflowVectorwiseClassifierABC">
+<em class="property">class </em><code class="descclassname">lazyflow.classifiers.lazyflowClassifier.</code><code class="descname">LazyflowVectorwiseClassifierABC</code><a class="reference internal" href="_modules/lazyflow/classifiers/lazyflowClassifier.html#LazyflowVectorwiseClassifierABC"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#lazyflow.classifiers.lazyflowClassifier.LazyflowVectorwiseClassifierABC" title="Permalink to this definition">¶</a></dt>
+<dd><p>Defines an interface for &#8220;vector-wise&#8221; classifier objects that can be used by the lazyflow classifier operators.
+A &#8220;vector-wise&#8221; classifier is trained with a 2D feature matrix and a 1D label vector.</p>
+<p>All scikit-learn classifiers already satisfy this interface.</p>
+<dl class="classmethod">
+<dt id="lazyflow.classifiers.lazyflowClassifier.LazyflowVectorwiseClassifierABC.deserialize_hdf5">
+<em class="property">classmethod </em><code class="descname">deserialize_hdf5</code><span class="sig-paren">(</span><em>h5py_group</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/lazyflow/classifiers/lazyflowClassifier.html#LazyflowVectorwiseClassifierABC.deserialize_hdf5"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#lazyflow.classifiers.lazyflowClassifier.LazyflowVectorwiseClassifierABC.deserialize_hdf5" title="Permalink to this definition">¶</a></dt>
+<dd><p>Class method.  Deserialize the classifier stored in the given <code class="docutils literal"><span class="pre">h5py.Group</span></code> object, and return it.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="lazyflow.classifiers.lazyflowClassifier.LazyflowVectorwiseClassifierABC.feature_count">
+<code class="descname">feature_count</code><a class="headerlink" href="#lazyflow.classifiers.lazyflowClassifier.LazyflowVectorwiseClassifierABC.feature_count" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return the number of features used to train this classifier.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="lazyflow.classifiers.lazyflowClassifier.LazyflowVectorwiseClassifierABC.feature_names">
+<code class="descname">feature_names</code><a class="headerlink" href="#lazyflow.classifiers.lazyflowClassifier.LazyflowVectorwiseClassifierABC.feature_names" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return a list of the names of the features used to train this classifier.
+len(self.feature_names) == self.feature_count</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="lazyflow.classifiers.lazyflowClassifier.LazyflowVectorwiseClassifierABC.known_classes">
+<code class="descname">known_classes</code><a class="headerlink" href="#lazyflow.classifiers.lazyflowClassifier.LazyflowVectorwiseClassifierABC.known_classes" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns the list of label classes known to this classifier (i.e. the classes it was trained with).</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="lazyflow.classifiers.lazyflowClassifier.LazyflowVectorwiseClassifierABC.predict_probabilities">
+<code class="descname">predict_probabilities</code><span class="sig-paren">(</span><em>X</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/lazyflow/classifiers/lazyflowClassifier.html#LazyflowVectorwiseClassifierABC.predict_probabilities"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#lazyflow.classifiers.lazyflowClassifier.LazyflowVectorwiseClassifierABC.predict_probabilities" title="Permalink to this definition">¶</a></dt>
+<dd><p>For each sample in the feature matrix <code class="docutils literal"><span class="pre">X</span></code>, predict the probabilities that the
+sample belongs to each label class the classifier was trained with.</p>
+<p>Returns: A multi-channel vector (each channel corresponds to a different label class).</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="lazyflow.classifiers.lazyflowClassifier.LazyflowVectorwiseClassifierABC.serialize_hdf5">
+<code class="descname">serialize_hdf5</code><span class="sig-paren">(</span><em>h5py_group</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/lazyflow/classifiers/lazyflowClassifier.html#LazyflowVectorwiseClassifierABC.serialize_hdf5"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#lazyflow.classifiers.lazyflowClassifier.LazyflowVectorwiseClassifierABC.serialize_hdf5" title="Permalink to this definition">¶</a></dt>
+<dd><p>Serialize the classifier as an hdf5 group.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="lazyflow.classifiers.lazyflowClassifier.LazyflowPixelwiseClassifierFactoryABC">
+<em class="property">class </em><code class="descclassname">lazyflow.classifiers.lazyflowClassifier.</code><code class="descname">LazyflowPixelwiseClassifierFactoryABC</code><a class="reference internal" href="_modules/lazyflow/classifiers/lazyflowClassifier.html#LazyflowPixelwiseClassifierFactoryABC"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#lazyflow.classifiers.lazyflowClassifier.LazyflowPixelwiseClassifierFactoryABC" title="Permalink to this definition">¶</a></dt>
+<dd><p>Defines an interface for pixel-wise classifier &#8216;factory&#8217; objects, 
+which lazyflow classifier operators use to construct new pixel-wise classifiers.
+A &#8220;pixel-wise&#8221; classifier is trained with a list of ND feature images (with M feature channels),
+and a list of corresponding ND label images, with 1 channel each.</p>
+<p>Note: It is assumed here that &#8216;channel&#8217; is always the last axis of the image.</p>
+<dl class="method">
+<dt id="lazyflow.classifiers.lazyflowClassifier.LazyflowPixelwiseClassifierFactoryABC.create_and_train_pixelwise">
+<code class="descname">create_and_train_pixelwise</code><span class="sig-paren">(</span><em>feature_images</em>, <em>label_images</em>, <em>axistags=None</em>, <em>feature_names=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/lazyflow/classifiers/lazyflowClassifier.html#LazyflowPixelwiseClassifierFactoryABC.create_and_train_pixelwise"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#lazyflow.classifiers.lazyflowClassifier.LazyflowPixelwiseClassifierFactoryABC.create_and_train_pixelwise" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create a new classifier and train it with the given list of feature images and the given list of label images.
+Generally, it is assumed that the channel dimension is the LAST axis for each image.  
+(The label image must include a singleton channel dimension.)
+Each pair of corresponding feature and label images must have matching shapes (except for the channel dimension).</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="lazyflow.classifiers.lazyflowClassifier.LazyflowPixelwiseClassifierFactoryABC.description">
+<code class="descname">description</code><a class="headerlink" href="#lazyflow.classifiers.lazyflowClassifier.LazyflowPixelwiseClassifierFactoryABC.description" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return a human-readable description of this classifier.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="lazyflow.classifiers.lazyflowClassifier.LazyflowPixelwiseClassifierFactoryABC.estimated_ram_usage_per_requested_predictionchannel">
+<code class="descname">estimated_ram_usage_per_requested_predictionchannel</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/lazyflow/classifiers/lazyflowClassifier.html#LazyflowPixelwiseClassifierFactoryABC.estimated_ram_usage_per_requested_predictionchannel"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#lazyflow.classifiers.lazyflowClassifier.LazyflowPixelwiseClassifierFactoryABC.estimated_ram_usage_per_requested_predictionchannel" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return the RAM (in bytes) needed by the classifier to run classification.
+The amount of RAM should be relative to the number of output channels (label classes).</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="lazyflow.classifiers.lazyflowClassifier.LazyflowPixelwiseClassifierFactoryABC.get_halo_shape">
+<code class="descname">get_halo_shape</code><span class="sig-paren">(</span><em>data_axes='zyxc'</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/lazyflow/classifiers/lazyflowClassifier.html#LazyflowPixelwiseClassifierFactoryABC.get_halo_shape"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#lazyflow.classifiers.lazyflowClassifier.LazyflowPixelwiseClassifierFactoryABC.get_halo_shape" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return the halo dimensions required for optimal classifier performance.
+For example, for a classifier that performs an internal 3D convolution with sigma=1.5 and window_size = 2.0,
+halo_shape = (3, 3, 3, 0).</p>
+<p>Clients are not required to provide the halo during training.  
+(For example, it may not be possible for labels near the image border.)</p>
+<dl class="docutils">
+<dt>data_axes: A string representing the axis order of the data that will be used for training/prediction.</dt>
+<dd>Examples: &#8216;yxc&#8217;, &#8216;zyxc&#8217;, or &#8216;tzyxc&#8217;.</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="lazyflow.classifiers.lazyflowClassifier.LazyflowPixelwiseClassifierABC">
+<em class="property">class </em><code class="descclassname">lazyflow.classifiers.lazyflowClassifier.</code><code class="descname">LazyflowPixelwiseClassifierABC</code><a class="reference internal" href="_modules/lazyflow/classifiers/lazyflowClassifier.html#LazyflowPixelwiseClassifierABC"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#lazyflow.classifiers.lazyflowClassifier.LazyflowPixelwiseClassifierABC" title="Permalink to this definition">¶</a></dt>
+<dd><p>Defines an interface for &#8220;pixel-wise&#8221; classifier objects that can be used by the lazyflow classifier operators.
+A &#8220;pixel-wise&#8221; classifier expects its input be given as a list of ND feature images (with M feature channels).
+(It was trained with a list of ND label images, with 1 channel each.)</p>
+<p>Note: It is assumed here that &#8216;channel&#8217; is always the last axis of the image.</p>
+<p>(This interface is typically used with classifiers that must generate their own features internally,
+and thus require the knowledge of the image structure and context around each training/prediction point.)</p>
+<dl class="classmethod">
+<dt id="lazyflow.classifiers.lazyflowClassifier.LazyflowPixelwiseClassifierABC.deserialize_hdf5">
+<em class="property">classmethod </em><code class="descname">deserialize_hdf5</code><span class="sig-paren">(</span><em>h5py_group</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/lazyflow/classifiers/lazyflowClassifier.html#LazyflowPixelwiseClassifierABC.deserialize_hdf5"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#lazyflow.classifiers.lazyflowClassifier.LazyflowPixelwiseClassifierABC.deserialize_hdf5" title="Permalink to this definition">¶</a></dt>
+<dd><p>Class method.  Deserialize the classifier stored in the given <code class="docutils literal"><span class="pre">h5py.Group</span></code> object, and return it.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="lazyflow.classifiers.lazyflowClassifier.LazyflowPixelwiseClassifierABC.feature_count">
+<code class="descname">feature_count</code><a class="headerlink" href="#lazyflow.classifiers.lazyflowClassifier.LazyflowPixelwiseClassifierABC.feature_count" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return the number of features used to train this classifier.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="lazyflow.classifiers.lazyflowClassifier.LazyflowPixelwiseClassifierABC.get_halo_shape">
+<code class="descname">get_halo_shape</code><span class="sig-paren">(</span><em>data_axes='zyxc'</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/lazyflow/classifiers/lazyflowClassifier.html#LazyflowPixelwiseClassifierABC.get_halo_shape"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#lazyflow.classifiers.lazyflowClassifier.LazyflowPixelwiseClassifierABC.get_halo_shape" title="Permalink to this definition">¶</a></dt>
+<dd><p>Same as LazyflowPixelwiseClassifierFactoryABC.get_halo_shape().  See that function for details.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="lazyflow.classifiers.lazyflowClassifier.LazyflowPixelwiseClassifierABC.known_classes">
+<code class="descname">known_classes</code><a class="headerlink" href="#lazyflow.classifiers.lazyflowClassifier.LazyflowPixelwiseClassifierABC.known_classes" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns the list of label classes known to this classifier (i.e. the classes it was trained with).</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="lazyflow.classifiers.lazyflowClassifier.LazyflowPixelwiseClassifierABC.predict_probabilities_pixelwise">
+<code class="descname">predict_probabilities_pixelwise</code><span class="sig-paren">(</span><em>feature_image</em>, <em>roi</em>, <em>axistags=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/lazyflow/classifiers/lazyflowClassifier.html#LazyflowPixelwiseClassifierABC.predict_probabilities_pixelwise"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#lazyflow.classifiers.lazyflowClassifier.LazyflowPixelwiseClassifierABC.predict_probabilities_pixelwise" title="Permalink to this definition">¶</a></dt>
+<dd><p>For each pixel in the given feature_image, predict the probabilities that the
+pixel belongs to each label class the classifier was trained with.</p>
+<p>feature_image: An ND image.  Last axis must be channel.
+roi: The region of interest (start, stop) within feature_image to predict (e.g. without the halo region)</p>
+<blockquote>
+<div><dl class="docutils">
+<dt>Note: roi parameter should not include channel.</dt>
+<dd>For example, a valid roi for a zyxc image could be ((0,0,0), (10,20,30))</dd>
+</dl>
+</div></blockquote>
+<p>axistags: Optional.  A vigra.AxisTags object describing the feature_image.</p>
+<dl class="docutils">
+<dt>Returns: A multi-channel image (each channel corresponds to a different label class).</dt>
+<dd>The result image size is determined by the roi parameter.</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="lazyflow.classifiers.lazyflowClassifier.LazyflowPixelwiseClassifierABC.serialize_hdf5">
+<code class="descname">serialize_hdf5</code><span class="sig-paren">(</span><em>h5py_group</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/lazyflow/classifiers/lazyflowClassifier.html#LazyflowPixelwiseClassifierABC.serialize_hdf5"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#lazyflow.classifiers.lazyflowClassifier.LazyflowPixelwiseClassifierABC.serialize_hdf5" title="Permalink to this definition">¶</a></dt>
+<dd><p>Serialize the classifier as an hdf5 group</p>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">Classifiers</a><ul>
+<li><a class="reference internal" href="#reference-classifier-abcs">Reference: Classifier ABCs</a></li>
+</ul>
+</li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="utilities.html"
+                        title="previous chapter">Utilities</a></p>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="_sources/classifiers.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="search.html" method="get">
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="utilities.html" title="Utilities"
+             >previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">lazyflow 0.1 documentation</a> &#187;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2012, Christoph Straehle, Bernhard X. Kausler, Thorben Kröger, Ullrich Köthe , Fred A. Hamprecht, Anna Kreshuk, Luca Fiaschi, Stuart Berg.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.4.8.
+    </div>
+  </body>
+</html>

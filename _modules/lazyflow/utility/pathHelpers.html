@@ -1,0 +1,395 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>lazyflow.utility.pathHelpers &#8212; lazyflow 0.1 documentation</title>
+    
+    <link rel="stylesheet" href="../../../_static/classic.css" type="text/css" />
+    <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../../',
+        VERSION:     '0.1',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../_static/doctools.js"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" />
+    <link rel="top" title="lazyflow 0.1 documentation" href="../../../index.html" />
+    <link rel="up" title="Module code" href="../../index.html" /> 
+  </head>
+  <body role="document">
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../../index.html">lazyflow 0.1 documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="../../index.html" accesskey="U">Module code</a> &#187;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for lazyflow.utility.pathHelpers</h1><div class="highlight"><pre>
+<span></span><span class="c1">###############################################################################</span>
+<span class="c1">#   lazyflow: data flow based lazy parallel computation framework</span>
+<span class="c1">#</span>
+<span class="c1">#       Copyright (C) 2011-2014, the ilastik developers</span>
+<span class="c1">#                                &lt;team@ilastik.org&gt;</span>
+<span class="c1">#</span>
+<span class="c1"># This program is free software; you can redistribute it and/or</span>
+<span class="c1"># modify it under the terms of the Lesser GNU General Public License</span>
+<span class="c1"># as published by the Free Software Foundation; either version 2.1</span>
+<span class="c1"># of the License, or (at your option) any later version.</span>
+<span class="c1">#</span>
+<span class="c1"># This program is distributed in the hope that it will be useful,</span>
+<span class="c1"># but WITHOUT ANY WARRANTY; without even the implied warranty of</span>
+<span class="c1"># MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the</span>
+<span class="c1"># GNU Lesser General Public License for more details.</span>
+<span class="c1">#</span>
+<span class="c1"># See the files LICENSE.lgpl2 and LICENSE.lgpl3 for full text of the</span>
+<span class="c1"># GNU Lesser General Public License version 2.1 and 3 respectively.</span>
+<span class="c1"># This information is also available on the ilastik web site at:</span>
+<span class="c1">#                 http://ilastik.org/license/</span>
+<span class="c1">###############################################################################</span>
+<span class="kn">import</span> <span class="nn">os</span>
+
+
+<div class="viewcode-block" id="PathComponents"><a class="viewcode-back" href="../../../utilities.html#lazyflow.utility.PathComponents">[docs]</a><span class="k">class</span> <span class="nc">PathComponents</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Provides a convenient access to path components of a combined external/internal path to a dataset.</span>
+<span class="sd">    Also, each of the properties listed below is writable, in which case ALL properties are updated accordingly.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="c1"># Only files with these extensions are allowed to have an &#39;internal&#39; path</span>
+    <span class="n">HDF5_EXTS</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;.ilp&#39;</span><span class="p">,</span> <span class="s1">&#39;.h5&#39;</span><span class="p">,</span> <span class="s1">&#39;.hdf5&#39;</span><span class="p">]</span>
+
+<div class="viewcode-block" id="PathComponents.__init__"><a class="viewcode-back" href="../../../utilities.html#lazyflow.utility.PathComponents.__init__">[docs]</a>    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">totalPath</span><span class="p">,</span> <span class="n">cwd</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Initialize the path components.</span>
+
+<span class="sd">        :param totalPath: The entire path to the dataset, including any internal path (e.g. the path to an hdf5 dataset).</span>
+<span class="sd">                          For example, ``totalPath=&#39;/some/path/to/file.h5/with/internal/dataset&#39;``</span>
+
+<span class="sd">        :param cwd: If provided, relative paths will be converted to absolute paths using this arg as the working directory.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_externalPath</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_externalDirectory</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_filename</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_filenameBase</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_extension</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_internalPath</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_internalDatasetName</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_internalDirectory</span> <span class="o">=</span> <span class="kc">None</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_cwd</span> <span class="o">=</span> <span class="n">cwd</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_init</span><span class="p">(</span><span class="n">totalPath</span><span class="p">,</span> <span class="n">cwd</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_initialized</span> <span class="o">=</span> <span class="kc">True</span></div>
+
+    <span class="k">def</span> <span class="nf">_init</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">totalPath</span><span class="p">,</span> <span class="n">cwd</span><span class="p">):</span>
+        <span class="n">ext</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="n">extIndex</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span>
+
+        <span class="k">if</span> <span class="n">cwd</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">absPath</span><span class="p">,</span> <span class="n">relPath</span> <span class="o">=</span> <span class="n">getPathVariants</span><span class="p">(</span><span class="n">totalPath</span><span class="p">,</span> <span class="n">cwd</span><span class="p">)</span>
+            <span class="n">totalPath</span> <span class="o">=</span> <span class="n">absPath</span>
+
+        <span class="c1"># convention for Windows: use &quot;/&quot;</span>
+        <span class="n">totalPath</span> <span class="o">=</span> <span class="n">totalPath</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\\</span><span class="s2">&quot;</span><span class="p">,</span><span class="s2">&quot;/&quot;</span><span class="p">)</span>
+
+        <span class="c1"># For hdf5 paths, split into external, extension, and internal paths</span>
+        <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">HDF5_EXTS</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">totalPath</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="n">x</span><span class="p">)</span> <span class="o">&gt;</span> <span class="n">extIndex</span><span class="p">:</span>
+                <span class="n">extIndex</span> <span class="o">=</span> <span class="n">totalPath</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+                <span class="n">ext</span> <span class="o">=</span> <span class="n">x</span>
+
+        <span class="c1"># Comments below refer to this example path:</span>
+        <span class="c1"># /some/path/to/file.h5/with/internal/dataset</span>
+        <span class="k">if</span> <span class="n">ext</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_extension</span> <span class="o">=</span> <span class="n">ext</span>                              <span class="c1"># .h5</span>
+            <span class="n">parts</span> <span class="o">=</span> <span class="n">totalPath</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="n">ext</span><span class="p">)</span>
+
+            <span class="c1"># Must deal with pathological filenames such as /path/to/file.h5_with_duplicate_ext.h5</span>
+            <span class="k">while</span> <span class="nb">len</span><span class="p">(</span><span class="n">parts</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">2</span><span class="p">:</span>
+                <span class="n">parts</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">parts</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="n">ext</span> <span class="o">+</span> <span class="n">parts</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+                <span class="k">del</span> <span class="n">parts</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_externalPath</span> <span class="o">=</span> <span class="n">parts</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="n">ext</span> <span class="c1"># /some/path/to/file.h5</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_internalPath</span> <span class="o">=</span> <span class="n">parts</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\\</span><span class="s1">&#39;</span><span class="p">,</span> <span class="s1">&#39;/&#39;</span><span class="p">)</span> <span class="c1"># /with/internal/dataset</span>
+
+            <span class="bp">self</span><span class="o">.</span><span class="n">_internalDirectory</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">internalPath</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>   <span class="c1"># /with/internal</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_internalDatasetName</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">internalPath</span><span class="p">)[</span><span class="mi">1</span><span class="p">]</span> <span class="c1"># dataset</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="c1"># For non-hdf5 files, use normal path/extension (no internal path)</span>
+            <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_externalPath</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_extension</span><span class="p">)</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">splitext</span><span class="p">(</span><span class="n">totalPath</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_externalPath</span> <span class="o">+=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_extension</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_internalPath</span> <span class="o">=</span> <span class="kc">None</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_internalDatasetName</span> <span class="o">=</span> <span class="kc">None</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_internalDirectory</span> <span class="o">=</span> <span class="kc">None</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_externalDirectory</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_externalPath</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span> <span class="c1"># /some/path/to</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_filename</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_externalPath</span><span class="p">)[</span><span class="mi">1</span><span class="p">]</span>          <span class="c1"># file.h5</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_filenameBase</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">splitext</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_filename</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>         <span class="c1"># file</span>
+
+    <span class="k">def</span> <span class="nf">__setattr__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">attr</span><span class="p">,</span> <span class="n">value</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        This prevents us from accidentally writing to a non-existant attribute.</span>
+<span class="sd">        e.g. if the user tries to say components.fIlEnAmE = &#39;newfile.h5&#39;, raise an error.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s1">&#39;_initialized&#39;</span><span class="p">):</span>
+            <span class="c1"># Attempt to get the old attribute first</span>
+            <span class="n">oldval</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">attr</span><span class="p">)</span>
+        <span class="nb">object</span><span class="o">.</span><span class="n">__setattr__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">attr</span><span class="p">,</span> <span class="n">value</span><span class="p">)</span>
+
+<div class="viewcode-block" id="PathComponents.totalPath"><a class="viewcode-back" href="../../../utilities.html#lazyflow.utility.PathComponents.totalPath">[docs]</a>    <span class="k">def</span> <span class="nf">totalPath</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Return the (reconstructed) totalPath to the dataset.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">total</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">externalPath</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">internalPath</span><span class="p">:</span>
+            <span class="n">total</span> <span class="o">+=</span> <span class="bp">self</span><span class="o">.</span><span class="n">internalPath</span>
+        <span class="k">return</span> <span class="n">total</span></div>
+
+    <span class="c1">#</span>
+    <span class="c1"># Getters</span>
+    <span class="c1">#</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">externalPath</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Example: ``/some/path/to/file.h5``</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_externalPath</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">externalDirectory</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Example: ``/some/path/to``</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_externalDirectory</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">filename</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Example: ``file.h5``</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_filename</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">filenameBase</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Example: ``file``</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_filenameBase</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">extension</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Example: ``.h5``</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_extension</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">internalPath</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Example: ``/with/internal/dataset``</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_internalPath</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">internalDatasetName</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Example: ``/dataset``</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_internalDatasetName</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">internalDirectory</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Example: ``/with/internal``</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_internalDirectory</span>
+
+    <span class="c1">#</span>
+    <span class="c1"># Setters</span>
+    <span class="c1">#</span>
+
+    <span class="nd">@externalPath</span><span class="o">.</span><span class="n">setter</span>
+    <span class="k">def</span> <span class="nf">externalPath</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">new</span><span class="p">):</span>
+        <span class="k">assert</span> <span class="n">new</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">!=</span> <span class="s1">&#39;/&#39;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_internalPath</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_init</span><span class="p">(</span><span class="n">new</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">_internalPath</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_cwd</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_init</span><span class="p">(</span><span class="n">new</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_cwd</span><span class="p">)</span>
+
+    <span class="nd">@externalDirectory</span><span class="o">.</span><span class="n">setter</span>
+    <span class="k">def</span> <span class="nf">externalDirectory</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">new</span><span class="p">):</span>
+        <span class="n">new_external</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">new</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_filename</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">externalPath</span> <span class="o">=</span> <span class="n">new_external</span>
+
+    <span class="nd">@filename</span><span class="o">.</span><span class="n">setter</span>
+    <span class="k">def</span> <span class="nf">filename</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">new</span><span class="p">):</span>
+        <span class="n">new_external</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_externalDirectory</span><span class="p">,</span> <span class="n">new</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">externalPath</span> <span class="o">=</span> <span class="n">new_external</span>
+
+    <span class="nd">@filenameBase</span><span class="o">.</span><span class="n">setter</span>
+    <span class="k">def</span> <span class="nf">filenameBase</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">new</span><span class="p">):</span>
+        <span class="n">new_external</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_externalDirectory</span><span class="p">,</span> <span class="n">new</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">_extension</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">externalPath</span> <span class="o">=</span> <span class="n">new_external</span>
+
+    <span class="nd">@extension</span><span class="o">.</span><span class="n">setter</span>
+    <span class="k">def</span> <span class="nf">extension</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">new</span><span class="p">):</span>
+        <span class="k">assert</span> <span class="p">(</span><span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">_internalPath</span><span class="p">)</span> <span class="ow">or</span> <span class="p">(</span><span class="n">new</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">HDF5_EXTS</span><span class="p">),</span> \
+            <span class="s2">&quot;This PathComponents has an internal path (</span><span class="si">{}</span><span class="s2">), but you are &quot;</span>\
+            <span class="s2">&quot;attempting to assign a non-hdf5 extension to it (</span><span class="si">{}</span><span class="s2">)&quot;</span>\
+            <span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_internalPath</span><span class="p">,</span> <span class="n">new</span><span class="p">)</span>
+        <span class="n">new_external</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_externalDirectory</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_filenameBase</span> <span class="o">+</span> <span class="n">new</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">externalPath</span> <span class="o">=</span> <span class="n">new_external</span>
+
+    <span class="nd">@internalPath</span><span class="o">.</span><span class="n">setter</span>
+    <span class="k">def</span> <span class="nf">internalPath</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">new</span><span class="p">):</span>
+        <span class="k">assert</span> <span class="bp">self</span><span class="o">.</span><span class="n">_extension</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">HDF5_EXTS</span><span class="p">,</span> \
+            <span class="s2">&quot;Can&#39;t set an internal path on a filename with extension </span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_extension</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">new</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_init</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_externalPath</span> <span class="o">+</span> <span class="n">new</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_cwd</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_init</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_externalPath</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_cwd</span><span class="p">)</span>
+
+    <span class="nd">@internalDatasetName</span><span class="o">.</span><span class="n">setter</span>
+    <span class="k">def</span> <span class="nf">internalDatasetName</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">new</span><span class="p">):</span>
+        <span class="n">new_internal</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_internalDirectory</span><span class="p">,</span> <span class="n">new</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">internalPath</span> <span class="o">=</span> <span class="n">new_internal</span>
+
+    <span class="nd">@internalDirectory</span><span class="o">.</span><span class="n">setter</span>
+    <span class="k">def</span> <span class="nf">internalDirectory</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">new</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">new</span> <span class="ow">and</span> <span class="n">new</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">!=</span> <span class="s1">&#39;/&#39;</span><span class="p">:</span>
+            <span class="n">new</span> <span class="o">=</span> <span class="s1">&#39;/&#39;</span> <span class="o">+</span> <span class="n">new</span>
+        <span class="n">new_internal</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">new</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_internalDatasetName</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">internalPath</span> <span class="o">=</span> <span class="n">new_internal</span></div>
+
+
+<span class="k">def</span> <span class="nf">areOnSameDrive</span><span class="p">(</span><span class="n">path1</span><span class="p">,</span><span class="n">path2</span><span class="p">):</span>
+    <span class="c1"># if one path is relative, assume they are on same drive</span>
+    <span class="k">if</span> <span class="n">isUrl</span><span class="p">(</span><span class="n">path1</span><span class="p">)</span> <span class="ow">or</span> <span class="n">isUrl</span><span class="p">(</span><span class="n">path2</span><span class="p">):</span>
+        <span class="k">return</span> <span class="kc">False</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isabs</span><span class="p">(</span><span class="n">path1</span><span class="p">)</span> <span class="ow">or</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isabs</span><span class="p">(</span><span class="n">path2</span><span class="p">):</span>
+        <span class="k">return</span> <span class="kc">True</span>
+    <span class="n">drive1</span><span class="p">,</span><span class="n">path1</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">splitdrive</span><span class="p">(</span><span class="n">path1</span><span class="p">)</span>
+    <span class="n">drive2</span><span class="p">,</span><span class="n">path2</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">splitdrive</span><span class="p">(</span><span class="n">path2</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">drive1</span><span class="o">==</span><span class="n">drive2</span>
+
+
+<span class="k">def</span> <span class="nf">compressPathForDisplay</span><span class="p">(</span><span class="n">pathstr</span><span class="p">,</span><span class="n">maxlength</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39;Add alternatingly parts of the start and the end of the path</span>
+<span class="sd">    until maxlength is exceeded. Result: Drive/Dir1/.../Dirn/file&#39;&#39;&#39;</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">pathstr</span><span class="p">)</span> <span class="o">&lt;=</span> <span class="n">maxlength</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">pathstr</span>
+    <span class="n">dots</span> <span class="o">=</span> <span class="s1">&#39;...&#39;</span>
+    <span class="n">component_list</span> <span class="o">=</span> <span class="n">pathstr</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;/&quot;</span><span class="p">)</span>
+    <span class="n">prefix</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
+    <span class="n">suffix</span> <span class="o">=</span> <span class="s2">&quot;/&quot;</span> <span class="o">+</span> <span class="n">component_list</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+    <span class="k">while</span> <span class="n">component_list</span><span class="p">:</span>
+        <span class="n">restlength</span> <span class="o">=</span> <span class="n">maxlength</span> <span class="o">-</span> <span class="nb">len</span><span class="p">(</span><span class="n">prefix</span><span class="p">)</span> <span class="o">-</span> <span class="nb">len</span><span class="p">(</span><span class="n">dots</span><span class="p">)</span>
+        <span class="n">suffix</span> <span class="o">=</span> <span class="s1">&#39;/&#39;</span> <span class="o">+</span> <span class="n">component_list</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span> <span class="o">+</span> <span class="n">suffix</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">suffix</span><span class="p">)</span> <span class="o">&gt;</span> <span class="n">restlength</span><span class="p">:</span>
+            <span class="n">suffix</span> <span class="o">=</span> <span class="n">suffix</span><span class="p">[</span><span class="o">-</span><span class="n">restlength</span><span class="p">:]</span>
+            <span class="k">break</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">component_list</span><span class="p">:</span>
+            <span class="k">break</span>
+        <span class="n">c</span> <span class="o">=</span> <span class="n">prefix</span> <span class="o">+</span> <span class="n">component_list</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span> <span class="o">+</span> <span class="s2">&quot;/&quot;</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">c</span><span class="p">)</span><span class="o">+</span><span class="nb">len</span><span class="p">(</span><span class="n">dots</span><span class="p">)</span><span class="o">+</span><span class="nb">len</span><span class="p">(</span><span class="n">suffix</span><span class="p">)</span> <span class="o">&gt;</span> <span class="n">maxlength</span><span class="p">:</span>
+            <span class="k">break</span>
+        <span class="n">prefix</span> <span class="o">=</span> <span class="n">c</span>
+    <span class="k">return</span> <span class="n">prefix</span> <span class="o">+</span> <span class="n">dots</span> <span class="o">+</span> <span class="n">suffix</span>
+
+
+<span class="k">def</span> <span class="nf">isUrl</span><span class="p">(</span><span class="n">path</span><span class="p">):</span>
+    <span class="c1"># For now, the simplest rule will work.</span>
+    <span class="k">return</span> <span class="s1">&#39;://&#39;</span> <span class="ow">in</span> <span class="n">path</span>
+
+<span class="k">def</span> <span class="nf">make_absolute</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">cwd</span><span class="o">=</span><span class="n">os</span><span class="o">.</span><span class="n">getcwd</span><span class="p">()):</span>
+    <span class="k">return</span> <span class="n">PathComponents</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">cwd</span><span class="p">)</span><span class="o">.</span><span class="n">totalPath</span><span class="p">()</span>
+
+<div class="viewcode-block" id="getPathVariants"><a class="viewcode-back" href="../../../utilities.html#lazyflow.utility.getPathVariants">[docs]</a><span class="k">def</span> <span class="nf">getPathVariants</span><span class="p">(</span><span class="n">originalPath</span><span class="p">,</span> <span class="n">workingDirectory</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Take the given filePath (which can be absolute or relative, and may include an internal path suffix),</span>
+<span class="sd">    and return a tuple of the absolute and relative paths to the file.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># urls are considered absolute</span>
+    <span class="k">if</span> <span class="n">isUrl</span><span class="p">(</span><span class="n">originalPath</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">originalPath</span><span class="p">,</span> <span class="kc">None</span>
+
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">originalPath</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="ow">and</span> <span class="n">originalPath</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="s1">&#39;~&#39;</span><span class="p">:</span>
+        <span class="n">originalPath</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">expanduser</span><span class="p">(</span><span class="n">originalPath</span><span class="p">)</span>
+
+    <span class="n">relPath</span> <span class="o">=</span> <span class="n">originalPath</span>
+
+    <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isabs</span><span class="p">(</span><span class="n">originalPath</span><span class="p">):</span>
+        <span class="n">absPath</span> <span class="o">=</span> <span class="n">originalPath</span>
+        <span class="k">if</span> <span class="n">areOnSameDrive</span><span class="p">(</span><span class="n">originalPath</span><span class="p">,</span><span class="n">workingDirectory</span><span class="p">):</span>
+            <span class="n">relPath</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">relpath</span><span class="p">(</span><span class="n">absPath</span><span class="p">,</span> <span class="n">workingDirectory</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="c1"># Relative path does not always exist.  Caller must check for None.</span>
+            <span class="n">relPath</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">relPath</span> <span class="o">=</span> <span class="n">originalPath</span>
+        <span class="n">absPath</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">normpath</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">workingDirectory</span><span class="p">,</span> <span class="n">relPath</span><span class="p">))</span>
+
+    <span class="k">return</span> <span class="p">(</span><span class="n">absPath</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\\</span><span class="s2">&quot;</span><span class="p">,</span><span class="s2">&quot;/&quot;</span><span class="p">),</span> <span class="n">relPath</span> <span class="ow">and</span> <span class="n">relPath</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\\</span><span class="s2">&quot;</span><span class="p">,</span><span class="s2">&quot;/&quot;</span><span class="p">))</span></div>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../../../search.html" method="get">
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../../index.html">lazyflow 0.1 documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="../../index.html" >Module code</a> &#187;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2012, Christoph Straehle, Bernhard X. Kausler, Thorben Kröger, Ullrich Köthe , Fred A. Hamprecht, Anna Kreshuk, Luca Fiaschi, Stuart Berg.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.4.8.
+    </div>
+  </body>
+</html>

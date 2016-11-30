@@ -1,0 +1,288 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>lazyflow.utility.io_util.RESTfulVolume &#8212; lazyflow 0.1 documentation</title>
+    
+    <link rel="stylesheet" href="../../../../_static/classic.css" type="text/css" />
+    <link rel="stylesheet" href="../../../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../../../',
+        VERSION:     '0.1',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../../_static/doctools.js"></script>
+    <link rel="index" title="Index" href="../../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../../search.html" />
+    <link rel="top" title="lazyflow 0.1 documentation" href="../../../../index.html" />
+    <link rel="up" title="Module code" href="../../../index.html" /> 
+  </head>
+  <body role="document">
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../../../index.html">lazyflow 0.1 documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="../../../index.html" accesskey="U">Module code</a> &#187;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for lazyflow.utility.io_util.RESTfulVolume</h1><div class="highlight"><pre>
+<span></span><span class="c1">###############################################################################</span>
+<span class="c1">#   lazyflow: data flow based lazy parallel computation framework</span>
+<span class="c1">#</span>
+<span class="c1">#       Copyright (C) 2011-2014, the ilastik developers</span>
+<span class="c1">#                                &lt;team@ilastik.org&gt;</span>
+<span class="c1">#</span>
+<span class="c1"># This program is free software; you can redistribute it and/or</span>
+<span class="c1"># modify it under the terms of the Lesser GNU General Public License</span>
+<span class="c1"># as published by the Free Software Foundation; either version 2.1</span>
+<span class="c1"># of the License, or (at your option) any later version.</span>
+<span class="c1">#</span>
+<span class="c1"># This program is distributed in the hope that it will be useful,</span>
+<span class="c1"># but WITHOUT ANY WARRANTY; without even the implied warranty of</span>
+<span class="c1"># MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the</span>
+<span class="c1"># GNU Lesser General Public License for more details.</span>
+<span class="c1">#</span>
+<span class="c1"># See the files LICENSE.lgpl2 and LICENSE.lgpl3 for full text of the</span>
+<span class="c1"># GNU Lesser General Public License version 2.1 and 3 respectively.</span>
+<span class="c1"># This information is also available on the ilastik web site at:</span>
+<span class="c1">#		   http://ilastik.org/license/</span>
+<span class="c1">###############################################################################</span>
+<span class="kn">import</span> <span class="nn">sys</span>
+<span class="kn">import</span> <span class="nn">urllib</span>
+<span class="kn">import</span> <span class="nn">numpy</span>
+
+<span class="kn">from</span> <span class="nn">lazyflow.utility</span> <span class="k">import</span> <span class="n">PathComponents</span>
+<span class="kn">from</span> <span class="nn">lazyflow.utility.jsonConfig</span> <span class="k">import</span> <span class="n">JsonConfigParser</span><span class="p">,</span> <span class="n">AutoEval</span><span class="p">,</span> <span class="n">FormattedField</span>
+
+<span class="kn">import</span> <span class="nn">logging</span>
+<span class="n">logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="n">__name__</span><span class="p">)</span>
+
+<div class="viewcode-block" id="RESTfulVolume"><a class="viewcode-back" href="../../../../utilities.html#lazyflow.utility.io_util.RESTfulVolume">[docs]</a><span class="k">class</span> <span class="nc">RESTfulVolume</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    This class provides access to data obtained via a RESTful API (e.g. from http://openconnecto.me).</span>
+<span class="sd">    A description of the remote volume must be provided via a JSON file, </span>
+<span class="sd">    whose schema is specified by :py:data:`RESTfulVolume.DescriptionFields`.</span>
+<span class="sd">    </span>
+<span class="sd">    See the unit tests in ``tests/testRESTfulVolume.py`` for example usage.</span>
+<span class="sd">    </span>
+<span class="sd">    .. note:: This class does not keep track of the data you&#39;ve already downloaded.  </span>
+<span class="sd">              Every call to :py:func:`downloadSubVolume()` results in a new download.</span>
+<span class="sd">              For automatic blockwise local caching of remote datasets, see :py:class:`RESTfulBlockwiseFileset`.</span>
+
+<span class="sd">    .. note:: See the unit tests in ``tests/testRESTfulVolume.py`` for example usage.              </span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    
+    <span class="c1">#: These fields describe the schema of the description file.</span>
+    <span class="c1">#: See the source code comments for a description of each field.    </span>
+    <span class="n">DescriptionFields</span> <span class="o">=</span> \
+    <span class="p">{</span>
+        <span class="s2">&quot;_schema_name&quot;</span> <span class="p">:</span> <span class="s2">&quot;RESTful-volume-description&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;_schema_version&quot;</span> <span class="p">:</span> <span class="mf">1.0</span><span class="p">,</span>
+
+        <span class="s2">&quot;name&quot;</span> <span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+        <span class="s2">&quot;format&quot;</span> <span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+        <span class="s2">&quot;axes&quot;</span> <span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+        <span class="s2">&quot;dtype&quot;</span> <span class="p">:</span> <span class="n">AutoEval</span><span class="p">(),</span>
+        <span class="s2">&quot;bounds&quot;</span> <span class="p">:</span> <span class="n">AutoEval</span><span class="p">(</span><span class="n">numpy</span><span class="o">.</span><span class="n">array</span><span class="p">),</span>
+        <span class="s2">&quot;shape&quot;</span> <span class="p">:</span> <span class="n">AutoEval</span><span class="p">(</span><span class="n">numpy</span><span class="o">.</span><span class="n">array</span><span class="p">),</span> <span class="c1"># Provided for you. Computed as bounds - origin_offset</span>
+        <span class="s2">&quot;origin_offset&quot;</span> <span class="p">:</span> <span class="n">AutoEval</span><span class="p">(</span><span class="n">numpy</span><span class="o">.</span><span class="n">array</span><span class="p">),</span>
+        <span class="s2">&quot;url_format&quot;</span> <span class="p">:</span> <span class="n">FormattedField</span><span class="p">(</span> <span class="n">requiredFields</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;x_start&quot;</span><span class="p">,</span> <span class="s2">&quot;x_stop&quot;</span><span class="p">,</span> <span class="s2">&quot;y_start&quot;</span><span class="p">,</span> <span class="s2">&quot;y_stop&quot;</span><span class="p">,</span> <span class="s2">&quot;z_start&quot;</span><span class="p">,</span> <span class="s2">&quot;z_stop&quot;</span><span class="p">],</span> 
+                                       <span class="n">optionalFields</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;t_start&quot;</span><span class="p">,</span> <span class="s2">&quot;t_stop&quot;</span><span class="p">,</span> <span class="s2">&quot;c_start&quot;</span><span class="p">,</span> <span class="s2">&quot;c_stop&quot;</span><span class="p">]</span> <span class="p">),</span>
+        <span class="s2">&quot;hdf5_dataset&quot;</span> <span class="p">:</span> <span class="nb">str</span>
+    <span class="p">}</span>
+    <span class="n">DescriptionSchema</span> <span class="o">=</span> <span class="n">JsonConfigParser</span><span class="p">(</span> <span class="n">DescriptionFields</span> <span class="p">)</span>
+
+    <span class="nd">@classmethod</span>
+<div class="viewcode-block" id="RESTfulVolume.readDescription"><a class="viewcode-back" href="../../../../utilities.html#lazyflow.utility.io_util.RESTfulVolume.readDescription">[docs]</a>    <span class="k">def</span> <span class="nf">readDescription</span><span class="p">(</span><span class="n">cls</span><span class="p">,</span> <span class="n">descriptionFilePath</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Parse the description file at the given path and return a </span>
+<span class="sd">        :py:class:`jsonConfig.Namespace` object with the description parameters.</span>
+<span class="sd">        The file will be parsed according to the schema given by :py:data:`RESTfulVolume.DescriptionFields`.</span>
+<span class="sd">        Any optional parameters not provided by the user are filled in automatically.</span>
+<span class="sd">        </span>
+<span class="sd">        :param descriptionFilePath: The path to the description file to parse.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># Read file</span>
+        <span class="n">description</span> <span class="o">=</span> <span class="n">RESTfulVolume</span><span class="o">.</span><span class="n">DescriptionSchema</span><span class="o">.</span><span class="n">parseConfigFile</span><span class="p">(</span> <span class="n">descriptionFilePath</span> <span class="p">)</span>
+        <span class="n">cls</span><span class="o">.</span><span class="n">updateDescription</span><span class="p">(</span><span class="n">description</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">description</span></div>
+
+    <span class="nd">@classmethod</span>
+<div class="viewcode-block" id="RESTfulVolume.updateDescription"><a class="viewcode-back" href="../../../../utilities.html#lazyflow.utility.io_util.RESTfulVolume.updateDescription">[docs]</a>    <span class="k">def</span> <span class="nf">updateDescription</span><span class="p">(</span><span class="n">cls</span><span class="p">,</span> <span class="n">description</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Some description fields are optional.</span>
+<span class="sd">        If they aren&#39;t provided in the description JSON file, then this function provides </span>
+<span class="sd">        them with default values, based on the other description fields.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># Augment with default parameters.</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">description</span><span class="p">))</span>
+        <span class="k">if</span> <span class="n">description</span><span class="o">.</span><span class="n">origin_offset</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">description</span><span class="o">.</span><span class="n">origin_offset</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">array</span><span class="p">(</span> <span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">*</span><span class="nb">len</span><span class="p">(</span><span class="n">description</span><span class="o">.</span><span class="n">bounds</span><span class="p">)</span> <span class="p">)</span>
+        <span class="n">description</span><span class="o">.</span><span class="n">shape</span> <span class="o">=</span> <span class="n">description</span><span class="o">.</span><span class="n">bounds</span> <span class="o">-</span> <span class="n">description</span><span class="o">.</span><span class="n">origin_offset</span></div>
+
+    <span class="nd">@classmethod</span>
+<div class="viewcode-block" id="RESTfulVolume.writeDescription"><a class="viewcode-back" href="../../../../utilities.html#lazyflow.utility.io_util.RESTfulVolume.writeDescription">[docs]</a>    <span class="k">def</span> <span class="nf">writeDescription</span><span class="p">(</span><span class="n">cls</span><span class="p">,</span> <span class="n">descriptionFilePath</span><span class="p">,</span> <span class="n">descriptionFields</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Write a :py:class:`jsonConfig.Namespace` object to the given path.</span>
+<span class="sd">        </span>
+<span class="sd">        :param descriptionFilePath: The path to overwrite with the description fields.</span>
+<span class="sd">        :param descriptionFields: The fields to write.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">RESTfulVolume</span><span class="o">.</span><span class="n">DescriptionSchema</span><span class="o">.</span><span class="n">writeConfigFile</span><span class="p">(</span> <span class="n">descriptionFilePath</span><span class="p">,</span> <span class="n">descriptionFields</span> <span class="p">)</span></div>
+
+<div class="viewcode-block" id="RESTfulVolume.__init__"><a class="viewcode-back" href="../../../../utilities.html#lazyflow.utility.io_util.RESTfulVolume.__init__">[docs]</a>    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span> <span class="bp">self</span><span class="p">,</span> <span class="n">descriptionFilePath</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">preparsedDescription</span><span class="o">=</span><span class="kc">None</span> <span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Constructor.  Uses `readDescription` interally.</span>
+<span class="sd">        </span>
+<span class="sd">        :param descriptionFilePath: The path to the .json file that describes the remote volume.</span>
+<span class="sd">        :param preparsedDescription: (Optional) Provide pre-parsed description fields, in which </span>
+<span class="sd">                                     case the provided description file will not be parsed.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">preparsedDescription</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">assert</span> <span class="n">descriptionFilePath</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">,</span> <span class="s2">&quot;Can&#39;t provide BOTH description file and pre-parsed description fields.&quot;</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">description</span> <span class="o">=</span> <span class="n">preparsedDescription</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">assert</span> <span class="n">descriptionFilePath</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">,</span> <span class="s2">&quot;Must provide either a description file or pre-parsed description fields&quot;</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">description</span> <span class="o">=</span> <span class="n">RESTfulVolume</span><span class="o">.</span><span class="n">readDescription</span><span class="p">(</span> <span class="n">descriptionFilePath</span> <span class="p">)</span>
+
+        <span class="c1"># Check for errors        </span>
+        <span class="k">assert</span> <span class="kc">False</span> <span class="ow">not</span> <span class="ow">in</span> <span class="nb">map</span><span class="p">(</span><span class="k">lambda</span> <span class="n">a</span><span class="p">:</span> <span class="n">a</span> <span class="ow">in</span> <span class="s1">&#39;txyzc&#39;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">description</span><span class="o">.</span><span class="n">axes</span><span class="p">),</span> <span class="s2">&quot;Unknown axis type.  Known axes: txyzc  Your axes:&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">description</span><span class="o">.</span><span class="n">axes</span><span class="p">)</span>
+        <span class="k">assert</span> <span class="bp">self</span><span class="o">.</span><span class="n">description</span><span class="o">.</span><span class="n">format</span> <span class="o">==</span> <span class="s2">&quot;hdf5&quot;</span><span class="p">,</span> <span class="s2">&quot;Only hdf5 RESTful volumes are supported so far.&quot;</span>
+        <span class="k">assert</span> <span class="bp">self</span><span class="o">.</span><span class="n">description</span><span class="o">.</span><span class="n">hdf5_dataset</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">,</span> <span class="s2">&quot;RESTful volume description file must specify the hdf5_dataset name&quot;</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">description</span><span class="o">.</span><span class="n">hdf5_dataset</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">!=</span> <span class="s1">&#39;/&#39;</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">description</span><span class="o">.</span><span class="n">hdf5_dataset</span> <span class="o">=</span> <span class="s1">&#39;/&#39;</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">description</span><span class="o">.</span><span class="n">hdf5_dataset</span></div>
+    
+<div class="viewcode-block" id="RESTfulVolume.downloadSubVolume"><a class="viewcode-back" href="../../../../utilities.html#lazyflow.utility.io_util.RESTfulVolume.downloadSubVolume">[docs]</a>    <span class="k">def</span> <span class="nf">downloadSubVolume</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">roi</span><span class="p">,</span> <span class="n">outputDatasetPath</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Download a cutout volume from the remote dataset.</span>
+<span class="sd">        </span>
+<span class="sd">        :param roi: The subset of the volume to download, specified as a tuple of coordinates: ``(start, stop)``</span>
+<span class="sd">        :param outputDatasetPath: The path to overwrite with the downloaded hdf5 file.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">origin_offset</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">description</span><span class="o">.</span><span class="n">origin_offset</span><span class="p">)</span>
+        <span class="n">accessStart</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">roi</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+        <span class="n">accessStart</span> <span class="o">+=</span> <span class="n">origin_offset</span>
+        <span class="n">accessStop</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">roi</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+        <span class="n">accessStop</span> <span class="o">+=</span> <span class="n">origin_offset</span>
+
+        <span class="n">RESTArgs</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="k">for</span> <span class="n">axisindex</span><span class="p">,</span> <span class="n">axiskey</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">description</span><span class="o">.</span><span class="n">axes</span><span class="p">):</span>
+            <span class="n">startKey</span> <span class="o">=</span> <span class="s1">&#39;</span><span class="si">{}</span><span class="s1">_start&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">axiskey</span><span class="p">)</span>
+            <span class="n">stopKey</span> <span class="o">=</span> <span class="s1">&#39;</span><span class="si">{}</span><span class="s1">_stop&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">axiskey</span><span class="p">)</span>
+            <span class="n">RESTArgs</span><span class="p">[</span><span class="n">startKey</span><span class="p">]</span> <span class="o">=</span> <span class="n">accessStart</span><span class="p">[</span> <span class="n">axisindex</span> <span class="p">]</span>
+            <span class="n">RESTArgs</span><span class="p">[</span><span class="n">stopKey</span><span class="p">]</span> <span class="o">=</span> <span class="n">accessStop</span><span class="p">[</span> <span class="n">axisindex</span> <span class="p">]</span>
+
+        <span class="c1"># Download the ROI specified in the url to a HDF5 file</span>
+        <span class="n">url</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">description</span><span class="o">.</span><span class="n">url_format</span><span class="o">.</span><span class="n">format</span><span class="p">(</span> <span class="o">**</span><span class="n">RESTArgs</span> <span class="p">)</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span> <span class="s2">&quot;Opening url for region </span><span class="si">{}</span><span class="s2">..</span><span class="si">{}</span><span class="s2">: </span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">roi</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">roi</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">url</span><span class="p">)</span> <span class="p">)</span>
+        
+        <span class="n">pathComponents</span> <span class="o">=</span> <span class="n">PathComponents</span><span class="p">(</span><span class="n">outputDatasetPath</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">pathComponents</span><span class="o">.</span><span class="n">internalPath</span> <span class="o">!=</span> <span class="bp">self</span><span class="o">.</span><span class="n">description</span><span class="o">.</span><span class="n">hdf5_dataset</span><span class="p">:</span>
+            <span class="c1"># We could just open the file and rename the dataset to match what the user asked for, but that would probably be slow.</span>
+            <span class="c1"># It&#39;s better just to force him to use the correct dataset name to begin with.</span>
+            <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="s2">&quot;The RESTful volume format uses internal dataset name &#39;</span><span class="si">{}</span><span class="s2">&#39;, but you seem to be expecting &#39;</span><span class="si">{}</span><span class="s2">&#39;.&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span> <span class="bp">self</span><span class="o">.</span><span class="n">description</span><span class="o">.</span><span class="n">hdf5_dataset</span><span class="p">,</span> <span class="n">pathComponents</span><span class="o">.</span><span class="n">internalPath</span> <span class="p">)</span> <span class="p">)</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span> <span class="s2">&quot;Downloading RESTful subvolume to file: </span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span> <span class="n">pathComponents</span><span class="o">.</span><span class="n">externalPath</span> <span class="p">)</span> <span class="p">)</span>
+
+        <span class="n">urllib</span><span class="o">.</span><span class="n">urlretrieve</span><span class="p">(</span><span class="n">url</span><span class="p">,</span> <span class="n">pathComponents</span><span class="o">.</span><span class="n">externalPath</span><span class="p">)</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span> <span class="s2">&quot;Finished downloading file: </span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span> <span class="n">pathComponents</span><span class="o">.</span><span class="n">externalPath</span> <span class="p">)</span> <span class="p">)</span></div></div>
+
+<span class="k">if</span> <span class="n">__name__</span> <span class="o">==</span> <span class="s2">&quot;__main__&quot;</span><span class="p">:</span>
+    <span class="n">testParameters0</span> <span class="o">=</span> <span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">{</span>
+<span class="s2">    &quot;_schema_name&quot; : &quot;RESTful-volume-description&quot;,</span>
+<span class="s2">    &quot;_schema_version&quot; : 1.0,</span>
+
+<span class="s2">    &quot;name&quot; : &quot;Bock11-level0&quot;,</span>
+<span class="s2">    &quot;format&quot; : &quot;hdf5&quot;,</span>
+<span class="s2">    &quot;axes&quot; : &quot;zyx&quot;,</span>
+
+<span class="s2">    &quot;##NOTE&quot;:&quot;The first z-slice of the bock dataset is 2917, so the origin_offset must be at least 2917&quot;,</span>
+<span class="s2">    &quot;origin_offset&quot; : [2917, 50000, 50000],</span>
+
+<span class="s2">    &quot;###shape&quot; : [1239, 135424, 119808],</span>
+<span class="s2">    &quot;shape&quot; : [1239, 10000, 10000],</span>
+<span class="s2">    &quot;dtype&quot; : &quot;numpy.uint8&quot;,</span>
+<span class="s2">    &quot;url_format&quot; : &quot;http://openconnecto.me/ocp/ca/bock11/hdf5/0/</span><span class="si">{x_start}</span><span class="s2">,</span><span class="si">{x_stop}</span><span class="s2">/</span><span class="si">{y_start}</span><span class="s2">,</span><span class="si">{y_stop}</span><span class="s2">/</span><span class="si">{z_start}</span><span class="s2">,</span><span class="si">{z_stop}</span><span class="s2">/&quot;,</span>
+<span class="s2">    &quot;hdf5_dataset&quot; : &quot;CUTOUT&quot;</span>
+<span class="s2">}</span>
+<span class="s2">&quot;&quot;&quot;</span>
+    <span class="kn">import</span> <span class="nn">os</span>
+    <span class="kn">import</span> <span class="nn">tempfile</span>
+    <span class="kn">import</span> <span class="nn">numpy</span>
+    
+    <span class="c1"># Write test to a temp file</span>
+    <span class="n">d</span> <span class="o">=</span> <span class="n">tempfile</span><span class="o">.</span><span class="n">mkdtemp</span><span class="p">()</span>
+    <span class="n">descriptionFilePath</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">d</span><span class="p">,</span> <span class="s1">&#39;remote_volume_parameters.json&#39;</span><span class="p">)</span>
+    <span class="k">with</span> <span class="n">file</span><span class="p">(</span> <span class="n">descriptionFilePath</span><span class="p">,</span> <span class="s1">&#39;w&#39;</span> <span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+        <span class="n">f</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">testParameters0</span><span class="p">)</span>
+    
+    <span class="n">description</span> <span class="o">=</span> <span class="n">RESTfulVolume</span><span class="o">.</span><span class="n">readDescription</span><span class="p">(</span> <span class="n">descriptionFilePath</span> <span class="p">)</span>
+
+    <span class="k">assert</span> <span class="n">description</span><span class="o">.</span><span class="n">name</span> <span class="o">==</span> <span class="s2">&quot;Bock11-level0&quot;</span>
+    <span class="k">assert</span> <span class="n">description</span><span class="o">.</span><span class="n">axes</span> <span class="o">==</span> <span class="s2">&quot;zyx&quot;</span>
+    <span class="k">assert</span> <span class="n">description</span><span class="o">.</span><span class="n">dtype</span> <span class="o">==</span> <span class="n">numpy</span><span class="o">.</span><span class="n">uint8</span>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../../../../search.html" method="get">
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../../../index.html">lazyflow 0.1 documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="../../../index.html" >Module code</a> &#187;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2012, Christoph Straehle, Bernhard X. Kausler, Thorben Kröger, Ullrich Köthe , Fred A. Hamprecht, Anna Kreshuk, Luca Fiaschi, Stuart Berg.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.4.8.
+    </div>
+  </body>
+</html>
