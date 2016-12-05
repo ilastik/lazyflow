@@ -10,6 +10,7 @@ import h5py
 import vigra
 import numpy
 import math
+from ilastik.applets.objectExtraction.opObjectExtraction import default_features_key
 
 def write_numpy_structured_array_to_HDF5(fid, internalPath, data, overwrite = False):
     """
@@ -175,10 +176,10 @@ class OpExportToKnime(Operator):
                 raw_shape = self.RawImage.meta.getTaggedShape()
                 nchannels = raw_shape['c']
                 try:
-                    minxs = table["Default features, Coord<Minimum>_ch_0"].astype(numpy.int32)
-                    minys = table["Default features, Coord<Minimum>_ch_1"].astype(numpy.int32)
-                    maxxs = table["Default features, Coord<Maximum>_ch_0"].astype(numpy.int32)
-                    maxys = table["Default features, Coord<Maximum>_ch_1"].astype(numpy.int32)
+                    minxs = table[default_features_key+", Coord<Minimum>_ch_0"].astype(numpy.int32)
+                    minys = table[default_features_key+", Coord<Minimum>_ch_1"].astype(numpy.int32)
+                    maxxs = table[default_features_key+", Coord<Maximum>_ch_0"].astype(numpy.int32)
+                    maxys = table[default_features_key+", Coord<Maximum>_ch_1"].astype(numpy.int32)
                     time_values = table["Time"].astype(numpy.int32)
                 except ValueError:
                     logger.info("Object bounding boxes are not passed as features. Object images will not be saved")
@@ -187,8 +188,8 @@ class OpExportToKnime(Operator):
                         image_paths["labels"][i] = ""
                 else:
                     try:
-                        minzs = table["Default features, Coord<Minimum>_ch_2"].astype(numpy.int32)
-                        maxzs = table["Default features, Coord<Maximum>_ch_2"].astype(numpy.int32)
+                        minzs = table[default_features_key+", Coord<Minimum>_ch_2"].astype(numpy.int32)
+                        maxzs = table[default_features_key+", Coord<Maximum>_ch_2"].astype(numpy.int32)
                     except ValueError:
                         minzs = None
                         maxzs = None
