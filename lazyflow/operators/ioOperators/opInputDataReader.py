@@ -1,3 +1,4 @@
+from __future__ import absolute_import
 ###############################################################################
 #   lazyflow: data flow based lazy parallel computation framework
 #
@@ -21,21 +22,21 @@
 ###############################################################################
 from lazyflow.graph import Operator, InputSlot, OutputSlot
 from lazyflow.operators import OpImageReader, OpBlockedArrayCache, OpMetadataInjector, OpSubRegion
-from opStreamingHdf5Reader import OpStreamingHdf5Reader
-from opNpyFileReader import OpNpyFileReader
-from opRawBinaryFileReader import OpRawBinaryFileReader
-from opTiffReader import OpTiffReader
-from opTiffSequenceReader import OpTiffSequenceReader
+from .opStreamingHdf5Reader import OpStreamingHdf5Reader
+from .opNpyFileReader import OpNpyFileReader
+from .opRawBinaryFileReader import OpRawBinaryFileReader
+from .opTiffReader import OpTiffReader
+from .opTiffSequenceReader import OpTiffSequenceReader
 from lazyflow.operators.ioOperators import OpStackLoader, OpBlockwiseFilesetReader, OpRESTfulBlockwiseFilesetReader, \
     OpCachedTiledVolumeReader, OpKlbReader
 from lazyflow.utility.jsonConfig import JsonConfigParser
 from lazyflow.utility.pathHelpers import isUrl
 
-from opStreamingUfmfReader import OpStreamingUfmfReader
-from opStreamingMmfReader import OpStreamingMmfReader
+from .opStreamingUfmfReader import OpStreamingUfmfReader
+from .opStreamingMmfReader import OpStreamingMmfReader
 
 try:
-    from opBigTiffReader import OpBigTiffReader
+    from .opBigTiffReader import OpBigTiffReader
     _supports_bigtiff = True
 except ImportError:
     _supports_bigtiff = False
@@ -173,7 +174,7 @@ class OpInputDataReader(Operator):
         iterFunc = openFuncs.__iter__()
         while not self.internalOperators:
             try:
-                openFunc = iterFunc.next()
+                openFunc = next(iterFunc)
             except StopIteration:
                 break
             self.internalOperators, self.internalOutput = openFunc(filePath)
