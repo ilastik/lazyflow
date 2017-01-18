@@ -2,7 +2,6 @@ from __future__ import absolute_import
 from __future__ import division
 from builtins import next
 from builtins import object
-from past.utils import old_div
 ###############################################################################
 #   lazyflow: data flow based lazy parallel computation framework
 #
@@ -189,7 +188,7 @@ class BigRequestStreamer(object):
         ram_usage_per_requested_pixel *= safety_factor
         
         if ideal_blockshape is None:
-            blockshape = determineBlockShape( input_shape, old_div(available_ram,(self._num_threads*ram_usage_per_requested_pixel)) )
+            blockshape = determineBlockShape( input_shape, (available_ram // (self._num_threads*ram_usage_per_requested_pixel)) )
             blockshape = tuple(numpy.minimum(max_blockshape, blockshape))
             if 'c' in outputSlot.meta.getAxisKeys():
                 blockshape = blockshape[:channel_index] + (num_channels,) + blockshape[channel_index:]
