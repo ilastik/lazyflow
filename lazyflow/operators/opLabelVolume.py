@@ -111,7 +111,7 @@ class OpLabelVolume(Operator):
             del self._opLabel
 
         method = self.Method.value
-        if not isinstance(method, str):
+        if not isinstance(method, basestring):
             method = method[0]
 
         self._opLabel = self._labelOps[method](parent=self)
