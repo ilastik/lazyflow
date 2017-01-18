@@ -20,6 +20,7 @@
 #		   http://ilastik.org/license/
 ###############################################################################
 from __future__ import division
+from builtins import map
 from functools import partial
 import logging
 logger = logging.getLogger(__name__)
@@ -123,7 +124,7 @@ class OpFeatureMatrixCache(Operator):
                 # A block should never span multiple time slices.
                 # For txy volumes, that could lead to lots of extra features being computed.
                 tagged_shape['t'] = 1
-            blockshape = determineBlockShape( tagged_shape.values(), 1e6 )
+            blockshape = determineBlockShape( list(tagged_shape.values()), 1e6 )
         
         # Don't span more than 256 px along any axis
         blockshape = tuple(min(x, 256) for x in blockshape)
@@ -170,7 +171,7 @@ class OpFeatureMatrixCache(Operator):
         # It's better to store the blocks here -- rather than within each request -- to 
         #  avoid contention over self._lock from within every block's request.
         with self._lock:
-            for block_start, req in reqs.items():
+            for block_start, req in list(reqs.items()):
                 if req.result is None:
                     # 'None' means the block wasn't dirty. No need to update.
                     continue
@@ -191,7 +192,7 @@ class OpFeatureMatrixCache(Operator):
 
         # Concatenate the all blockwise results
         if self._blockwise_feature_matrices:
-            total_feature_matrix = numpy.concatenate( self._blockwise_feature_matrices.values(), axis=0 )
+            total_feature_matrix = numpy.concatenate( list(self._blockwise_feature_matrices.values()), axis=0 )
         else:
             # No label points at all.
             # Return an empty label&feature matrix (of the correct shape)
@@ -211,7 +212,7 @@ class OpFeatureMatrixCache(Operator):
         roi.stop[-1] = 1
         # Bookkeeping: Track the dirty blocks
         block_starts = getIntersectingBlocks( self._blockshape, (roi.start, roi.stop) )
-        block_starts = map( tuple, block_starts )
+        block_starts = list(map( tuple, block_starts ))
         
         # 
         # If the features were dirty (not labels), we only really care about
@@ -219,7 +220,7 @@ class OpFeatureMatrixCache(Operator):
         # For big dirty rois (e.g. the entire image), 
         #  we avoid a lot of unnecessary entries in self._dirty_blocks
         if slot == self.FeatureImage:
-            block_starts = set( block_starts ).intersection( self._blockwise_feature_matrices.keys() )
+            block_starts = set( block_starts ).intersection( list(self._blockwise_feature_matrices.keys()) )
 
         with self._lock:
             self._dirty_blocks.update( block_starts )

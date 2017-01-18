@@ -1,4 +1,8 @@
 from __future__ import absolute_import
+from __future__ import division
+from builtins import next
+from builtins import object
+from past.utils import old_div
 ###############################################################################
 #   lazyflow: data flow based lazy parallel computation framework
 #
@@ -161,9 +165,9 @@ class BigRequestStreamer(object):
         tagged_shape = outputSlot.meta.getTaggedShape()
         
         # Generally, we don't want to split requests across channels.
-        if 'c' in tagged_shape.keys():
+        if 'c' in list(tagged_shape.keys()):
             num_channels = tagged_shape['c']
-            channel_index = tagged_shape.keys().index('c')
+            channel_index = list(tagged_shape.keys()).index('c')
             input_shape = input_shape[:channel_index] + input_shape[channel_index+1:]
             max_blockshape = max_blockshape[:channel_index] + max_blockshape[channel_index+1:]
             if ideal_blockshape:
@@ -185,7 +189,7 @@ class BigRequestStreamer(object):
         ram_usage_per_requested_pixel *= safety_factor
         
         if ideal_blockshape is None:
-            blockshape = determineBlockShape( input_shape, available_ram/(self._num_threads*ram_usage_per_requested_pixel) )
+            blockshape = determineBlockShape( input_shape, old_div(available_ram,(self._num_threads*ram_usage_per_requested_pixel)) )
             blockshape = tuple(numpy.minimum(max_blockshape, blockshape))
             if 'c' in outputSlot.meta.getAxisKeys():
                 blockshape = blockshape[:channel_index] + (num_channels,) + blockshape[channel_index:]
