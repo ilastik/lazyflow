@@ -115,7 +115,7 @@ class OpTiffReader(Operator):
                                        "(Separate T,Z,C axes already exist.)")
             
             self.Output.meta.shape = shape
-            self.Output.meta.axistags = vigra.defaultAxistags( axes )
+            self.Output.meta.axistags = vigra.defaultAxistags( str(axes) )
             self.Output.meta.dtype = numpy.dtype(dtype_code).type
             self.Output.meta.ideal_blockshape = ((1,) * len(self._non_page_shape)) + self._page_shape
 

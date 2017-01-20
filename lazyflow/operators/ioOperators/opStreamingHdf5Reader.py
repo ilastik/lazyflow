@@ -90,7 +90,7 @@ class OpStreamingHdf5Reader(Operator):
                 # Special case: If the 3rd dim is small, assume it's 'c', not 'z'
                 axisorder = 'yxc'
 
-            axistags = vigra.defaultAxistags(axisorder)
+            axistags = vigra.defaultAxistags(str(axisorder))
 
         assert len(axistags) == len( dataset.shape ),\
             "Mismatch between shape {} and axisorder {}".format( dataset.shape, axisorder )
