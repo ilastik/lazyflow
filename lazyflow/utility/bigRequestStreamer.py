@@ -150,6 +150,20 @@ class BigRequestStreamer(object):
         """
         Choose a blockshape using the slot metadata (if available) or an arbitrary guess otherwise.
         """
+        warnings.warn("Using 64px blockshape...")
+        tagged_shape = outputSlot.meta.getTaggedShape()
+        if 't' in tagged_shape.keys():
+            tagged_shape['t'] = 1
+        if 'z' in tagged_shape.keys():
+            tagged_shape['z'] = 64
+        if 'y' in tagged_shape.keys():
+            tagged_shape['y'] = 64
+        if 'x' in tagged_shape.keys():
+            tagged_shape['x'] = 64
+        # (Keep channels untouched)
+        
+        return tuple(tagged_shape.values())
+        
         input_shape = outputSlot.meta.shape
         ideal_blockshape = outputSlot.meta.ideal_blockshape
         ram_usage_per_requested_pixel = outputSlot.meta.ram_usage_per_requested_pixel
