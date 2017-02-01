@@ -269,7 +269,6 @@ class OperatorWrapper(Operator):
 
         op = self.innerOperators.pop(index)
         for slot in op.inputs.values():
-            slot.backpropagate_values = False
             slot.unregisterDisconnect(self.handleEarlyDisconnect)
 
         for oslot in self.outputs.values():
@@ -278,6 +277,9 @@ class OperatorWrapper(Operator):
         for key, outerSlot in self.inputs.items():
             if outerSlot.name in self.promotedSlotNames:
                 outerSlot.removeSlot(index, length)
+
+        for slot in op.inputs.values():
+            slot.backpropagate_values = False
 
         op.cleanUp()
 
