@@ -86,40 +86,12 @@ class OpCompressedUserLabelArray(OpUnmanagedCompressedCache):
     def clearAllLabels(self):
         """
         Nearly the same as _purge_label but deleting all the >0 entries. 
-        
-        FIXME: This should be done more effecient, but at the moment, this works
         """
-        replacement_value = 0
-        changed_block_rois = []
-        #stored_block_rois = self.CleanBlocks.value
-        stored_block_roi_destination = [None]
-        self.execute(self.CleanBlocks, (), SubRegion( self.Output, (0,),(1,) ), stored_block_roi_destination)
-        stored_block_rois = stored_block_roi_destination[0]
-
-        for block_roi in stored_block_rois:
-            # Get data
-            block_shape = numpy.subtract( block_roi[1], block_roi[0] )
-            block = self.Output.stype.allocateDestination(SubRegion(self.Output, *roiFromShape(block_shape)))
-
-            self.execute(self.Output, (), SubRegion( self.Output, *block_roi ), block)
-
-            # Locate pixels to change
-            #matching_label_coords = numpy.nonzero( block == label_to_purge )
-            # to get all the data that is nonzero
-            matching_label_coords = numpy.nonzero( block )
-
-            # Change the data
-            block[matching_label_coords] = replacement_value
-            
-            # Update cache with the new data (only if something really changed)
-            if len(matching_label_coords[0]) > 0 :
-                super( OpCompressedUserLabelArray, self )._setInSlotInput( self.Input, (), SubRegion( self.Output, *block_roi ), block, store_zero_blocks=False )
-                changed_block_rois.append( block_roi )
-
-        for block_roi in changed_block_rois:
-            # FIXME: Shouldn't this dirty notification be handled in OpUnmanagedCompressedCache?
-            self.Output.setDirty( *block_roi )
-
+        for block_start in list(self._blockLocks.keys()):
+            self._deleteBlock(block_start)
+        self._dirtyBlocks = set()
+        self.Output.setDirty()
+                
     def mergeLabels(self, from_label, into_label):
         self._purge_label(from_label, True, into_label)
     
@@ -210,7 +182,6 @@ class OpCompressedUserLabelArray(OpUnmanagedCompressedCache):
                 changed_block_rois.append( block_roi )
 
         for block_roi in changed_block_rois:
-            # FIXME: Shouldn't this dirty notification be handled in OpUnmanagedCompressedCache?
             self.Output.setDirty( *block_roi )
     
     def execute(self, slot, subindex, roi, destination):

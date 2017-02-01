@@ -523,11 +523,7 @@ class OpUnmanagedCompressedCache(Operator):
 
                     # If we can, remove this block entirely.
                     if not store_zero_blocks and new_block_sum == 0 and (dataset[:] == 0).all():
-                        with self._lock:
-                            with self._blockLocks[block_start]:
-                               self._cacheFiles[block_start].close()
-                               del self._cacheFiles[block_start]
-                            del self._blockLocks[block_start]
+                        self._deleteBlock(block_start)
     
             # Here, we assume that if this function is used to update ANY PART of a 
             #  block, he is responsible for updating the ENTIRE block.
@@ -537,6 +533,13 @@ class OpUnmanagedCompressedCache(Operator):
     #            self.Output._sig_value_changed()
     #            self.OutputHdf5._sig_value_changed()
     #            self.CleanBlocks._sig_value_changed()
+
+    def _deleteBlock(self, block_start):
+        with self._lock:
+            with self._blockLocks[block_start]:
+               self._cacheFiles[block_start].close()
+               del self._cacheFiles[block_start]
+            del self._blockLocks[block_start]
 
     def _setInSlotInputHdf5(self, slot, subindex, roi, value):
         logger.debug("Setting block {} from hdf5".format( roi ))
