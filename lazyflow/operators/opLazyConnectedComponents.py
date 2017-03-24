@@ -19,7 +19,7 @@
 # This information is also available on the ilastik web site at:
 #          http://ilastik.org/license/
 ###############################################################################
-
+from __future__ import division
 import numpy as np
 import vigra
 import h5py
@@ -372,10 +372,9 @@ class OpLazyConnectedComponents(Operator, ObservableCache):
 
                 # determine which objects from this chunk continue in the
                 # neighbouring chunk
-                extendingLabels = [b for a, b in zip(myLabels, otherLabels)
-                                   if a in actualLabels]
-                extendingLabels = np.unique(extendingLabels
-                                            ).astype(_LABEL_TYPE)
+                extendingLabels = np.array([b for a, b in zip(myLabels, otherLabels)
+                                   if a in actualLabels]).astype( myLabels.dtype )
+                extendingLabels = np.sort(vigra.analysis.unique(extendingLabels)).astype(_LABEL_TYPE)
 
                 # add the neighbour to our processing queue only if it actually
                 # shares objects
@@ -549,7 +548,7 @@ class OpLazyConnectedComponents(Operator, ObservableCache):
         newlabels = labels.copy()
         d = self._globalToFinal[(t, c)]
         labeler = self._labelIterators[(t, c)]
-        for k in np.unique(labels):
+        for k in vigra.analysis.unique(labels):
             l = self._uf.findIndex(k)
             if l == 0:
                 continue
@@ -579,8 +578,8 @@ class OpLazyConnectedComponents(Operator, ObservableCache):
         cs = self._chunkShape
         start = np.asarray(roi.start)
         stop = np.asarray(roi.stop)
-        start_cs = start / cs
-        stop_cs = stop / cs
+        start_cs = start // cs
+        stop_cs = stop // cs
         # add one if division was not even
         stop_cs += np.where(stop % cs, 1, 0)
         iters = [xrange(start_cs[i], stop_cs[i]) for i in range(5)]

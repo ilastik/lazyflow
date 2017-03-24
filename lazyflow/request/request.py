@@ -29,6 +29,7 @@ import multiprocessing
 import platform
 import traceback
 import StringIO
+from random import randrange
 
 import logging
 logger = logging.getLogger(__name__)
@@ -802,25 +803,39 @@ class RequestLock(object):
             item = self._l[0]
             self._l = self._l[1:]
             return item
-
-        def popNone(self):
-            self._l.remove(None)
     
     class RequestLockQueue(object):
         """
-        This is a pseudo-priority queue.
-        All items pushed consecutively (with no pop()s in between), will be prioritized.
-        But as soon as one call to pop() is made, newly pushed items will 
-        NOT be included in the current set until it is exhausted.
-        This way, if a high-priority item is popped() and then immediately
-        re-pushed, it is not simply replaced at the head of the queue.
+        This data structure is a pseudo-priority queue.
+        If you're not ready to process the highest-priority item, you can simply push it back.
+        It will be placed in a secondary queue while you continue to process other items.
 
-        (It has to wait until the next "batch" of pops.) 
+        Two priority queues are maintained: one for pushing, one for popping.
+        Items are popped from the 'popping queue' until it is empty, and then the two
+        queues are swapped.
+
+        Suppose you pop an item (the highest priority item), but you discover you're not
+        able to use it immediately for some reason (e.g. it's a request that is still
+        waiting for a lock). Hence, you simply 'push' it back into this data structure.
+        
+        If there were only one queue, it would end up a the front of the queue again (it was the
+        highest priority item, after all).
+        
+        That is, you would never make any progress on the queue because you would just pop and
+        push the same item over and over!
+        
+        But since this data structure uses TWO queues, the pushed item will be put on the
+        'pushing queue' instead and, it won't be popped again until the popping queue is depleted
+        (at which point the two queues are swapped).
+
+        With this scheme, high-priority requests can opt not to monopolize access to a lock if
+        they need to wait for lower-priority requests to complete before continuing.
+        This is important for code involving condition variables, for instance.
         """
         def __init__(self):
             self._pushing_queue = []
             self._popping_queue = []
-        
+            
         def push(self, item):
             heapq.heappush(self._pushing_queue, item)
         
@@ -828,15 +843,11 @@ class RequestLock(object):
             if not self._popping_queue:
                 self._pushing_queue, self._popping_queue = self._popping_queue, self._pushing_queue
             return heapq.heappop(self._popping_queue)
-        
-        def popNone(self):
-            if self._popping_queue and self._popping_queue[0] is None:
-                self._popping_queue = self._popping_queue[1:]
-            else:
-                assert self._pushing_queue[0] is None
-                self._pushing_queue = self._pushing_queue[1:]
-        
+
         def __len__(self):
+            """
+            Returns the number of waiting threads, but NOT the number of 
+            """
             return len(self._pushing_queue) + len(self._popping_queue)
 
     logger = logging.getLogger(__name__ + ".RequestLock")
@@ -854,6 +865,14 @@ class RequestLock(object):
             # Other waiting threads (i.e. non-request "foreign" threads) are each listed as a single "None" item. 
             self._pendingRequests = RequestLock.RequestLockQueue()
 
+            # Native threads have no intrinsic priority, but we generally want to schedule them
+            # favorably in comparison to requests.
+            # Instead of pushing them onto the pendingRequests queue, we track the number of
+            # waiting threads here in this counter.
+            # When deciding which request or thread to scheudle next, we choose randomly from
+            # either set.
+            self.num_waiting_threads = 0
+        
     def _debug_mode_init(self):
         """
         For debug purposes, the user can use an empty threadpool.
@@ -915,21 +934,18 @@ class RequestLock(object):
     
     def _acquire_from_within_thread(self, blocking):
         if not blocking:
-            return self._modelLock.acquire(blocking)
+            return self._modelLock.acquire(False)
 
         with self._selfProtectLock:
-            # Append "None" to indicate that a real thread is waiting (not a request)
-            self._pendingRequests.push(None)
+            self.num_waiting_threads += 1
 
         # Wait for the internal lock to become free
-        got_it = self._modelLock.acquire(blocking)
+        self._modelLock.acquire(True)
     
         with self._selfProtectLock:
-            # Search for a "None" to pull off the list of pendingRequests.
-            # Don't take real requests from the queue
-            self._pendingRequests.popNone()
+            self.num_waiting_threads -= 1
 
-        return got_it
+        return True # got it
 
     def release(self):
         """
@@ -938,20 +954,32 @@ class RequestLock(object):
         assert self._modelLock.locked(), "Can't release a RequestLock that isn't already acquired!"
 
         with self._selfProtectLock:
-            if len(self._pendingRequests) == 0:
+            # This if/else statement could be simplified, but in this
+            # form it's easier to comment the explanation for each case.
+            if len(self._pendingRequests) == 0 and self.num_waiting_threads == 0:
                 # There were no waiting requests or threads, so the lock is free to be acquired again.
                 self._modelLock.release()
-            else:
+            elif len(self._pendingRequests) == 0 and self.num_waiting_threads > 0:
+                # There are not requests, but there is a waiting thread.
+                # Release the lock to wake it up (it will decrement the num_waiting_threads member)
+                self._modelLock.release()
+            elif len(self._pendingRequests) > 0 and self.num_waiting_threads == 0:
+                # There are no waiting 'native' threads, but there is a pending request.
                 # Instead of releasing the modelLock, just wake up a request that was waiting for it.
                 # He assumes that the lock is his when he wakes up.
-                r = self._pendingRequests.pop()
-                if r is not None:
-                    r._wake_up()
-                else:
-                    # The pending "request" is a real thread.
+                self._pendingRequests.pop()._wake_up()
+            elif len(self._pendingRequests) > 0 and self.num_waiting_threads > 0:
+                # There are both pending requests and native threads
+                # We generally want to give the threads priority, but not starve out requests.
+                # Therefore, give threads a 50% chance of getting selected.
+                # (Generally, there should be only one or two threads waiting on a lock, so 50% odds are quite high.)
+                if randrange(2):
                     # Release the lock to wake it up (he'll remove the _pendingRequest entry)
-                    self._pendingRequests.push(None)
                     self._modelLock.release()
+                else:
+                    # Instead of releasing the modelLock, just wake up a request that was waiting for it.
+                    # He assumes that the lock is his when he wakes up.
+                    self._pendingRequests.pop()._wake_up()
 
     def __enter__(self):
         self.acquire()
@@ -1111,11 +1139,12 @@ class SimpleRequestCondition(object):
 
 class RequestPool(object):
     """
-    Convenience class for submitting a batch of requests and waiting until they are all complete.
-    Requests can not be added to the pool after it has already started.
+    Class for submitting a batch of requests and waiting until they are all complete.
+    Requests cannot be added to the pool after it has already started.
     Not threadsafe:
         - don't call add() from more than one thread
-        - don't call wait() or submit() from more than one thread
+        - don't call wait() from more than one thread, but you CAN add requests
+          that are already executing in a different thread to a requestpool
     """
 
     class RequestPoolError(Exception):
@@ -1124,16 +1153,42 @@ class RequestPool(object):
         """
         pass
 
-    def __init__(self):
+    def __init__(self, max_active=None):
+        """
+        max_active: The number of Requests to launch in parallel.
+        """
         self._started = False
         self._failed = False
-        self._requests = set()
-        self._finishing_requests = set()
-        self._set_lock = threading.Lock()
+        self._finished = True
         self._request_completed_condition = SimpleRequestCondition()
+        self._set_lock = threading.Lock()
+
+        # Set default max_active here because global_thread_pool might change after startup
+        # Also, remember that num_workers could be 0 (when debugging)
+        self._max_active = max_active or max(max_active, Request.global_thread_pool.num_workers)
+
+        self.clean() # Initialize request sets
+
+    def clean(self):
+        """
+        Release our handles to all requests in the pool, for cleanup purposes.
+        There is no need to call this yourself.
+        """
+        assert not self._started or self._finished
+        with self._set_lock:
+            self._unsubmitted_requests = []
+            self._active_requests = set()
+            self._finishing_requests = set()
 
     def __len__(self):
-        return len(self._requests)
+        """
+        Returns the number of requests that we haven't discarded yet
+        and therefore haven't completely finished.
+        
+        This len will decrease until the RequestPool has completed or failed.
+        """
+        with self._set_lock:
+            return len(self._unsubmitted_requests) + len(self._active_requests) + len(self._finishing_requests)
 
     def add(self, req):
         """
@@ -1146,88 +1201,135 @@ class RequestPool(object):
             # If this exception blocks a desirable use case, then change this behavior and provide a unit test.
             raise RequestPool.RequestPoolError("Attempted to add a request to a pool that was already started!")
 
-        with self._set_lock:
-            self._requests.add(req)
-        req.notify_finished( functools.partial(self._transfer_request_to_finishing_queue, req, 'finished' ) )
-        req.notify_failed( functools.partial(self._transfer_request_to_finishing_queue, req, 'failed' ) )
-        req.notify_cancelled( functools.partial(self._transfer_request_to_finishing_queue, req, 'cancelled' ) )
+        self._unsubmitted_requests.append(req)
+        req.owning_pool = self
 
     def wait(self):
         """
-        If the pool hasn't been submitted yet, submit it. Then wait for all requests in the pool to complete.
+        Launch all requests and return after they have all completed, including their callback handlers.
         
-        To be efficient with memory, we attempt to discard requests quickly after they complete.
-        To achieve this, we keep requests in two sets:
+        First, N requests are launched (N=_max_active).
+        As each one completes, launch a new request to replace it until
+        there are no unsubmitted requests remaining.
         
-        _requests: All requests that are still executing or 'finishing'
-        _finishing_requests: Requests whose main work has completed, but may still be executing callbacks
-                             (e.g. handlers for notify_finished)
+        The block() function is called on every request after it has completed, to ensure
+        that any exceptions from those requests are re-raised by the RequestPool.
 
-        Requests are transferred in batches from the first set to the second as they complete.
-        
-        We block() for 'finishing' requests first, so they can be discarded quickly.
         (If we didn't block for 'finishing' requests at all, we'd be violating the Request 'Callback Timing Guarantee', 
         which must hold for *both* Requests and RequestPools.  See Request docs for details.)        
+        
+        After that, each request is discarded, so that it's reference dies immediately
+        and any memory it consumed is reclaimed.
+        
+        So, requests fall into four categories:
+        
+        1. unsubmitted
+            Not started yet.
+
+        2. active
+            Currently running their main workload
+
+        3. finishing
+            Main workload complete, but might still be running callback handlers.
+            We will call block() on these to ensure they have finished with callbacks,
+            and then discard them.
+
+        4. discarded
+            After each request is processed in _clear_finishing_requests(), it is removed from the
+            'finishing' set and the RequestPool retains no references to it any more.
         """
+        if Request.global_thread_pool.num_workers == 0:
+            # Simple wait() functionality when using debug mode
+            self._debug_mode_wait()
+            return
+
+        if self._started:
+            raise RequestPool.RequestPoolError("Can't re-start a RequestPool that was already started.")
+        self._started = True
+
+        # Edge case: Empty RequestPool
+        if not self._unsubmitted_requests:
+            self._finished = True
+            return
+
         try:
-            if not self._started:
-                self.submit()
+            # Launch the initial batch
+            n_first_batch = min(self._max_active, len(self._unsubmitted_requests))
+            assert n_first_batch > 0
+            for _ in range(n_first_batch):
+                self._activate_next_request()
             
-            while self._requests:
+            while True:
+                # Wait for at least one request to finish
                 with self._request_completed_condition:
-                    if self._requests:
+                    while len(self._active_requests) == self._max_active:
                         self._request_completed_condition.wait()
-                    assert self._request_completed_condition._ownership_lock.locked()
+
+                # Remove it from 'finishing' list (and raise an exception if it failed).
+                with self._request_completed_condition:
+                    self._clear_finishing_requests()
+
+                # Activate more requests until we're at the max again
+                while len(self._active_requests) < self._max_active and self._unsubmitted_requests:
+                    self._activate_next_request()
+
+                    # Clear once per time through this loop, in case the requests are finishing
+                    # faster than we can add them -- we don't want them to build up.
+                    with self._request_completed_condition:
+                        self._clear_finishing_requests()
+
+                if not self._unsubmitted_requests:
+                    # There are no more unsubmitted requests to activate
+                    break
+
+            # Wait for final batch of requests to clear
+            with self._request_completed_condition:
+                while self._active_requests:
+                    self._request_completed_condition.wait()
                     self._clear_finishing_requests()
             
             # Clear one last time, in case any finished right 
-            #  at the end of the last time through the loop.
-            self._clear_finishing_requests()
+            # at the end of the final pass through the last loop.
+            with self._request_completed_condition:
+                self._clear_finishing_requests()
         except:
             self._failed = True
-            self.clean()
             raise
+        finally:
+            self._finished = True
+            self.clean()
 
+
+    def _activate_next_request(self):
+        """
+        """
+        with self._set_lock:
+            req = self._unsubmitted_requests.pop(0)
+            self._active_requests.add(req)
+        req.notify_finished( functools.partial(self._transfer_request_to_finishing_queue, req, 'finished' ) )
+        req.notify_failed( functools.partial(self._transfer_request_to_finishing_queue, req, 'failed' ) )
+        req.notify_cancelled( functools.partial(self._transfer_request_to_finishing_queue, req, 'cancelled' ) )
+        req.submit()
+        del req                    
+            
     def cancel(self):
         """
         Cancel all requests in the pool.
         """
-        for req in self._requests:
+        for req in self._active_requests:
             req.cancel()
         self.clean()
-    
-    def submit(self):
-        """
-        Submit all the requests in the pool.  The pool must not be submitted yet.  
-        Otherwise, an exception is raised.
-        Since wait() automatically calls submit(), there is usually no advantage to calling submit() yourself.
-        """
-        if self._started:
-            raise RequestPool.RequestPoolError("Can't re-start a RequestPool that was already started.")
-
-        try:        
-            # Use copy here because requests may remove themselves from self._requests as they complete.
-            requests = self._requests.copy()
-            while requests:
-                requests.pop().submit()
-                self._clear_finishing_requests()
-        except:
-            self._failed = True
-            self.clean()
-            raise
 
     def _transfer_request_to_finishing_queue(self, req, reason, *args):
         """
         Called (via a callback) when a request is finished executing, 
         but not yet done with its callbacks.  We mark the state change by 
-        removing it from _requests and adding it to _finishing_requests.
-        
-        See docstrings in wait() and _clear_finishing_requests() for details.
+        removing it from _active_requests and adding it to _finishing_requests.
         """
         with self._request_completed_condition:
             with self._set_lock:
                 if not self._failed:
-                    self._requests.remove(req)
+                    self._active_requests.remove(req)
                     self._finishing_requests.add(req)
                     self._request_completed_condition.notify()
 
@@ -1251,15 +1353,17 @@ class RequestPool(object):
                 The proper way to do that is to call Request.block() on the failed request.
                 Since we call Request.block() on all of our requests, we'll definitely see the 
                 exception if there was a failed request.
+        
+        Note: This function assumes that the current context owns _request_completed_condition.
         """
-        while self._finishing_requests:
-            try:
-                with self._set_lock:
+        with self._set_lock:
+            while self._finishing_requests:
+                try:
                     req = self._finishing_requests.pop()
-            except KeyError:
-                break
-            else:
-                req.block()
+                except KeyError:
+                    break
+                else:
+                    req.block()
     
     def request(self, func):
         """
@@ -1268,15 +1372,24 @@ class RequestPool(object):
         """
         self.add( Request(func) )
     
-    def clean(self):
-        """
-        Release our handles to all requests in the pool, for cleanup purposes.
-        There is no need to call this yourself.
-        """
-        with self._set_lock:
-            self._requests = set()
-            self._finishing_requests = set()
+    def _debug_mode_wait(self):
+        if self._started:
+            raise RequestPool.RequestPoolError("Can't re-start a RequestPool that was already started.")
+        self._started = True
 
+        try:
+            while self._unsubmitted_requests:
+                req = self._unsubmitted_requests.pop()
+                req.wait()
+                del req
+        except:
+            self._failed = True
+            raise
+        finally:
+            self._finished = True
+            self.clean()
+
+    
 class RequestPool_SIMPLE(object):
     # This simplified version doesn't attempt to be efficient with RAM like the standard version (above).
     # It is provided here as a simple reference implementation for comparison and testing purposes.
@@ -1305,23 +1418,16 @@ class RequestPool_SIMPLE(object):
             raise RequestPool.RequestPoolError("Attempted to add a request to a pool that was already started!")
         self._requests.add(req)
 
-    def submit(self):
+    def wait(self):
         """
-        Submit all the requests in the pool.  The pool must not be submitted yet.  Otherwise, an exception is raised.
+        If the pool hasn't been submitted yet, submit it. 
+        Then wait for all requests in the pool to complete in the simplest way possible.
         """
         if self._started:
             raise RequestPool.RequestPoolError("Can't re-start a RequestPool that was already started.")
 
         for req in self._requests:
             req.submit()
-
-    def wait(self):
-        """
-        If the pool hasn't been submitted yet, submit it. 
-        Then wait for all requests in the pool to complete in the simplest way possible.
-        """
-        if not self._started:
-            self.submit()
 
         for req in self._requests:
             req.block()

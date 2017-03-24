@@ -33,6 +33,7 @@ import numpy
 from math import ceil, floor, pow, log10
 import collections
 from functools import partial
+from itertools import combinations
 
 class TinyVector(list):
     __slots__ = []
@@ -576,7 +577,7 @@ def determineBlockShape( max_shape, target_block_volume ):
     
     for (m, i), num_remaining_axes in zip(sorted_max, range(ndims, 0, -1)):
         # Make a block_shape that is isometric in the remaining dimensions
-        remaining_factor = target_block_volume/volume_so_far
+        remaining_factor = target_block_volume//volume_so_far
         block_side = int( pow( remaining_factor, 1.0/num_remaining_axes ) + 0.5 )
         block_side = min( block_side, m )
         block_shape.append( block_side )
@@ -616,7 +617,7 @@ def determine_optimal_request_blockshape( max_blockshape, ideal_blockshape, ram_
     max_blockshape = numpy.asarray( max_blockshape )
     ideal_blockshape = numpy.asarray( ideal_blockshape )
 
-    target_block_volume_bytes = available_ram / num_threads
+    target_block_volume_bytes = available_ram // num_threads
     target_block_volume_pixels = target_block_volume_bytes / ram_usage_per_requested_pixel
     
     # Replace 0's in the ideal_blockshape with the corresponding piece of max_blockshape
@@ -624,26 +625,44 @@ def determine_optimal_request_blockshape( max_blockshape, ideal_blockshape, ram_
     
     # Clip to max
     clipped_ideal_blockshape = numpy.minimum( max_blockshape, complete_ideal_blockshape )
-
-    # Try to expand.
+    
     atomic_blockshape = determineBlockShape( clipped_ideal_blockshape, target_block_volume_pixels )
     atomic_blockshape = numpy.asarray( atomic_blockshape )
-    
-    # Does our blockshape consume all available RAM?  Or was it limited by the max_shape?
-    blockshape = atomic_blockshape
+
+    if numpy.prod(clipped_ideal_blockshape) >= target_block_volume_pixels:
+        # Target volume is too small for us to stack the atomic blockshape, anyway
+        return tuple(atomic_blockshape)
+
+    # Need to stack the ideal_blockshape to come up with something larger.
+    # Start with an isotropic block, clipped to the nearest multiple of the atomic_blockshape
+    blockshape = numpy.array( determineBlockShape( max_blockshape, target_block_volume_pixels ) )
+    blockshape -= blockshape % atomic_blockshape
+        
     while True:
         # Find a dimension of atomic_blockshape that isn't already maxed out,
         # And see if we have enough RAM to 
+        candidate_blockshapes = []
         for index in range( len(blockshape) ):
             # If we were to expand the blockshape in this dimension, would the block still fit in RAM?
             candidate_blockshape = blockshape.copy()
-            candidate_blockshape[index] += atomic_blockshape[index]
+            candidate_blockshape[index] += clipped_ideal_blockshape[index]
             if (candidate_blockshape <= max_blockshape).all() and \
                (numpy.prod(candidate_blockshape) < target_block_volume_pixels):
-                blockshape = candidate_blockshape
-                break
-        if blockshape is not candidate_blockshape:
+                candidate_blockshapes.append(candidate_blockshape)
+
+        if len(candidate_blockshapes) == 0:
             break
+
+        def normalized_surface_area(shape):
+            pairs = numpy.array(list(combinations(shape, 2)))
+            surface_area = 2*(pairs[:,0] * pairs[:,1]).sum()
+            volume = numpy.prod(shape)
+            return surface_area / volume
+
+        # Choose the best among the canidates
+        scores = map(normalized_surface_area, candidate_blockshapes)
+        (best_shape, best_score) = min(zip(candidate_blockshapes, scores), key=lambda (shape, score): score )
+        blockshape = best_shape
         
     return tuple(blockshape)
 

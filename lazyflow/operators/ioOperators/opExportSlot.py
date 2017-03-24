@@ -29,7 +29,7 @@ import h5py
 
 from lazyflow.graph import Operator, InputSlot, OutputSlot
 from lazyflow.roi import roiFromShape
-from lazyflow.utility import OrderedSignal, format_known_keys, PathComponents
+from lazyflow.utility import OrderedSignal, format_known_keys, PathComponents, mkdir_p
 from lazyflow.operators.ioOperators import OpH5WriterBigDataset, OpNpyWriter, OpExport2DImage, OpStackWriter, \
                                            OpExportMultipageTiff, OpExportMultipageTiffSequence, OpExportToArray
 
@@ -67,6 +67,7 @@ class OpExportSlot(Operator):
     _3d_volume_formats = [ FormatInfo('multipage tiff', 'tiff', 3, 3) ]
     _4d_sequence_formats = [ FormatInfo('multipage tiff sequence', 'tiff', 4, 4) ]
     nd_format_formats = [ FormatInfo('hdf5', 'h5', 0, 5),
+                          FormatInfo('compressed hdf5', 'h5', 0, 5),
                           FormatInfo('numpy', 'npy', 0, 5),
                           FormatInfo('dvid', '', 2, 5),
                           FormatInfo('blockwise hdf5', 'json', 0, 5) ]
@@ -81,7 +82,8 @@ class OpExportSlot(Operator):
         # Set up the impl function lookup dict
         export_impls = {}
         export_impls['hdf5'] = ('h5', self._export_hdf5)
-        export_impls['npy'] = ('npy', self._export_npy)
+        export_impls['compressed hdf5'] = ('h5', partial(self._export_hdf5, True))
+        export_impls['numpy'] = ('npy', self._export_npy)
         export_impls['dvid'] = ('', self._export_dvid)
         export_impls['blockwise hdf5'] = ('json', self._export_blockwise_hdf5)
         
@@ -103,7 +105,7 @@ class OpExportSlot(Operator):
         self.FormatSelectionErrorMsg.meta.shape = (1,)
         self.FormatSelectionErrorMsg.meta.dtype = object
         
-        if self.OutputFormat.value == 'hdf5' and self.OutputInternalPath.value == "":
+        if self.OutputFormat.value in ('hdf5', 'compressed hdf5') and self.OutputInternalPath.value == "":
             self.ExportPath.meta.NOTREADY = True
     
     def execute(self, slot, subindex, roi, result):
@@ -122,7 +124,7 @@ class OpExportSlot(Operator):
             path_format += '.' + file_extension
 
         # Provide the TOTAL path (including dataset name)
-        if self.OutputFormat.value == 'hdf5':
+        if self.OutputFormat.value in ('hdf5', 'compressed hdf5'):
             path_format += '/' + self.OutputInternalPath.value
 
         roi = numpy.array( roiFromShape(self.Input.meta.shape) )
@@ -157,7 +159,7 @@ class OpExportSlot(Operator):
         output_format = self.OutputFormat.value
 
         # These cases support all combinations
-        if output_format in ('hdf5', 'npy', 'blockwise hdf5'):
+        if output_format in ('hdf5', 'compressed hdf5' 'npy', 'blockwise hdf5'):
             return ""
         
         tagged_shape = self.Input.meta.getTaggedShape()
@@ -228,9 +230,10 @@ class OpExportSlot(Operator):
         except KeyError:
             raise Exception( "Unknown export format: {}".format( output_format ) )
         else:
+            mkdir_p( PathComponents(self.ExportPath.value).externalDirectory )
             export_func()
     
-    def _export_hdf5(self):
+    def _export_hdf5(self, compress=False):
         self.progressSignal( 0 )
 
         # Create and open the hdf5 file
@@ -246,6 +249,7 @@ class OpExportSlot(Operator):
                 # Create a temporary operator to do the work for us
                 opH5Writer = OpH5WriterBigDataset(parent=self)
                 try:
+                    opH5Writer.CompressionEnabled.setValue( compress )
                     opH5Writer.hdf5File.setValue( hdf5File )
                     opH5Writer.hdf5Path.setValue( export_components.internalPath )
                     opH5Writer.Image.connect( self.Input )
@@ -389,10 +393,13 @@ class FormatValidity(object):
               'ppm': (np.uint8, np.uint16,),
               'pgm': (np.uint8, np.uint16,),
               'pbm': (np.uint8, np.uint16,),  # vigra outputs p[gn]m
-              'npy': (np.uint8, np.uint16, np.uint32, np.uint64,
+              'numpy': (np.uint8, np.uint16, np.uint32, np.uint64,
                       np.int8, np.int16, np.int32, np.int64,
                       np.float32, np.float64,),
               'hdf5': (np.uint8, np.uint16, np.uint32, np.uint64,
+                       np.int8, np.int16, np.int32, np.int64,
+                       np.float32, np.float64,),
+              'compressed hdf5': (np.uint8, np.uint16, np.uint32, np.uint64,
                        np.int8, np.int16, np.int32, np.int64,
                        np.float32, np.float64,),
               }
@@ -409,8 +416,9 @@ class FormatValidity(object):
             'ppm': (2, 2),
             'pgm': (2, 2),
             'pbm': (2, 2),
-            'npy': (0, 5),
+            'numpy': (0, 5),
             'hdf5': (0, 5),
+            'compressed hdf5': (0, 5),
             }
 
     # { extension : [allowed_num_channels] }
@@ -425,8 +433,9 @@ class FormatValidity(object):
               'ppm': (1, 3,),
               'pgm': (1,),
               'pbm': (1,),  # vigra outputs p[gn]m
-              'npy': (),  # empty means "no restriction on number of channels"
+              'numpy': (),  # empty means "no restriction on number of channels"
               'hdf5': (), # ditto
+              'compressed hdf5': (), # ditto
               }
 
     @classmethod

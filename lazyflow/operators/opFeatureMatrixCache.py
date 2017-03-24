@@ -1,3 +1,25 @@
+###############################################################################
+#   lazyflow: data flow based lazy parallel computation framework
+#
+#       Copyright (C) 2011-2014, the ilastik developers
+#                                <team@ilastik.org>
+#
+# This program is free software; you can redistribute it and/or
+# modify it under the terms of the Lesser GNU General Public License
+# as published by the Free Software Foundation; either version 2.1
+# of the License, or (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+# GNU Lesser General Public License for more details.
+#
+# See the files LICENSE.lgpl2 and LICENSE.lgpl3 for full text of the
+# GNU Lesser General Public License version 2.1 and 3 respectively.
+# This information is also available on the ilastik web site at:
+#		   http://ilastik.org/license/
+###############################################################################
+from __future__ import division
 from functools import partial
 import logging
 logger = logging.getLogger(__name__)
@@ -36,7 +58,6 @@ class OpFeatureMatrixCache(Operator):
                                     # to a downstream operator (such as OpConcatenateFeatureMatrices),  
                                     # we provide the progressSignal member as an output slot.
 
-    MAX_BLOCK_PIXELS = 1e6
 
     def __init__(self, *args, **kwargs):
         super(OpFeatureMatrixCache, self).__init__(*args, **kwargs)
@@ -66,6 +87,7 @@ class OpFeatureMatrixCache(Operator):
         # In these set/dict members, the block id (dict key) 
         #  is simply the block's start coordinate (as a tuple)
         self._blockshape = new_blockshape
+        assert all(self._blockshape)
         logger.debug("Initialized with blockshape: {}".format(new_blockshape))
     
     def setupOutputs(self):
@@ -93,14 +115,17 @@ class OpFeatureMatrixCache(Operator):
         self.ProgressSignal.meta.dtype = object
         self.ProgressSignal.setValue( self.progressSignal )
 
-        # Auto-choose a blockshape
-        tagged_shape = self.LabelImage.meta.getTaggedShape()
-        if 't' in tagged_shape:
-            # A block should never span multiple time slices.
-            # For txy volumes, that could lead to lots of extra features being computed.
-            tagged_shape['t'] = 1
-        blockshape = determineBlockShape( tagged_shape.values(), OpFeatureMatrixCache.MAX_BLOCK_PIXELS )
-
+        if self.LabelImage.meta.ideal_blockshape is not None and all(self.LabelImage.meta.ideal_blockshape):
+            blockshape = self.LabelImage.meta.ideal_blockshape
+        else:
+            # Auto-choose a blockshape
+            tagged_shape = self.LabelImage.meta.getTaggedShape()
+            if 't' in tagged_shape:
+                # A block should never span multiple time slices.
+                # For txy volumes, that could lead to lots of extra features being computed.
+                tagged_shape['t'] = 1
+            blockshape = determineBlockShape( tagged_shape.values(), 40**3 )
+        
         # Don't span more than 256 px along any axis
         blockshape = tuple(min(x, 256) for x in blockshape)
         self._init_blocks(self.LabelImage.meta.shape, blockshape)
@@ -118,7 +143,7 @@ class OpFeatureMatrixCache(Operator):
         remaining_dirty = [num_dirty_blocks]
         def update_progress( result ):
             remaining_dirty[0] -= 1
-            percent_complete = 95.0*(num_dirty_blocks - remaining_dirty[0])/num_dirty_blocks
+            percent_complete = 95.0*(num_dirty_blocks - remaining_dirty[0])//num_dirty_blocks
             self.progressSignal( percent_complete )
 
         # Update all dirty blocks in the cache
@@ -186,19 +211,23 @@ class OpFeatureMatrixCache(Operator):
         roi.start[-1] = 0
         roi.stop[-1] = 1
         # Bookkeeping: Track the dirty blocks
-        block_starts = getIntersectingBlocks( self._blockshape, (roi.start, roi.stop) )
-        block_starts = map( tuple, block_starts )
-        
-        # 
+
         # If the features were dirty (not labels), we only really care about
         #  the blocks that are actually stored already
         # For big dirty rois (e.g. the entire image), 
         #  we avoid a lot of unnecessary entries in self._dirty_blocks
         if slot == self.FeatureImage:
-            block_starts = set( block_starts ).intersection( self._blockwise_feature_matrices.keys() )
-
+            # We ignore the ROI and assume all blocks are dirty.
+            # Technically, this would be inefficient if it's possible for the features
+            # to become only partially dirty in a small ROI.
+            # But currently, there is no known use-case for that.
+            block_starts = self._blockwise_feature_matrices.keys()
+        else:
+            block_starts = getIntersectingBlocks( self._blockshape, (roi.start, roi.stop) )
+            block_starts = map( tuple, block_starts )
+        
         with self._lock:
-            self._dirty_blocks.update( block_starts )
+            self._dirty_blocks.update( set(block_starts) )
 
         # Output has no notion of roi. It's all dirty.
         self.LabelAndFeatureMatrix.setDirty()
@@ -226,14 +255,16 @@ class OpFeatureMatrixCache(Operator):
         label_block_positions = numpy.nonzero(labels[...,0].view(numpy.ndarray))
         labels_matrix = labels[label_block_positions].astype(numpy.float32).view(numpy.ndarray)
         
+        del labels # Done with dense labels block; delete immediately.
+        
         if len(label_block_positions) == 0 or len(label_block_positions[0]) == 0:
             # No label points in this roi.
             # Return an empty label&feature matrix (of the correct shape)
             return numpy.ndarray( shape=(0, 1 + num_feature_channels), dtype=numpy.float32 )
 
         # Shrink the roi to the bounding box of nonzero labels
-        block_bounding_box_start = numpy.array( map( numpy.min, label_block_positions ) )
-        block_bounding_box_stop = 1 + numpy.array( map( numpy.max, label_block_positions ) )
+        block_bounding_box_start = numpy.min( label_block_positions, axis=1 )
+        block_bounding_box_stop = 1 + numpy.max( label_block_positions, axis=1 )
         
         global_bounding_box_start = block_bounding_box_start + label_block_roi[0][:-1]
         global_bounding_box_stop  = block_bounding_box_stop + label_block_roi[0][:-1]

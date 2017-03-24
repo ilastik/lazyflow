@@ -8,7 +8,8 @@ from lazyflow.roi import getIntersectingRois, roiToSlice
 from lazyflow.rtype import SubRegion
 
 class OpSimpleBlockedArrayCache(OpUnblockedArrayCache):
-    BlockShape = InputSlot(optional=True)
+    BlockShape = InputSlot(optional=True) # Must be a tuple.  Any 'None' elements will be interpreted as 'max' for that dimension.
+    BypassModeEnabled = InputSlot(value=False)
 
     def __init__(self, *args, **kwargs):
         super( OpSimpleBlockedArrayCache, self ).__init__(*args, **kwargs)
@@ -24,6 +25,9 @@ class OpSimpleBlockedArrayCache(OpUnblockedArrayCache):
         if len(self._blockshape) != len(self.Input.meta.shape):
             self.Output.meta.NOTREADY = True
             return
+
+        # Replace 'None' (or zero) with default (from Input shape)
+        self._blockshape = tuple( numpy.where(self._blockshape, self._blockshape, self.Input.meta.shape) )
 
         self.Output.meta.ideal_blockshape = tuple(numpy.minimum(self._blockshape, self.Input.meta.shape))
 
@@ -53,10 +57,20 @@ class OpSimpleBlockedArrayCache(OpUnblockedArrayCache):
             clipped_block_roi = numpy.asarray(clipped_block_roi)
             output_roi = numpy.asarray(clipped_block_roi) - roi.start
 
+            block_roi = self._get_containing_block_roi( clipped_block_roi )
+            
+            # Skip cache and copy full block directly
+            if self.BypassModeEnabled.value:
+                full_block_data = self.Output.stype.allocateDestination( SubRegion(self.Output, *full_block_roi ) )
+
+                self.Input(*full_block_roi).writeInto(full_block_data).block()
+                
+                roi_within_block = clipped_block_roi - full_block_roi[0]
+                self.Output.stype.copy_data( result[roiToSlice(*output_roi)],
+                                             full_block_data[roiToSlice(*roi_within_block)] )
             # If data data exists already or we can just fetch it without needing extra scratch space,
             # just call the base class
-            block_roi = self._get_containing_block_roi( clipped_block_roi )
-            if block_roi is not None or (full_block_roi == clipped_block_roi).all():
+            elif block_roi is not None or (full_block_roi == clipped_block_roi).all():
                 self._execute_Output_impl( clipped_block_roi, result[roiToSlice(*output_roi)] )
             elif self.Input.meta.dontcache:
                 # Data isn't in the cache, but we don't need it in the cache anyway.
@@ -83,3 +97,7 @@ class OpSimpleBlockedArrayCache(OpUnblockedArrayCache):
             pool.add(req)
         pool.wait()
         
+    def propagateDirty(self, slot, subindex, roi):
+        if slot in (self.BypassModeEnabled, self.BlockShape):
+            return
+        super(OpSimpleBlockedArrayCache, self ).propagateDirty(slot, subindex, roi)

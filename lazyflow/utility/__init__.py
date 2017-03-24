@@ -19,7 +19,7 @@
 # This information is also available on the ilastik web site at:
 #		   http://ilastik.org/license/
 ###############################################################################
-from alternative_numpy_functions import vigra_bincount
+from alternative_numpy_functions import vigra_bincount, chunked_bincount
 from memory import Memory
 import helpers
 import jsonConfig
@@ -28,7 +28,7 @@ from singleton import Singleton
 from orderedSignal import OrderedSignal
 from fileLock import FileLock
 from tracer import Tracer, traceLogged
-from pathHelpers import PathComponents, getPathVariants, isUrl, make_absolute
+from pathHelpers import PathComponents, getPathVariants, isUrl, make_absolute, mkdir_p
 from roiRequestBatch import RoiRequestBatch
 from bigRequestStreamer import BigRequestStreamer
 import io_util

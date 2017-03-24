@@ -194,7 +194,13 @@ class OpFormattedDataExport(Operator):
 
         # Use user-provided axis order if specified
         if self.OutputAxisOrder.ready():
-            self._opReorderAxes.AxisOrder.setValue( self.OutputAxisOrder.value )
+            try:
+                self._opReorderAxes.AxisOrder.setValue( self.OutputAxisOrder.value )
+            except KeyError:
+                # FIXME: Why does the above line fail sometimes?
+                warnings.warn("Ignoring invalid axis order setting")
+                axistags = self.Input.meta.axistags
+                self._opReorderAxes.AxisOrder.setValue( "".join( tag.key for tag in axistags ) )
         else:
             axistags = self.Input.meta.axistags
             self._opReorderAxes.AxisOrder.setValue( "".join( tag.key for tag in axistags ) )
@@ -208,6 +214,10 @@ class OpFormattedDataExport(Operator):
 
         # Obtain values for possible name fields
         known_keys = { 'roi' : list(self._opSubRegion.Roi.value) }
+        roi = numpy.array(self._opSubRegion.Roi.value)
+        for key, (start, stop) in zip( self.Input.meta.getAxisKeys(), roi.transpose() ):
+            known_keys[key + '_start'] = start
+            known_keys[key + '_stop'] = stop
 
         # Blank the internal path while we update the external path
         #  to avoid invalid intermediate states of ExportPath

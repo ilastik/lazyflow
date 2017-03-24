@@ -20,6 +20,10 @@
 #                 http://ilastik.org/license/
 ###############################################################################
 import os
+import fnmatch
+import errno
+
+import h5py
 
 
 class PathComponents(object):
@@ -30,6 +34,7 @@ class PathComponents(object):
 
     # Only files with these extensions are allowed to have an 'internal' path
     HDF5_EXTS = ['.ilp', '.h5', '.hdf5']
+    NPZ_EXTS = ['.npz']
 
     def __init__(self, totalPath, cwd=None):
         """
@@ -65,7 +70,7 @@ class PathComponents(object):
         totalPath = totalPath.replace("\\","/")
 
         # For hdf5 paths, split into external, extension, and internal paths
-        for x in self.HDF5_EXTS:
+        for x in (self.HDF5_EXTS + self.NPZ_EXTS):
             if totalPath.find(x) > extIndex:
                 extIndex = totalPath.find(x)
                 ext = x
@@ -302,3 +307,47 @@ def getPathVariants(originalPath, workingDirectory):
         absPath = os.path.normpath(os.path.join(workingDirectory, relPath))
 
     return (absPath.replace("\\","/"), relPath and relPath.replace("\\","/"))
+
+def mkdir_p(path):
+    """
+    Like the bash command 'mkdir -p'
+    """
+    try:
+        os.makedirs(path)
+    except OSError as exc:  # Python >2.5
+        if exc.errno == errno.EEXIST and os.path.isdir(path):
+            pass
+        else:
+            raise
+
+
+def globHdf5(hdf5FileObject, globString):
+    """globs a hdf5 file like a file system for datasets
+
+    Note: does not glob Attributes, only data sets.
+
+    Recurses through the hdf5 tree using .visititems and matches the provided
+    globstring to the respective object names using the fnmatch standard module.
+
+
+    Args:
+        hdf5FileObject: h5py.File object
+        globString: String describing the internal path of the dataset(s) with
+            glob-like placeholders
+
+    Returns
+        A sorted list of matched object names. This list is empty if no
+        matches occurred.
+    """
+    pathlist = []
+
+    def addObjectNames(objectName, object):
+        if isinstance(object, h5py.Dataset):
+            pathlist.append(objectName)
+
+    hdf5FileObject.visititems(addObjectNames)
+
+    matches = [x for x in pathlist
+               if fnmatch.fnmatch(x, globString)]
+
+    return sorted(matches)

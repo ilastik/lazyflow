@@ -32,6 +32,7 @@ from functools import partial
 
 #SciPy
 import numpy
+import vigra
 
 #lazyflow
 from lazyflow.request import RequestPool
@@ -395,7 +396,8 @@ class OpArrayCache(Operator, ManagedCache):
                 cacheView = None
                 return
     
-            inProcessQueries = numpy.unique(numpy.extract( blockSet == OpArrayCache.IN_PROCESS, self._blockQuery[blockKey]))
+            extracted = numpy.extract( blockSet == OpArrayCache.IN_PROCESS, self._blockQuery[blockKey])
+            inProcessQueries = numpy.unique(extracted)
     
             cond = (blockSet == OpArrayCache.DIRTY)
             tileWeights = fastWhere(cond, 1, 128**3, numpy.uint32)
@@ -409,7 +411,7 @@ class OpArrayCache(Operator, ManagedCache):
                 tileArray = numpy.concatenate((tileStartArray, tileStopArray), axis=0)
             
             dirtyRois = []
-            half = tileArray.shape[0]/2
+            half = tileArray.shape[0]//2
             dirtyPool = RequestPool()
     
             for i in range(tileArray.shape[1]):

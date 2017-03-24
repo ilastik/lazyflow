@@ -20,7 +20,10 @@
 #                 http://ilastik.org/license/
 ###############################################################################
 import os
-from lazyflow.utility.pathHelpers import compressPathForDisplay, getPathVariants, PathComponents
+import h5py
+from lazyflow.utility.pathHelpers import (
+    compressPathForDisplay, getPathVariants, PathComponents, globHdf5
+)
 
 SIMULATE_WINDOWS = False
 
@@ -43,6 +46,11 @@ class TestPathHelpers(object):
         assert components.externalPath == '/some/external/path/to/file.h5_crazy_ext.h5'
         assert components.extension == '.h5'
         assert components.internalPath == '/with/internal/path/to/data'
+
+        components = PathComponents('/some/external/path/to/file.npz_crazy_ext.npz/withInternalPathToData')
+        assert components.externalPath == '/some/external/path/to/file.npz_crazy_ext.npz'
+        assert components.extension == '.npz'
+        assert components.internalPath == '/withInternalPathToData'
 
         # Everything should work for URLs, too.
         components = PathComponents('http://somehost:8000/path/to/data/with.ext')
@@ -105,6 +113,35 @@ class TestPathHelpers(object):
 
         assert getPathVariants('', '/abc') == ('/abc', ''), \
             "{} != {}".format( getPathVariants('', '/abc'), ('/abc', '') )
+
+    def testHdf5Glob(self):
+        hdf5File = self.createHdf5Data()
+
+        globString = 'here/is/the/data/test-*'
+
+        expectedPaths = ['here/is/the/data/test-{index:02d}'.format(index=index)
+                         for index in xrange(5)
+                         ]
+
+        globbedPaths = globHdf5(hdf5File, globString)
+        assert all([a == b
+                    for a, b in zip(globbedPaths, expectedPaths)])
+
+    def createHdf5Data(self):
+        """Creates Hdf5 file in memory for testHff5Glob"""
+        f = h5py.File(name='test', driver='core', backing_store=False)
+        data_group = f.create_group('here/is/the/data')
+        data_group2 = f.create_group('this/is/also/some/data')
+
+        for i in xrange(5):
+            for dg in [data_group, data_group2]:
+                dg.create_dataset(
+                    'test-{index:02d}'.format(index=i),
+                    (0, 0),
+                    dtype='i8'
+                )
+        return f
+
 
 if __name__ == "__main__":
     import sys
