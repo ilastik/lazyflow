@@ -242,6 +242,15 @@ class ArrayLike( SlotType ):
         else:
             assert False, "check_result_valid: result type is not supported"
 
+
+class ImageType(ArrayLike):
+    """For now: dummy class to mark image slots to expose in the api
+    """
+    def isCompatible(self, value):
+        warnings.warn("ImageType.isCompatible: FIXME here")
+        return True
+
+
 class Opaque(SlotType):
     def allocateDestination(self, roi):
         return None
