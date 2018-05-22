@@ -24,6 +24,8 @@ import jsonschema
 import logging
 import requests
 
+from urllib import parse
+
 import numpy
 
 import lazyflow.roi
@@ -79,6 +81,16 @@ class RESTfulPrecomputedChunkedVolume(object):
         },
         'required': ['type', 'data_type', 'num_channels', 'scales']
     }
+
+    @staticmethod
+    def check_url(url):
+        if url.strip().startswith('precomputed://'):
+            return url
+        components = parse.urlparse(url)
+        fragments = parse.unquote(components.fragment)
+        # TODO: this will be incorrect for anything with a valid underscore
+        fragments = fragments.replace("'", '"').replace('_', ',').strip('!')
+        return json.loads(fragments)
 
     def __init__(self, volume_url, tmp_data_file=None, n_threads=4):
         """
