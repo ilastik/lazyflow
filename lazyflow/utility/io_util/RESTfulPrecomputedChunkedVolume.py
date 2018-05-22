@@ -156,7 +156,7 @@ class RESTfulPrecomputedChunkedVolume(object):
         resolutions = [(scale, scales_info_dict[scale]['resolution'])
                        for scale in scales]
         # sort by x value of the resolution
-        resolutions.sort(key=lambda x: -x[1][0])
+        resolutions.sort(key=lambda x: x[1][0])
         lowest_scale = resolutions[0]
         logger.debug(f'using lowest scale {lowest_scale[0]}')
         return lowest_scale
