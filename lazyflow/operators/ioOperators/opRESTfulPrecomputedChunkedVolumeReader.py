@@ -19,9 +19,6 @@
 # This information is also available on the ilastik web site at:
 #          http://ilastik.org/license/
 ###############################################################################
-import os
-import copy
-import tempfile
 import h5py
 import vigra
 from lazyflow.graph import Operator, InputSlot, OutputSlot
@@ -79,7 +76,6 @@ class OpRESTfulPrecomputedChunkedVolumeReaderNoCache(Operator):
         self.Output.meta.shape = output_shape
         self.Output.meta.dtype = numpy.dtype(self._volume_object.dtype).type
         self.Output.meta.axistags = vigra.defaultAxistags(self._axes)
-
 
     @staticmethod
     def get_intersecting_blocks(blockshape, roi, shape):
@@ -190,7 +186,6 @@ class OpRESTfulPrecomputedChunkedVolumeReader(Operator):
         self.RESTfulReader.Scale.backpropagate_values = True
         self.RESTfulReader.Scale.connect(self.Scale)
 
-
         self.cache = OpBlockedArrayCache(parent=self)
         self.cache.name = "input_image_cache"
         self.cache.fixAtCurrent.connect(self.fixAtCurrent)
@@ -208,7 +203,6 @@ class OpRESTfulPrecomputedChunkedVolumeReader(Operator):
         self.cache.Input.disconnect()
 
 
-
 if __name__ == '__main__':
     # assumes there is a server running at localhost
     logging.basicConfig(level=logging.DEBUG)
@@ -224,7 +218,6 @@ if __name__ == '__main__':
     # get some data
     roi = ((0, 0, 0, 0), (1, 10, 100, 100))
     data = op.Output(*roi).wait()
-    import h5py
     with h5py.File('/tmp/temph5.h5', 'w') as f:
         f.create_dataset('exported', data=data)
 
