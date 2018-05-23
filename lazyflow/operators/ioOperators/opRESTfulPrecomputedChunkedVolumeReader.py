@@ -69,6 +69,9 @@ class OpRESTfulPrecomputedChunkedVolumeReaderNoCache(Operator):
 
         self._volume_object = RESTfulPrecomputedChunkedVolume(self.BaseUrl.value)
 
+        if self.Scale.ready():
+            self._volume_object._use_scale = self.Scale.value
+
         self._axes = self._volume_object.axes
 
         self.AvailableScales.setValue(self._volume_object.available_scales)
@@ -77,11 +80,6 @@ class OpRESTfulPrecomputedChunkedVolumeReaderNoCache(Operator):
         self.Output.meta.dtype = numpy.dtype(self._volume_object.dtype).type
         self.Output.meta.axistags = vigra.defaultAxistags(self._axes)
 
-
-        # scale needs to be defined for the following, so:
-        # override whatever was set before to the lowest available scale:
-        # is this a good idea? Triggers setupOutputs again
-        self.Scale.setValue(self._volume_object._use_scale)
 
     @staticmethod
     def get_intersecting_blocks(blockshape, roi, shape):
@@ -143,7 +141,7 @@ class OpRESTfulPrecomputedChunkedVolumeReaderNoCache(Operator):
         start, stop = roi.start, roi.stop
         roi = (start, stop)
 
-        scale = self.Scale.value
+        scale = self._volume_object._use_scale
         assert len(roi) == 2
         assert all(len(x) == len(self._volume_object.get_shape(scale)) for x in roi)
         block_shape = self._volume_object.get_block_shape(scale)

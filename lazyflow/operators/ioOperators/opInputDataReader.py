@@ -111,6 +111,8 @@ class OpInputDataReader(Operator):
 
     # FIXME: Document this.
     SubVolumeRoi = InputSlot(optional=True)  # (start, stop)
+    # Experimental, scale key for precomputed chunked volumes, string
+    ScaleKey = InputSlot(optional=True)
 
     Output = OutputSlot()
 
@@ -203,6 +205,11 @@ class OpInputDataReader(Operator):
             self._opSubRegion.Input.connect(self.internalOutput)
             self.internalOutput = self._opSubRegion.Output
 
+        # Apply scale key only to the RESTFulPrecomputed chunks, for now
+        if isinstance(self.internalOperators, OpRESTfulPrecomputedChunkedVolumeReader):
+            if self.ScaleKey.ready():
+                self.internalOperators.Scale.setValue(self.ScaleKey.value)
+
         self.opInjector = OpMetadataInjector(parent=self)
         self.opInjector.Input.connect(self.internalOutput)
 
@@ -276,6 +283,8 @@ class OpInputDataReader(Operator):
         else:
             url = filePath.lstrip('precomputed://')
             reader = OpRESTfulPrecomputedChunkedVolumeReader(parent=self)
+            if self.ScaleKey.ready():
+                reader.Scale.setValue(self.ScaleKey.value)
             reader.BaseUrl.setValue(url)
             return [reader], reader.Output
 
