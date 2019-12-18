@@ -281,10 +281,12 @@ class OpFormattedDataExport(Operator):
         return self._opExportSlot.run_export_to_array()
 
     def run_distributed_export(self, block_shape: Shape5D):
-        # orchestrator = TaskOrchestrator()
+        from lazyflow.distributed.TaskOrchestrator import TaskOrchestrator
+
+        orchestrator = TaskOrchestrator()
         n5_file_path = Path(self.OutputFilenameFormat.value).with_suffix(".n5")
-        if True:  # orchestrator.rank == 0:
-            output_meta = self.ImageToExport.meta
+        output_meta = self.ImageToExport.meta
+        if orchestrator.rank == 0:
             output_shape = output_meta.getShape5D()
             block_shape = block_shape.clamped(maximum=output_shape)
 
@@ -298,15 +300,14 @@ class OpFormattedDataExport(Operator):
                 ds[...] = 1  # FIXME: for some reason setting to 0 does nothing
 
             cutout = self.get_cutout()
-            # orchestrator.orchestrate(cutout.to_slice_5d().split(block_shape=block_shape))
+            orchestrator.orchestrate(cutout.split(block_shape=block_shape))
+        else:
+
             def process_tile(tile: Slice5D, rank: int):
                 self.set_cutout(tile)
                 slices = tile.to_slices(output_meta.getAxisKeys())
                 with z5py.File(n5_file_path, "r+") as n5_file:
-                    print("+++++++++++++++++++++  " + self.OutputInternalPath.value)
                     dataset = n5_file[self.OutputInternalPath.value]
                     dataset[slices] = self.ImageToExport.value
 
-            for tile in cutout.split(block_shape=block_shape):
-                process_tile(tile, 1)
-            # orchestrator.start_as_worker(process_tile)
+            orchestrator.start_as_worker(process_tile)
