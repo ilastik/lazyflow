@@ -297,6 +297,7 @@ class OpFormattedDataExport(Operator):
                     chunks=block_shape.to_tuple(output_meta.getAxisKeys()),
                     dtype=output_meta.dtype.__name__,
                 )
+                ds.attrs["axes"] = list(reversed(output_meta.getAxisKeys()))
                 ds[...] = 1  # FIXME: for some reason setting to 0 does nothing
 
             cutout = self.get_cutout()
